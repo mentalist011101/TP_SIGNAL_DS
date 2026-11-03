@@ -1,0 +1,71 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Front
+web/node_modules/
+web/dist/
+web/*.tsbuildinfo
+web/node_modules/.tmp/
+
+# Données, modèles, sorties : jamais dans git (dépôt public, licences, taille)
+data/*
+!data/README.md
+models/*
+!models/README.md
+var/
+wandb/
+outputs/
+*.wav
+*.mp3
+*.flac
+*.ogg
+*.webm
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.safetensors
+*.npy
+*.npz
+!tests/fixtures/**
+
+# Secrets
+.env
+.env.*
+!.env.example
+kaggle.json
+
+# Notebooks
+.ipynb_checkpoints/
+
+# LaTeX
+report/**/*.aux
+report/**/*.log
+report/**/*.out
+report/**/*.toc
+report/**/*.synctex.gz
+report/**/*.fdb_latexmk
+report/**/*.fls
+report/**/*.bbl
+report/**/*.blg
+slides/**/*.aux
+slides/**/*.log
+slides/**/*.nav
+slides/**/*.out
+slides/**/*.snm
+slides/**/*.toc
+slides/**/*.synctex.gz
+
+# Divers
+.DS_Store
+.idea/
+.vscode/

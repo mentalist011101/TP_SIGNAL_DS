@@ -1,0 +1,16 @@
+@import 'tailwindcss';
+
+/* Thème EchoLens : jetons de couleur partagés par toute l'interface. */
+@theme {
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --color-brand-50: #eef6ff;
+  --color-brand-500: #2563eb;
+  --color-brand-600: #1d4ed8;
+}
+
+/* Le thème sombre suit la préférence du système. */
+@custom-variant dark (@media (prefers-color-scheme: dark));
+
+html {
+  @apply bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100;
+}

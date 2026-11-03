@@ -1,0 +1,18 @@
+services:
+  echolens:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    ports:
+      - "5000:5000"
+    env_file:
+      - path: ../.env
+        required: false
+    volumes:
+      # Historique, audios et base SQLite conservés entre deux lancements.
+      - echolens-var:/app/var
+      # Poids des modèles téléchargés par « make models ».
+      - ../models:/app/models:ro
+
+volumes:
+  echolens-var:

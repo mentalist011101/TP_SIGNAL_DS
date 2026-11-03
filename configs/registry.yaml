@@ -1,0 +1,14 @@
+# Registre des modèles (décision S1). Chaque entraînement terminé ajoute ou met à jour une entrée.
+# Les poids sont hébergés sur le Hugging Face Hub et récupérés par « make models ».
+#
+# Exemple d'entrée :
+# - id: emotion-cnn
+#   task: emotion              # emotion | sound_event | transcription | speaker | voice_cloning
+#   family: A                  # baseline | A | B | pretrained
+#   profiles: [realtime]       # quality | realtime
+#   version: 0.1.0
+#   weights: hf://<organisation>/echolens-emotion-cnn
+#   labels: [neutral, happy, sad, angry, fear, disgust]
+#   metrics: {f1_macro: 0.0, accuracy: 0.0}
+#   description: CNN 4 blocs sur log-Mel 64 bandes
+models: []
