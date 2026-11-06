@@ -1,0 +1,18 @@
+# Classes d'émotion communes à tous les jeux (décision P2).
+# id : identifiant utilisé dans le code, les modèles et l'API (anglais).
+# label_fr : libellé affiché dans l'interface.
+# La correspondance depuis les étiquettes d'origine de chaque jeu n'est pas ici :
+# elle sera fixée par les règles de Lynn (Ly2).
+emotions:
+  - id: neutral
+    label_fr: Neutre
+  - id: happy
+    label_fr: Joie
+  - id: sad
+    label_fr: Tristesse
+  - id: angry
+    label_fr: Colère
+  - id: fear
+    label_fr: Peur
+  - id: disgust
+    label_fr: Dégoût

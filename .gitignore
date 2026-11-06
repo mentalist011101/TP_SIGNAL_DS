@@ -19,6 +19,10 @@ web/node_modules/.tmp/
 # Données, modèles, sorties : jamais dans git (dépôt public, licences, taille)
 data/*
 !data/README.md
+# Les manifestes (métadonnées CSV, sans audio) sont versionnés.
+!data/manifests/
+data/manifests/*
+!data/manifests/*.csv
 models/*
 !models/README.md
 var/
