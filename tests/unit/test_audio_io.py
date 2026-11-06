@@ -6,6 +6,7 @@ import pytest
 from echolens.core.audio.io import AudioDecodeError, AudioTooLongError, load_audio
 
 
+@pytest.mark.ffmpeg
 def test_load_audio_resamples_to_mono_16k(stereo_wav_44k: Path) -> None:
     signal = load_audio(stereo_wav_44k)
     assert signal.dtype == np.float32
@@ -14,6 +15,7 @@ def test_load_audio_resamples_to_mono_16k(stereo_wav_44k: Path) -> None:
     assert abs(signal.size - 32_000) <= 64
 
 
+@pytest.mark.ffmpeg
 def test_load_audio_rejects_too_long(stereo_wav_44k: Path) -> None:
     with pytest.raises(AudioTooLongError):
         load_audio(stereo_wav_44k, max_seconds=1.0)
