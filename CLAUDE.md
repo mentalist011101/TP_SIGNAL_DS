@@ -12,7 +12,8 @@ chaque membre (25 %). Le code doit donc être lisible et explicable par toute l'
 
 Échéances : remise le 2 décembre 2026, soutenance le 9 décembre 2026.
 
-La spécification technique (8 briques, exigences EF/ENF, décisions D, R, P, S, U, I, E) fait foi.
+La spécification technique (8 briques, exigences EF/ENF, décisions D, R, P, S, U, I, E) fait foi :
+sa version de référence pour le code est `docs/specification.md`.
 Toute décision qui la contredit doit être discutée avant d'être codée.
 
 ## Architecture (règles non négociables)
@@ -116,6 +117,7 @@ par le porteur de la brique ; Luciano la relit, l'améliore si besoin et la fusi
 
 | Besoin | Emplacement |
 | --- | --- |
+| Décisions numérotées (D, R, P, S, U, I, E, H) et exigences | `docs/specification.md` |
 | Paramètres des features | `configs/features.yaml` |
 | Modèles disponibles | `configs/registry.yaml` |
 | Décisions d'architecture | `docs/adr/` |
