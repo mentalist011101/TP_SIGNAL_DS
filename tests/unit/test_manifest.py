@@ -5,7 +5,9 @@ from pydantic import ValidationError
 
 from echolens.config import CONFIG_DIR, load_settings, load_yaml
 from echolens.core.data.manifest import (
+    MANIFEST_COLUMNS,
     ManifestRow,
+    audio_path,
     check_manifest,
     load_manifest,
     save_manifest,
@@ -135,3 +137,27 @@ def test_labels_config_has_the_six_p2_emotions() -> None:
 def test_datasets_dir_can_be_overridden(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("ECHOLENS_DATASETS_DIR", "/kaggle/input/esc50")
     assert load_settings().datasets_dir == Path("/kaggle/input/esc50")
+
+
+def test_incomplete_header_is_rejected_with_missing_columns(tmp_path: Path) -> None:
+    manifest_path = tmp_path / "manifest.csv"
+    manifest_path.write_text("dataset,path,duration_s\nesc50,a.wav,5.0\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="manquantes") as error:
+        load_manifest(manifest_path)
+    message = str(error.value)
+    assert "label" in message
+    assert "transcript" in message
+
+
+def test_semicolon_separated_header_is_rejected(tmp_path: Path) -> None:
+    manifest_path = tmp_path / "manifest.csv"
+    header = ";".join(MANIFEST_COLUMNS)
+    manifest_path.write_text(header + "\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="inattendues"):
+        load_manifest(manifest_path)
+
+
+def test_audio_path_joins_datasets_dir_dataset_id_and_path(tmp_path: Path) -> None:
+    row = make_row("audio/1-100032-A-0.wav")
+    expected = tmp_path / "esc50" / "audio" / "1-100032-A-0.wav"
+    assert audio_path(row, tmp_path) == expected

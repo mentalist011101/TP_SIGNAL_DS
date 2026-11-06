@@ -10,7 +10,7 @@ sont dans `configs/labels.yaml`.
 | --- | --- | --- | --- | --- |
 | Émotions | CREMA-D (7 442 extraits, 91 acteurs, 6 émotions) | Entraînement principal | ODbL 1.0 | https://www.tensorflow.org/datasets/catalog/crema_d |
 | Émotions | RAVDESS (24 acteurs, 1 440 fichiers de parole) | Complément d'entraînement | CC BY-NC-SA 4.0 | https://zenodo.org/records/1188976 |
-| Émotions | CaFE (français canadien, 12 acteurs) | Test hors domaine en français | CC BY-NC-SA 4.0 | https://zenodo.org/record/1219621 |
+| Émotions | CaFE (français canadien, 12 acteurs) | Test hors domaine en français | CC BY-NC-SA 4.0 | https://zenodo.org/records/1478765 |
 | Émotions | Akan Cinematic Emotions (308 locuteurs) | Test hors domaine africain, sous réserve d'accès | Non précisée | https://github.com/zehuiwu/Akan-Cinematic-Emotion |
 | Événements | ESC-50 (2 000 extraits, 50 classes, 5 folds) | Entraînement et évaluation | CC BY-NC 3.0 | https://github.com/karolpiczak/esc-50 |
 | Transcription, locuteur | African Accented French, OpenSLR 57 (~22 h) | Test WER, évaluation du locuteur | Apache 2.0 | https://www.openslr.org/57/ |
@@ -32,6 +32,24 @@ manifestes ne contiennent que des métadonnées (aucun audio) et sont versionné
 
 Encodage UTF-8, séparateur virgule, colonnes toujours dans cet ordre. Une cellule vide signifie
 « valeur absente ».
+
+> **Ne jamais éditer un manifeste à la main, ni l'ouvrir et l'enregistrer dans Excel.** Les
+> manifestes sont générés par les scripts ; pour corriger une ligne, corriger le script et
+> régénérer. Excel remplace souvent la virgule par « ; » et peut renommer ou réordonner les
+> colonnes : `load_manifest` refuse alors le fichier et liste les colonnes manquantes et
+> inattendues.
+
+### Racine des jeux
+
+La colonne `path` est relative à la racine du jeu, qui vaut toujours `<datasets_dir>/<id>`, où
+`<id>` est l'identifiant du jeu dans `configs/datasets.yaml`. Le chemin complet d'un fichier est
+donné par `audio_path(row, datasets_dir)` ; ne jamais construire ce chemin à la main.
+
+- En local : `datasets_dir` vaut `data/` (par défaut), par exemple `data/esc50/audio/1-100032-A-0.wav`.
+- Sur Kaggle : chaque jeu est publié en dataset privé dont le nom est **exactement** l'id de
+  `configs/datasets.yaml` (`esc50`, `cremad`, `ravdess`, `cafe`, `openslr57`), et on définit
+  `ECHOLENS_DATASETS_DIR=/kaggle/input`. Le même manifeste donne alors
+  `/kaggle/input/esc50/audio/1-100032-A-0.wav`.
 
 | Colonne | Obligatoire | Contenu |
 | --- | --- | --- |
