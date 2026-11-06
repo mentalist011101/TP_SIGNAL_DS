@@ -37,13 +37,49 @@ Toute décision qui la contredit doit être discutée avant d'être codée.
 - Aucune ligne d'attribution dans les commits ni dans les PR : pas de `Co-Authored-By`, pas de lien
   de session, pas de mention « Generated with Claude Code ».
 
+## Code simple d'abord (règle prioritaire)
+
+Chaque membre de l'équipe doit pouvoir lire ce code ligne à ligne et l'expliquer au tableau, sans
+être développeur. La lisibilité passe avant la concision et avant la performance (sauf goulot
+mesuré). Concrètement :
+
+- **Une ligne = une opération.** Découper toute expression longue en plusieurs lignes courtes avec
+  des variables intermédiaires aux noms explicites.
+- **Interdits** : compréhensions imbriquées ou avec condition complexe, lambdas, chaînes d'appels
+  de plus de deux méthodes, ternaires imbriqués, opérateur morse (`:=`), astuces « one-liner »,
+  indexation numpy sophistiquée quand une étape intermédiaire nommée est possible.
+- **Autorisés et encouragés** : boucles `for` explicites, `if` simples, retours anticipés,
+  compréhensions de liste simples sur une ligne courte.
+- **Fonctions courtes** (30 lignes au plus) avec une seule responsabilité. Pas de classe,
+  décorateur maison, métaclasse ou générique quand une fonction suffit.
+- **Commentaires d'étape** : avant chaque bloc, un commentaire en français qui dit l'étape et sa
+  raison (`# Étape 2 : passage en dB absolus, pour qu'un silence reste un silence (R1)`).
+- **Pas de paramètre implicite** : quand on appelle une bibliothèque (librosa, torch, sklearn),
+  passer explicitement les arguments qui comptent pour la spécification.
+
+Exemple à suivre :
+
+```python
+# À éviter : tout sur une ligne, illisible à l'oral.
+stats = np.concatenate([m.mean(1), m.std(1)]) if (m := mfcc(x, cfg)).size else np.zeros(80)
+
+# À préférer : une étape par ligne, chaque variable nommée.
+coefficients = mfcc(signal, config)
+mean_per_coefficient = coefficients.mean(axis=1)
+std_per_coefficient = coefficients.std(axis=1)
+summary = np.concatenate([mean_per_coefficient, std_per_coefficient])
+```
+
+La même règle s'applique au front TypeScript : petites fonctions, variables intermédiaires
+nommées, pas de chaînes de `.map().filter().reduce()` difficiles à suivre.
+
 ## Style de code
 
 - Python 3.11, typage complet ; `mypy` strict sur `echolens.core`.
 - ruff gère lint et formatage (ligne de 100 caractères).
-- Fonctions courtes, nommées par ce qu'elles font ; une docstring en français pour toute fonction
+- Fonctions nommées par ce qu'elles font ; une docstring en français pour toute fonction
   publique, qui cite la décision de la spécification concernée quand il y en a une (« D3 », « R1 »).
-- Commenter le *pourquoi* (choix, équation, piège), pas le *quoi*.
+- Commentaires : l'étape et le *pourquoi* (choix, équation, piège), jamais une paraphrase du code.
 - Pas de nombres magiques dans le code : paramètres dans `configs/`.
 - Front : TypeScript strict, composants fonctionnels, TanStack Query pour les appels API,
   Tailwind pour le style, Prettier (sans point-virgule, guillemets simples).
@@ -63,6 +99,10 @@ make check   # ruff, mypy, pytest, oxlint, prettier, build du front
 
 Une PR = un sujet. Branches : `feat/…`, `fix/…`, `exp/…`, `docs/…`. Remplir le modèle de PR,
 lier l'issue et les exigences (EF-xx, ENF-xx) concernées.
+
+Avant d'ouvrir la PR, relire chaque fichier modifié avec la règle « Code simple d'abord » et
+découper toute ligne qu'un membre non développeur ne pourrait pas expliquer. La PR est ouverte
+par le porteur de la brique ; Luciano la relit, l'améliore si besoin et la fusionne.
 
 ## À ne jamais faire
 
