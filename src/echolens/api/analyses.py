@@ -1,6 +1,17 @@
 """Routes des analyses (S4) : import d'un audio, suivi du statut, historique, audio, suppression.
 
 Les routes ne font que traduire HTTP ↔ service : toute la logique vit dans AnalysisService.
+
+Format des erreurs (identique pour toutes les routes, voir echolens.api.errors) :
+
+    {"code": 400, "status": "Bad Request", "message": "L'audio est silencieux : …"}
+
+- « message » est toujours présent, en français, et s'affiche tel quel dans l'interface.
+- 400 : fichier refusé (format, décodage, durée, silence) ou paramètre invalide. Pour un
+  paramètre invalide, « message » reprend la première erreur trouvée et « errors » donne le
+  détail complet, par exemple {"form": {"tasks": {"1": ["Tâche inconnue : « danse »…"]}}}.
+- 404 : analyse inconnue, ou audio pas encore converti.
+- 413 : fichier plus gros que max_upload_mb.
 """
 
 from __future__ import annotations
@@ -145,19 +156,23 @@ class HistoryQuerySchema(Schema):
 
     limit = fields.Integer(
         load_default=DEFAULT_PAGE_SIZE,
-        validate=validate.Range(min=1, max=MAX_PAGE_SIZE),
+        validate=validate.Range(
+            min=1, max=MAX_PAGE_SIZE, error="limit doit être compris entre {min} et {max}."
+        ),
+        error_messages={"invalid": "limit doit être un nombre entier."},
         metadata={"description": "Nombre maximal d'analyses renvoyées."},
     )
     offset = fields.Integer(
         load_default=0,
-        validate=validate.Range(min=0),
+        validate=validate.Range(min=0, error="offset doit être positif ou nul."),
+        error_messages={"invalid": "offset doit être un nombre entier."},
         metadata={"description": "Nombre d'analyses à sauter (pagination)."},
     )
 
 
 @blp.route("")
 class Analyses(MethodView):
-    @blp.arguments(HistoryQuerySchema, location="query")
+    @blp.arguments(HistoryQuerySchema, location="query", error_status_code=VALIDATION_ERROR_STATUS)
     @blp.response(200, AnalysisSchema(many=True))
     def get(self, query: dict[str, int]) -> list[AnalysisRecord]:
         """Historique des analyses, les plus récentes d'abord."""

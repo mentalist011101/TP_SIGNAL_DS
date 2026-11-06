@@ -14,7 +14,7 @@ from pathlib import Path
 
 import numpy as np
 import soundfile as sf
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session, sessionmaker
 from werkzeug.datastructures import FileStorage
 from werkzeug.utils import secure_filename
@@ -27,6 +27,7 @@ from echolens.services.storage import AnalysisRecord, AnalysisStatus
 # Format de l'audio conservé : WAV PCM 16 bits, mono 16 kHz (D2).
 CONVERTED_AUDIO_NAME = "audio.wav"
 CONVERTED_AUDIO_SUBTYPE = "PCM_16"
+INTERRUPTED_MESSAGE = "Traitement interrompu par un redémarrage du serveur : relancez l'analyse."
 
 
 class AnalysisRejectedError(ValueError):
@@ -44,6 +45,7 @@ class AnalysisService:
         self.settings = settings
         self.session_factory = session_factory
         self.executor = ThreadPoolExecutor(max_workers=settings.analysis_workers)
+        self._fail_interrupted_analyses()
 
     def create_analysis(
         self, upload: FileStorage, tasks: list[str], profile: str
@@ -53,9 +55,11 @@ class AnalysisService:
         Lève AnalysisRejectedError (message en français) si un contrôle échoue ; dans ce cas,
         rien n'est enregistré.
         """
-        # Étape 1 : nom nettoyé et extension autorisée, avant d'écrire quoi que ce soit (S6).
-        filename = secure_filename(upload.filename or "")
-        extension = self._check_extension(filename)
+        # Étape 1 : extension lue sur le nom envoyé, avant tout nettoyage, car secure_filename
+        # efface les caractères non latins et peut emporter le nom entier ; puis nom nettoyé (S6).
+        sent_name = upload.filename or ""
+        extension = self._check_extension(sent_name)
+        filename = _clean_filename(sent_name, extension)
 
         # Étape 2 : copie sur disque, puis contrôles qui demandent de décoder l'audio (D6).
         analysis_id = str(uuid.uuid4())
@@ -118,12 +122,26 @@ class AnalysisService:
         """Chemin de l'audio converti en 16 kHz mono (audio.wav)."""
         return self.analysis_dir(analysis_id) / CONVERTED_AUDIO_NAME
 
-    def _check_extension(self, filename: str) -> str:
-        extension = Path(filename).suffix.lower().removeprefix(".")
+    def _fail_interrupted_analyses(self) -> None:
+        # Les threads ne survivent pas à un redémarrage : une analyse encore pending ou
+        # processing au démarrage ne finira jamais. On la passe en failed pour que l'interface
+        # ne l'attende pas indéfiniment.
+        unfinished = [AnalysisStatus.PENDING, AnalysisStatus.PROCESSING]
+        statement = update(AnalysisRecord).where(AnalysisRecord.status.in_(unfinished))
+        statement = statement.values(
+            status=AnalysisStatus.FAILED, error_message=INTERRUPTED_MESSAGE
+        )
+        with self.session_factory() as session:
+            session.execute(statement)
+            session.commit()
+
+    def _check_extension(self, sent_name: str) -> str:
+        suffix = Path(sent_name).suffix
+        extension = suffix.lower().removeprefix(".")
         if extension in self.settings.allowed_extensions:
             return extension
         allowed = ", ".join(self.settings.allowed_extensions)
-        shown_name = filename
+        shown_name = sent_name
         if not shown_name:
             shown_name = "fichier sans nom"
         raise AnalysisRejectedError(
@@ -165,9 +183,7 @@ class AnalysisService:
 
     def _convert_audio(self, analysis_id: str) -> float:
         # Décodage en mono 16 kHz float32 (D1, D2), puis écriture en WAV PCM 16 bits.
-        record = self.get_analysis(analysis_id)
-        extension = Path(record.original_filename).suffix.lower()
-        original = self.analysis_dir(analysis_id) / f"original{extension}"
+        original = self._original_audio_path(analysis_id)
         signal = load_audio(original, max_seconds=self.settings.max_audio_seconds)
         # Le PCM 16 bits n'accepte que [-1, 1] : on écrête les rares dépassements du décodeur.
         clipped = np.clip(signal, -1.0, 1.0)
@@ -175,6 +191,15 @@ class AnalysisService:
         sf.write(destination, clipped, TARGET_SAMPLE_RATE, subtype=CONVERTED_AUDIO_SUBTYPE)
         duration_s = signal.size / TARGET_SAMPLE_RATE
         return duration_s
+
+    def _original_audio_path(self, analysis_id: str) -> Path:
+        # L'extension est conservée dans le nom original.<ext> : on retrouve le fichier dans
+        # le dossier plutôt que de la redéduire du nom importé.
+        folder = self.analysis_dir(analysis_id)
+        matches = sorted(folder.glob("original.*"))
+        if not matches:
+            raise FileNotFoundError(f"Fichier original introuvable pour l'analyse {analysis_id}")
+        return matches[0]
 
     def _update(
         self,
@@ -193,3 +218,13 @@ class AnalysisService:
             if duration_s is not None:
                 record.duration_s = duration_s
             session.commit()
+
+
+def _clean_filename(sent_name: str, extension: str) -> str:
+    cleaned = secure_filename(sent_name)
+    # « 音声メモ.wav » devient « wav » : il ne reste plus de nom avant l'extension,
+    # on en donne un neutre.
+    cleaned_suffix = Path(cleaned).suffix.lower()
+    if cleaned_suffix != f".{extension}":
+        return f"audio.{extension}"
+    return cleaned
