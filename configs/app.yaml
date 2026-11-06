@@ -1,5 +1,9 @@
 # Paramètres d'exécution de l'application (surchargeables par ECHOLENS_<CLE> dans l'environnement).
 max_upload_mb: 100        # taille maximale d'un fichier importé (ENF-09)
 max_audio_seconds: 300    # durée maximale d'un audio importé, 5 min (D6)
+# Extensions acceptées à l'import (D6, ENF-09), en minuscules et sans le point.
+allowed_extensions: [wav, mp3, flac, ogg, webm, m4a]
+analysis_workers: 2       # analyses traitées en parallèle en arrière-plan (S2)
+run_jobs_synchronously: false  # true : traitement immédiat dans la requête (tests uniquement)
 # data_dir: var           # dossier des audios, résultats et de la base SQLite
 # database_url: ""        # vide = SQLite dans data_dir

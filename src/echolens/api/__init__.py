@@ -7,10 +7,15 @@ from typing import Any
 
 from flask import Flask, Response, abort, send_from_directory
 from flask_smorest import Api
+from werkzeug.exceptions import HTTPException
 
 from echolens import __version__
+from echolens.api.analyses import blp as analyses_blp
+from echolens.api.errors import handle_http_error
 from echolens.api.health import blp as health_blp
 from echolens.config import AppSettings, load_settings
+from echolens.services.analysis_service import AnalysisService
+from echolens.services.storage import create_session_factory
 
 
 def create_app(settings: AppSettings | None = None, **overrides: Any) -> Flask:
@@ -33,8 +38,17 @@ def create_app(settings: AppSettings | None = None, **overrides: Any) -> Flask:
     )
     app.config.update(overrides)
 
+    # Base de données et service des analyses, partagés par toutes les requêtes (S2, S3).
+    settings.data_dir.mkdir(parents=True, exist_ok=True)
+    session_factory = create_session_factory(settings.resolved_database_url())
+    app.extensions["analysis_service"] = AnalysisService(settings, session_factory)
+
     api = Api(app)
     api.register_blueprint(health_blp)
+    api.register_blueprint(analyses_blp)
+    # Enregistré après Api(app) pour remplacer le gestionnaire de flask-smorest : toute erreur
+    # porte ainsi un « message » en français (format décrit dans echolens.api.errors).
+    app.register_error_handler(HTTPException, handle_http_error)
 
     _register_frontend(app, settings.web_dist_dir)
     return app
