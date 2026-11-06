@@ -9,6 +9,7 @@ classes communes est une décision séparée (P2).
 from __future__ import annotations
 
 import csv
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Literal
 
@@ -23,6 +24,8 @@ MANIFEST_COLUMNS = [
     "gender",
     "duration_s",
     "fold",
+    "official_split",
+    "subset",
     "intensity",
     "source",
     "transcript",
@@ -42,21 +45,35 @@ class ManifestRow(BaseModel):
     speaker: str | None = None
     gender: Literal["F", "M"] | None = None
     duration_s: float = Field(gt=0)
+    # Fold officiel d'ESC-50 (1 à 5, P3).
     fold: int | None = None
+    # Découpage officiel d'origine (OpenSLR 57 : dossier speech/<split>).
+    official_split: Literal["train", "dev", "devtest", "test"] | None = None
+    # Sous-corpus d'origine (ex. « yaounde », « ca16 », « niger » pour OpenSLR 57).
+    subset: str | None = None
     # Code d'intensité d'origine, tel quel (ex. « HI » pour CREMA-D).
     intensity: str | None = None
     # Enregistrement d'origine (ex. src_file d'ESC-50) : deux lignes de même source
     # ne doivent jamais être séparées entre deux folds.
     source: str | None = None
-    # Texte prononcé, pour calculer le WER.
+    # Texte prononcé tel qu'écrit dans le jeu, sans normalisation : la normalisation
+    # (casse, ponctuation) fait partie du calcul du WER, pas du manifeste.
     transcript: str | None = None
 
 
 def load_manifest(path: Path) -> list[ManifestRow]:
-    """Lit un manifeste CSV ; une cellule vide devient None."""
+    """Lit un manifeste CSV ; une cellule vide devient None.
+
+    Lève ValueError si l'en-tête ne correspond pas exactement à MANIFEST_COLUMNS.
+    """
     rows: list[ManifestRow] = []
     with path.open(encoding="utf-8", newline="") as handle:
         reader = csv.DictReader(handle)
+        # Étape 1 : vérifier l'en-tête avant toute ligne, pour refuser un fichier modifié
+        # à la main (colonne renommée, séparateur « ; » d'Excel) avec un message clair.
+        header = reader.fieldnames
+        _check_header(header, path)
+        # Étape 2 : lire les lignes une par une.
         for record in reader:
             # Une cellule vide signifie « valeur absente » : pydantic convertit le reste
             # (texte → entier pour fold, texte → réel pour duration_s) et le valide.
@@ -86,6 +103,21 @@ def save_manifest(rows: list[ManifestRow], path: Path) -> None:
             writer.writerow(values)
 
 
+def dataset_root(dataset_id: str, datasets_dir: Path) -> Path:
+    """Renvoie le dossier racine d'un jeu : <datasets_dir>/<id du jeu>.
+
+    Sur Kaggle, datasets_dir vaut /kaggle/input et chaque jeu est un dataset privé nommé
+    exactement comme son identifiant dans configs/datasets.yaml.
+    """
+    return datasets_dir / dataset_id
+
+
+def audio_path(row: ManifestRow, datasets_dir: Path) -> Path:
+    """Renvoie le chemin complet du fichier audio d'une ligne de manifeste."""
+    root = dataset_root(row.dataset, datasets_dir)
+    return root / row.path
+
+
 def check_manifest(rows: list[ManifestRow]) -> None:
     """Vérifie la cohérence d'un manifeste ; lève ValueError au premier problème trouvé.
 
@@ -96,6 +128,32 @@ def check_manifest(rows: list[ManifestRow]) -> None:
     _check_single_dataset(rows)
     _check_unique_paths(rows)
     _check_sources_stay_in_one_fold(rows)
+
+
+def _check_header(header: Sequence[str] | None, path: Path) -> None:
+    if header is None:
+        header = []
+    header_columns = list(header)
+    if header_columns == MANIFEST_COLUMNS:
+        return
+    missing = [column for column in MANIFEST_COLUMNS if column not in header_columns]
+    unexpected = [column for column in header_columns if column not in MANIFEST_COLUMNS]
+    missing_text = _join_or_none(missing)
+    unexpected_text = _join_or_none(unexpected)
+    raise ValueError(
+        f"En-tête invalide dans {path}. "
+        f"Colonnes manquantes : {missing_text}. "
+        f"Colonnes inattendues : {unexpected_text}. "
+        f"Ordre attendu : {','.join(MANIFEST_COLUMNS)}. "
+        "Les manifestes sont générés par les scripts : ne jamais les éditer à la main "
+        "(ni dans Excel), régénérez-les."
+    )
+
+
+def _join_or_none(columns: list[str]) -> str:
+    if not columns:
+        return "aucune"
+    return ", ".join(columns)
 
 
 def _check_single_dataset(rows: list[ManifestRow]) -> None:
