@@ -23,6 +23,8 @@ MANIFEST_COLUMNS = [
     "gender",
     "duration_s",
     "fold",
+    "official_split",
+    "subset",
     "intensity",
     "source",
     "transcript",
@@ -42,13 +44,19 @@ class ManifestRow(BaseModel):
     speaker: str | None = None
     gender: Literal["F", "M"] | None = None
     duration_s: float = Field(gt=0)
+    # Fold officiel d'ESC-50 (1 à 5, P3).
     fold: int | None = None
+    # Découpage officiel d'origine (OpenSLR 57 : dossier speech/<split>).
+    official_split: Literal["train", "dev", "devtest", "test"] | None = None
+    # Sous-corpus d'origine (ex. « yaounde », « ca16 », « niger » pour OpenSLR 57).
+    subset: str | None = None
     # Code d'intensité d'origine, tel quel (ex. « HI » pour CREMA-D).
     intensity: str | None = None
     # Enregistrement d'origine (ex. src_file d'ESC-50) : deux lignes de même source
     # ne doivent jamais être séparées entre deux folds.
     source: str | None = None
-    # Texte prononcé, pour calculer le WER.
+    # Texte prononcé tel qu'écrit dans le jeu, sans normalisation : la normalisation
+    # (casse, ponctuation) fait partie du calcul du WER, pas du manifeste.
     transcript: str | None = None
 
 

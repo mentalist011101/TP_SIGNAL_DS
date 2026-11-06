@@ -22,7 +22,7 @@ datasets:
     task: emotion
     language: en
     url: https://github.com/CheyneyComputerScience/CREMA-D
-    license: à vérifier (Ly3)
+    license: ODbL 1.0
     sample_rate: 16000
     # P1 : découpage par acteur, aucun locuteur commun entre train, validation et test.
     role: entraînement principal (émotions)
@@ -52,6 +52,7 @@ datasets:
     language: fr
     url: https://www.openslr.org/57/
     license: Apache 2.0
+    # Déjà en 16 kHz mono : aucun rééchantillonnage nécessaire.
     sample_rate: 16000
     # Sert aussi à l'évaluation de l'identification du locuteur (brique locuteur).
     role: test WER (transcription) et évaluation du locuteur, jamais vu à l'entraînement

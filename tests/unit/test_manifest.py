@@ -21,20 +21,33 @@ def make_row(
     )
 
 
-def test_save_then_load_gives_identical_rows(tmp_path: Path) -> None:
+def test_round_trip_with_every_optional_column(tmp_path: Path) -> None:
+    row = ManifestRow(
+        dataset="openslr57",
+        path="speech/devtest/ca16/gabon_m_074/gabon_m_074_001.wav",
+        label="inutilisé",
+        speaker="gabon_m_074",
+        gender="M",
+        duration_s=4.2,
+        fold=3,
+        official_split="devtest",
+        subset="ca16",
+        intensity="HI",
+        source="rec-001",
+        transcript='Il a dit : « oui, bien sûr », puis "non".',
+    )
+    manifest_path = tmp_path / "manifest.csv"
+
+    save_manifest([row], manifest_path)
+    loaded = load_manifest(manifest_path)
+
+    assert loaded == [row]
+
+
+def test_round_trip_without_optional_columns(tmp_path: Path) -> None:
     rows = [
-        make_row("audio/1-100032-A-0.wav"),
-        ManifestRow(
-            dataset="cremad",
-            path="AudioWAV/1001_DFA_ANG_XX.wav",
-            label="ANG",
-            speaker="1001",
-            gender="M",
-            duration_s=2.275,
-            intensity="XX",
-            transcript='Don\'t forget a jacket, "please"',
-        ),
         ManifestRow(dataset="openslr57", path="wav/é 1.wav", duration_s=0.1),
+        ManifestRow(dataset="openslr57", path="wav/2.wav", duration_s=2.275),
     ]
     manifest_path = tmp_path / "manifest.csv"
 
@@ -48,7 +61,26 @@ def test_saved_columns_follow_fixed_order(tmp_path: Path) -> None:
     manifest_path = tmp_path / "manifest.csv"
     save_manifest([make_row("a.wav")], manifest_path)
     header = manifest_path.read_text(encoding="utf-8").splitlines()[0]
-    assert header == "dataset,path,label,speaker,gender,duration_s,fold,intensity,source,transcript"
+    expected_columns = [
+        "dataset",
+        "path",
+        "label",
+        "speaker",
+        "gender",
+        "duration_s",
+        "fold",
+        "official_split",
+        "subset",
+        "intensity",
+        "source",
+        "transcript",
+    ]
+    assert header == ",".join(expected_columns)
+
+
+def test_unknown_official_split_is_rejected() -> None:
+    with pytest.raises(ValidationError):
+        ManifestRow(dataset="openslr57", path="a.wav", duration_s=1.0, official_split="valid")
 
 
 def test_zero_duration_is_rejected() -> None:
