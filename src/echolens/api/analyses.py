@@ -1,4 +1,4 @@
-"""Routes des analyses (S4) : import d'un audio, suivi du statut, historique, audio, suppression.
+"""Routes des analyses (S4) : import, statut, historique, audio, spectrogramme, suppression.
 
 Les routes ne font que traduire HTTP ↔ service : toute la logique vit dans AnalysisService.
 
@@ -10,7 +10,7 @@ Format des erreurs (identique pour toutes les routes, voir echolens.api.errors) 
 - 400 : fichier refusé (format, décodage, durée, silence) ou paramètre invalide. Pour un
   paramètre invalide, « message » reprend la première erreur trouvée et « errors » donne le
   détail complet, par exemple {"form": {"tasks": {"1": ["Tâche inconnue : « danse »…"]}}}.
-- 404 : analyse inconnue, ou audio pas encore converti.
+- 404 : analyse inconnue, ou audio ou spectrogramme pas encore disponible.
 - 413 : fichier plus gros que max_upload_mb.
 """
 
@@ -28,6 +28,7 @@ from marshmallow import Schema, fields, validate
 # abort de webargs (republié par flask-smorest) : typé NoReturn, ce qui satisfait mypy.
 from webargs.flaskparser import abort
 
+from echolens.core.features import FeatureConfig
 from echolens.core.models.registry import Profile, Task
 from echolens.services.analysis_service import (
     AnalysisNotFoundError,
@@ -48,6 +49,41 @@ DEFAULT_PAGE_SIZE = 20
 MAX_PAGE_SIZE = 100
 # Les erreurs de validation des paramètres renvoient 400, comme les contrôles du fichier.
 VALIDATION_ERROR_STATUS = 400
+
+
+class SpectrogramInfoSchema(Schema):
+    """Ce qu'il faut au front pour tracer les axes et la légende de l'image (EF-04, U6)."""
+
+    n_mels = fields.Integer(
+        metadata={"description": "Nombre de bandes Mel : hauteur de l'image en pixels (R2)."}
+    )
+    f_min_hz = fields.Float(
+        metadata={"description": "Fréquence de la bande du bas de l'image, en Hz."}
+    )
+    f_max_hz = fields.Float(
+        metadata={"description": "Fréquence de la bande du haut de l'image, en Hz."}
+    )
+    frame_step_s = fields.Float(
+        metadata={
+            "description": "Durée d'une colonne de pixels, en secondes (hop_length / "
+            "sample_rate, soit 0,01 s) : axe du temps."
+        }
+    )
+    db_min = fields.Float(
+        metadata={
+            "description": "Niveau en dB de la couleur la plus sombre (bas de la légende) ; "
+            "tout ce qui est plus faible a cette couleur."
+        }
+    )
+    db_max = fields.Float(
+        metadata={
+            "description": "Niveau en dB de la couleur la plus claire (haut de la légende) ; "
+            "tout ce qui est plus fort a cette couleur."
+        }
+    )
+    colormap = fields.String(
+        metadata={"description": "Nom de la palette matplotlib utilisée (par exemple magma)."}
+    )
 
 
 class AnalysisSchema(Schema):
@@ -101,6 +137,30 @@ class AnalysisSchema(Schema):
             "d'onde ; null tant que status ≠ done.",
         },
     )
+    spectrogram_url = fields.Method(
+        "get_spectrogram_url",
+        metadata={
+            "type": "string",
+            "nullable": True,
+            "description": "URL de l'image PNG du spectrogramme log-Mel (graves en bas) ; "
+            "null tant que status ≠ done.",
+        },
+    )
+    spectrogram = fields.Nested(
+        SpectrogramInfoSchema,
+        allow_none=True,
+        metadata={
+            "description": "Axes et échelle de couleurs de l'image du spectrogramme ; "
+            "null tant que status ≠ done."
+        },
+    )
+
+    def get_attribute(self, obj: Any, attr: str, default: Any) -> Any:
+        # marshmallow lit chaque champ sur l'objet avec cette méthode. AnalysisRecord n'a pas
+        # de champ « spectrogram » : ses informations viennent de features.yaml.
+        if attr == "spectrogram":
+            return _spectrogram_info(obj)
+        return super().get_attribute(obj, attr, default)
 
     def get_created_at(self, record: AnalysisRecord) -> str:
         created_at = record.created_at
@@ -114,6 +174,11 @@ class AnalysisSchema(Schema):
         if record.status != AnalysisStatus.DONE:
             return None
         return url_for("analyses.AnalysisAudio", analysis_id=record.id)
+
+    def get_spectrogram_url(self, record: AnalysisRecord) -> str | None:
+        if record.status != AnalysisStatus.DONE:
+            return None
+        return url_for("analyses.AnalysisSpectrogram", analysis_id=record.id)
 
 
 class AnalysisFormSchema(Schema):
@@ -231,6 +296,45 @@ class AnalysisAudio(MethodView):
         return send_file(path, mimetype="audio/wav")
 
 
+@blp.route("/<analysis_id>/spectrogram")
+class AnalysisSpectrogram(MethodView):
+    @blp.response(200, description="Image PNG du spectrogramme log-Mel.", content_type="image/png")
+    @blp.alt_response(404, description="Analyse introuvable ou spectrogramme pas encore prêt.")
+    def get(self, analysis_id: str) -> Response:
+        """Spectrogramme log-Mel en PNG : une colonne par trame de 10 ms, graves en bas (EF-04)."""
+        service = _service()
+        try:
+            service.get_analysis(analysis_id)
+        except AnalysisNotFoundError as error:
+            abort(404, message=str(error))
+        # Image absente : analyse pas encore terminée, ou importée avant l'ajout du spectrogramme.
+        path = service.spectrogram_path(analysis_id)
+        if not path.is_file():
+            abort(
+                404,
+                message="Spectrogramme indisponible : l'analyse n'est pas terminée, "
+                "ou elle a été importée avant l'ajout du spectrogramme.",
+            )
+        return send_file(path, mimetype="image/png")
+
+
 def _service() -> AnalysisService:
     service: AnalysisService = current_app.extensions["analysis_service"]
     return service
+
+
+def _spectrogram_info(record: AnalysisRecord) -> dict[str, Any] | None:
+    if record.status != AnalysisStatus.DONE:
+        return None
+    config: FeatureConfig = _service().feature_config
+    # Durée d'une colonne de pixels : un pas de STFT (10 ms).
+    frame_step_s = config.hop_length / config.sample_rate
+    return {
+        "n_mels": config.n_mels,
+        "f_min_hz": config.f_min,
+        "f_max_hz": config.f_max,
+        "frame_step_s": frame_step_s,
+        "db_min": config.display_db_min,
+        "db_max": config.display_db_max,
+        "colormap": config.display_colormap,
+    }

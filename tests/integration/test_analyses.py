@@ -2,6 +2,7 @@ import io
 from pathlib import Path
 from typing import Any
 
+import matplotlib.image
 import numpy as np
 import pytest
 import soundfile as sf
@@ -242,3 +243,65 @@ def test_analysis_routes_are_documented(client: FlaskClient) -> None:
     assert "/api/v1/analyses" in paths
     assert "/api/v1/analyses/{analysis_id}" in paths
     assert "/api/v1/analyses/{analysis_id}/audio" in paths
+    assert "/api/v1/analyses/{analysis_id}/spectrogram" in paths
+
+
+@pytest.mark.ffmpeg
+def test_spectrogram_png_is_served(client: FlaskClient) -> None:
+    analysis = post_audio(client, stereo_sine_wav(seconds=1.0)).get_json()
+
+    response = client.get(analysis["spectrogram_url"])
+    assert response.status_code == 200
+    assert response.mimetype == "image/png"
+    image = matplotlib.image.imread(io.BytesIO(response.data), format="png")
+    # 1 s à 16 kHz avec un pas de 160 échantillons et center=True : 1 + 16000 // 160 = 101.
+    height = image.shape[0]
+    width = image.shape[1]
+    assert width == 101
+    assert height == 64
+
+
+@pytest.mark.ffmpeg
+def test_analysis_describes_its_spectrogram(client: FlaskClient) -> None:
+    analysis = post_audio(client, stereo_sine_wav(seconds=1.0)).get_json()
+
+    assert analysis["spectrogram_url"] == f"{ANALYSES_URL}/{analysis['id']}/spectrogram"
+    assert analysis["spectrogram"] == {
+        "n_mels": 64,
+        "f_min_hz": 0.0,
+        "f_max_hz": 8000.0,
+        "frame_step_s": 0.01,
+        "db_min": -80.0,
+        "db_max": 40.0,
+        "colormap": "magma",
+    }
+
+
+def test_unknown_analysis_spectrogram_is_404(client: FlaskClient) -> None:
+    response = client.get(f"{ANALYSES_URL}/inconnue/spectrogram")
+    assert response.status_code == 404
+    assert "introuvable" in response.get_json()["message"]
+
+
+@pytest.mark.ffmpeg
+def test_missing_spectrogram_image_is_404(client: FlaskClient, tmp_path: Path) -> None:
+    # Cas d'une analyse importée avant l'ajout du spectrogramme : terminée, mais sans image.
+    analysis = post_audio(client, stereo_sine_wav(seconds=1.0)).get_json()
+    image_path = tmp_path / "analyses" / analysis["id"] / "spectrogram.png"
+    image_path.unlink()
+
+    response = client.get(analysis["spectrogram_url"])
+    assert response.status_code == 404
+    assert "Spectrogramme indisponible" in response.get_json()["message"]
+
+
+@pytest.mark.ffmpeg
+def test_too_short_audio_fails_with_french_message(client: FlaskClient) -> None:
+    # 10 ms : assez de son pour passer le contrôle de silence, moins qu'une trame de 25 ms.
+    analysis = post_audio(client, stereo_sine_wav(seconds=0.01)).get_json()
+
+    assert analysis["status"] == "failed"
+    assert "trop court" in analysis["error_message"]
+    assert "25 ms" in analysis["error_message"]
+    assert analysis["spectrogram_url"] is None
+    assert analysis["spectrogram"] is None
