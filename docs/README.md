@@ -2,7 +2,8 @@
 
 | Document | Contenu |
 | --- | --- |
-| Spécification technique | Document partagé de l'équipe : besoin, exigences EF/ENF, 8 briques, protocole, planning, risques. Lien fourni par Luciano. |
+| [specification.md](specification.md) | Référence technique du code : exigences EF/ENF et toutes les décisions numérotées (D, R, P, S, U, I, E, H), avec leur journal des changements |
+| Spécification complète | Document partagé de l'équipe : contexte, organisation, planning, risques. Lien fourni par Luciano. |
 | [datasets.md](datasets.md) | Jeux de données, rôle, licence, procédure d'obtention |
 | [adr/](adr/) | Décisions d'architecture (une par fichier, numérotées) |
 | [uml/](uml/) | Diagrammes UML : séquence du flux micro, composants, déploiement ; MCD de l'historique |

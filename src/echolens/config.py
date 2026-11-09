@@ -23,7 +23,15 @@ class AppSettings(BaseModel):
 
     max_upload_mb: int = Field(default=100, gt=0)
     max_audio_seconds: float = Field(default=300.0, gt=0)
+    allowed_extensions: list[str] = Field(
+        default=["wav", "mp3", "flac", "ogg", "webm", "m4a"], min_length=1
+    )
+    analysis_workers: int = Field(default=2, gt=0)
+    # Vrai dans les tests : le traitement s'exécute dans la requête, sans thread.
+    run_jobs_synchronously: bool = False
     data_dir: Path = REPO_ROOT / "var"
+    # Racine des jeux de données ; sur Kaggle : ECHOLENS_DATASETS_DIR=/kaggle/input/...
+    datasets_dir: Path = REPO_ROOT / "data"
     database_url: str = ""
     web_dist_dir: Path = REPO_ROOT / "web" / "dist"
     registry_path: Path = CONFIG_DIR / "registry.yaml"

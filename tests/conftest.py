@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import shutil
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -13,6 +14,18 @@ from flask.testing import FlaskClient
 
 from echolens.api import create_app
 from echolens.config import AppSettings
+
+FFMPEG_SKIP_REASON = "ffmpeg absent de cette machine : test sauté (la CI l'installe)"
+
+
+def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
+    """Saute les tests marqués « ffmpeg » quand ffmpeg n'est pas installé (D1)."""
+    if shutil.which("ffmpeg") is not None:
+        return
+    skip_marker = pytest.mark.skip(reason=FFMPEG_SKIP_REASON)
+    for item in items:
+        if "ffmpeg" in item.keywords:
+            item.add_marker(skip_marker)
 
 
 @pytest.fixture
@@ -35,7 +48,9 @@ def stereo_wav_44k(tmp_path: Path) -> Path:
 
 @pytest.fixture
 def app(tmp_path: Path) -> Iterator[Flask]:
-    settings = AppSettings(data_dir=tmp_path, web_dist_dir=tmp_path / "dist")
+    settings = AppSettings(
+        data_dir=tmp_path, web_dist_dir=tmp_path / "dist", run_jobs_synchronously=True
+    )
     yield create_app(settings, TESTING=True)
 
 

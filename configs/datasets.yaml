@@ -1,0 +1,60 @@
+# Jeux de données du projet (voir docs/datasets.md et la décision P2).
+# Une entrée par jeu ; l'identifiant est celui de la colonne « dataset » des manifestes.
+# Champs :
+#   task        : emotion | sound_event | transcription | speaker (tâche principale du jeu)
+#   language    : code ISO 639-1 de la langue parlée, null si le jeu ne contient pas de parole
+#   sample_rate : fréquence d'échantillonnage d'origine en Hz, null si inconnue
+#                 (tout est rééchantillonné à 16 kHz au chargement, D2)
+#   role        : rôle dans le protocole d'évaluation
+datasets:
+  - id: esc50
+    name: "ESC-50: Dataset for Environmental Sound Classification"
+    task: sound_event
+    language: null
+    url: https://github.com/karolpiczak/ESC-50
+    license: CC BY-NC 3.0
+    sample_rate: 44100
+    # P3 : validation croisée sur les 5 folds officiels, jamais remélangés.
+    role: entraînement et évaluation (validation croisée sur les 5 folds officiels, P3)
+
+  - id: cremad
+    name: "CREMA-D: Crowd-sourced Emotional Multimodal Actors Dataset"
+    task: emotion
+    language: en
+    url: https://github.com/CheyneyComputerScience/CREMA-D
+    license: ODbL 1.0
+    sample_rate: 16000
+    # P1 : découpage par acteur, aucun locuteur commun entre train, validation et test.
+    role: entraînement principal (émotions)
+
+  - id: ravdess
+    name: "RAVDESS: Ryerson Audio-Visual Database of Emotional Speech and Song"
+    task: emotion
+    language: en
+    url: https://zenodo.org/records/1188976
+    license: CC BY-NC-SA 4.0
+    sample_rate: 48000
+    role: complément d'entraînement (émotions)
+
+  - id: cafe
+    name: "CaFE: Canadian French Emotional speech dataset"
+    task: emotion
+    language: fr
+    # Version réellement téléchargée. La version 1.0 (zenodo.org/record/1219621) est obsolète :
+    # ne pas l'utiliser.
+    url: https://zenodo.org/records/1478765
+    license: CC BY-NC-SA 4.0
+    # Le jeu est distribué en deux versions (48 kHz et 192 kHz) : on utilise la version 48 kHz.
+    sample_rate: 48000
+    role: test hors domaine en français (émotions), jamais vu à l'entraînement
+
+  - id: openslr57
+    name: "African Accented French (OpenSLR 57)"
+    task: transcription
+    language: fr
+    url: https://www.openslr.org/57/
+    license: Apache 2.0
+    # Déjà en 16 kHz mono : aucun rééchantillonnage nécessaire.
+    sample_rate: 16000
+    # Sert aussi à l'évaluation de l'identification du locuteur (brique locuteur).
+    role: test WER (transcription) et évaluation du locuteur, jamais vu à l'entraînement
