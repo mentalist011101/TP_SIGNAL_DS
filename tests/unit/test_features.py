@@ -3,7 +3,7 @@ import numpy as np
 import pytest
 
 from echolens.config import CONFIG_DIR
-from echolens.core.features import FeatureConfig, log_mel_spectrogram, mfcc
+from echolens.core.features import FeatureConfig, log_mel_spectrogram, mel_axis_position, mfcc
 
 # 1 s à 16 kHz, pas de 160, center=True : 1 + 16000 // 160 = 101 trames.
 EXPECTED_FRAMES = 101
@@ -118,3 +118,24 @@ def test_display_range_comes_from_yaml(config: FeatureConfig) -> None:
 def test_empty_or_inverted_display_range_is_rejected(db_min: float, db_max: float) -> None:
     with pytest.raises(ValueError, match="display_db_min"):
         FeatureConfig(display_db_min=db_min, display_db_max=db_max)
+
+
+def test_mel_axis_ends_are_f_min_and_f_max(config: FeatureConfig) -> None:
+    assert mel_axis_position(config.f_min, config) == pytest.approx(0.0)
+    assert mel_axis_position(config.f_max, config) == pytest.approx(1.0)
+
+
+@pytest.mark.parametrize(("frequency_hz", "expected"), [(1000.0, 0.35), (4000.0, 0.76)])
+def test_mel_axis_is_not_linear_in_hz(
+    frequency_hz: float, expected: float, config: FeatureConfig
+) -> None:
+    # En Hz, 1 kHz serait à 0,125 et 4 kHz à 0,5 : l'échelle Mel dilate les graves.
+    assert mel_axis_position(frequency_hz, config) == pytest.approx(expected, abs=0.01)
+
+
+def test_mel_axis_position_increases_with_frequency(config: FeatureConfig) -> None:
+    positions = []
+    for frequency_hz in config.display_frequency_ticks_hz:
+        positions.append(mel_axis_position(frequency_hz, config))
+    assert positions == sorted(positions)
+    assert len(set(positions)) == len(positions)

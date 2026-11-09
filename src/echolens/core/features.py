@@ -43,6 +43,7 @@ class FeatureConfig(BaseModel):
     display_db_min: float = -80.0
     display_db_max: float = 40.0
     display_colormap: str = "magma"
+    display_frequency_ticks_hz: tuple[float, ...] = (250.0, 500.0, 1000.0, 2000.0, 4000.0, 8000.0)
 
     @model_validator(mode="after")
     def check_display_range(self) -> FeatureConfig:
@@ -147,6 +148,28 @@ def mfcc(signal: FloatArray, config: FeatureConfig, with_deltas: bool = True) ->
     # Étape 3 : empilement c, Δ, ΔΔ, soit 3 × n_mfcc valeurs par trame.
     stacked = np.concatenate([coefficients, delta, delta2], axis=0)
     return np.asarray(stacked, dtype=np.float32)
+
+
+def mel_axis_position(frequency_hz: float, config: FeatureConfig) -> float:
+    """Hauteur relative d'une fréquence sur l'axe vertical du spectrogramme (R2).
+
+    0 en bas (f_min), 1 en haut (f_max). Les n_mels bandes sont réparties régulièrement sur
+    l'échelle Mel HTK, pas en Hz : la position est donc linéaire en Mel. Exemple avec
+    0–8 kHz : 1 kHz est à 0,35 et 4 kHz à 0,76 de la hauteur, et non à 0,125 et 0,5.
+
+    Approximation de moins d'un pixel : chaque ligne de l'image correspond au centre d'une
+    bande, et ces centres sont décalés d'au plus un demi-pixel de cette échelle continue.
+    """
+    # Étape 1 : passage des trois fréquences en Mel, avec la même formule HTK que le banc de
+    # filtres (m = 2595·log10(1 + f/700)).
+    mel_min = float(librosa.hz_to_mel(config.f_min, htk=True))
+    mel_max = float(librosa.hz_to_mel(config.f_max, htk=True))
+    mel_value = float(librosa.hz_to_mel(frequency_hz, htk=True))
+
+    # Étape 2 : normalisation entre le bas et le haut de l'axe.
+    mel_range = mel_max - mel_min
+    position = (mel_value - mel_min) / mel_range
+    return position
 
 
 def _check_signal(signal: FloatArray, config: FeatureConfig) -> None:

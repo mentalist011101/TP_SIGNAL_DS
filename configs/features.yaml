@@ -26,3 +26,7 @@ delta_width: 9       # R3 : fenêtre de régression des deltas (impair, en trame
 display_db_min: -80.0
 display_db_max: 40.0
 display_colormap: magma   # palette sombre → claire, lisible aussi en niveaux de gris
+# Graduations de l'axe des fréquences de l'image, en Hz. Les 64 bandes sont réparties
+# régulièrement en Mel (R2), pas en Hz : 4 kHz est à 76 % de la hauteur, pas au milieu.
+# L'API donne la position de chaque graduation (core.features.mel_axis_position).
+display_frequency_ticks_hz: [250, 500, 1000, 2000, 4000, 8000]

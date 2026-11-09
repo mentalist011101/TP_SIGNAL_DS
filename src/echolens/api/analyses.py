@@ -28,7 +28,7 @@ from marshmallow import Schema, fields, validate
 # abort de webargs (republié par flask-smorest) : typé NoReturn, ce qui satisfait mypy.
 from webargs.flaskparser import abort
 
-from echolens.core.features import FeatureConfig
+from echolens.core.features import FeatureConfig, mel_axis_position
 from echolens.core.models.registry import Profile, Task
 from echolens.services.analysis_service import (
     AnalysisNotFoundError,
@@ -51,6 +51,15 @@ MAX_PAGE_SIZE = 100
 VALIDATION_ERROR_STATUS = 400
 
 
+class FrequencyTickSchema(Schema):
+    """Une graduation de l'axe des fréquences de l'image."""
+
+    hz = fields.Float(metadata={"description": "Fréquence de la graduation, en Hz."})
+    position = fields.Float(
+        metadata={"description": "Hauteur relative depuis le bas de l'image : 0 en bas, 1 en haut."}
+    )
+
+
 class SpectrogramInfoSchema(Schema):
     """Ce qu'il faut au front pour tracer les axes et la légende de l'image (EF-04, U6)."""
 
@@ -58,10 +67,24 @@ class SpectrogramInfoSchema(Schema):
         metadata={"description": "Nombre de bandes Mel : hauteur de l'image en pixels (R2)."}
     )
     f_min_hz = fields.Float(
-        metadata={"description": "Fréquence de la bande du bas de l'image, en Hz."}
+        metadata={
+            "description": "Limite basse du banc de filtres Mel, en Hz (bas de l'axe). "
+            "Ce n'est pas la fréquence centrale d'une bande."
+        }
     )
     f_max_hz = fields.Float(
-        metadata={"description": "Fréquence de la bande du haut de l'image, en Hz."}
+        metadata={
+            "description": "Limite haute du banc de filtres Mel, en Hz (haut de l'axe). "
+            "Ce n'est pas la fréquence centrale d'une bande."
+        }
+    )
+    frequency_ticks = fields.List(
+        fields.Nested(FrequencyTickSchema),
+        metadata={
+            "description": "Graduations de l'axe des fréquences. position = hauteur relative "
+            "depuis le bas ; l'axe suit l'échelle Mel, ne pas interpoler linéairement entre "
+            "f_min_hz et f_max_hz."
+        },
     )
     frame_step_s = fields.Float(
         metadata={
@@ -327,12 +350,18 @@ def _spectrogram_info(record: AnalysisRecord) -> dict[str, Any] | None:
     if record.status != AnalysisStatus.DONE:
         return None
     config: FeatureConfig = _service().feature_config
+    # Graduations placées sur l'échelle Mel de l'image (R2), une par fréquence de features.yaml.
+    frequency_ticks = []
+    for tick_hz in config.display_frequency_ticks_hz:
+        position = mel_axis_position(tick_hz, config)
+        frequency_ticks.append({"hz": tick_hz, "position": position})
     # Durée d'une colonne de pixels : un pas de STFT (10 ms).
     frame_step_s = config.hop_length / config.sample_rate
     return {
         "n_mels": config.n_mels,
         "f_min_hz": config.f_min,
         "f_max_hz": config.f_max,
+        "frequency_ticks": frequency_ticks,
         "frame_step_s": frame_step_s,
         "db_min": config.display_db_min,
         "db_max": config.display_db_max,

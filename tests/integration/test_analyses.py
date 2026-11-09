@@ -266,15 +266,22 @@ def test_analysis_describes_its_spectrogram(client: FlaskClient) -> None:
     analysis = post_audio(client, stereo_sine_wav(seconds=1.0)).get_json()
 
     assert analysis["spectrogram_url"] == f"{ANALYSES_URL}/{analysis['id']}/spectrogram"
-    assert analysis["spectrogram"] == {
-        "n_mels": 64,
-        "f_min_hz": 0.0,
-        "f_max_hz": 8000.0,
-        "frame_step_s": 0.01,
-        "db_min": -80.0,
-        "db_max": 40.0,
-        "colormap": "magma",
-    }
+    spectrogram = analysis["spectrogram"]
+    assert spectrogram["n_mels"] == 64
+    assert spectrogram["f_min_hz"] == 0.0
+    assert spectrogram["f_max_hz"] == 8000.0
+    assert spectrogram["frame_step_s"] == 0.01
+    assert spectrogram["db_min"] == -80.0
+    assert spectrogram["db_max"] == 40.0
+    assert spectrogram["colormap"] == "magma"
+
+    # Graduations présentes, croissantes en Hz comme en hauteur, de 250 Hz à 8 kHz (en haut).
+    ticks = spectrogram["frequency_ticks"]
+    tick_hz = [tick["hz"] for tick in ticks]
+    tick_positions = [tick["position"] for tick in ticks]
+    assert tick_hz == [250.0, 500.0, 1000.0, 2000.0, 4000.0, 8000.0]
+    assert tick_positions == sorted(tick_positions)
+    assert tick_positions[-1] == pytest.approx(1.0)
 
 
 def test_unknown_analysis_spectrogram_is_404(client: FlaskClient) -> None:
