@@ -36,13 +36,20 @@ class FeatureConfig(BaseModel):
     f_min: float = Field(default=0.0, ge=0)
     f_max: float = Field(default=8_000.0, gt=0)
     n_mfcc: int = Field(default=40, gt=0)
-    top_db: float = Field(default=80.0, gt=0)
+    db_reference: float = Field(default=1.0, gt=0)
+    db_amin: float = Field(default=1e-10, gt=0)
     delta_width: int = Field(default=9, ge=3)
 
     @property
     def frequency_resolution_hz(self) -> float:
         """Résolution fréquentielle Δf = fs / n_fft (40 Hz avec les valeurs par défaut)."""
         return self.sample_rate / self.n_fft
+
+    @property
+    def db_floor(self) -> float:
+        """Plancher du log-Mel en dB : 10·log10(amin / ref), soit −100 dB par défaut (R2)."""
+        ratio = self.db_amin / self.db_reference
+        return float(10.0 * np.log10(ratio))
 
     @classmethod
     def from_yaml(cls, path: Path) -> FeatureConfig:
@@ -51,19 +58,20 @@ class FeatureConfig(BaseModel):
 
 
 def log_mel_spectrogram(signal: FloatArray, config: FeatureConfig) -> FloatArray:
-    """Spectrogramme log-Mel en dB, de forme (n_mels, n_frames) (décisions R1, R2).
+    """Spectrogramme log-Mel en dB absolus, de forme (n_mels, n_frames) (décisions R1, R2).
 
     R1 : STFT à fenêtre de Hann de 25 ms (n_fft) et pas de 10 ms (hop_length), spectre de
-    puissance |X|^power. R2 : banc de n_mels filtres triangulaires sur l'échelle Mel entre
-    f_min et f_max, puis passage en dB relatif au maximum du signal, plancher à -top_db.
+    puissance |X|^power. R2 : banc de n_mels filtres triangulaires sur l'échelle Mel HTK entre
+    f_min et f_max, puis passage en dB absolus avec un plancher fixe (−100 dB).
 
-    Lève ValueError si le signal n'est pas un vecteur mono non vide.
+    Lève ValueError si le signal n'est pas mono, est vide ou dure moins d'une trame.
     """
-    _check_signal(signal)
+    _check_signal(signal, config)
+
+    # Étape 1 : STFT puis banc de filtres Mel (R1, R2).
     # htk=True et norm=None : la spécification définit l'échelle Mel par la formule HTK
     # m = 2595·log10(1 + f/700) et des filtres triangulaires de hauteur 1. Les valeurs par
-    # défaut de librosa (htk=False, norm="slaney") suivent la convention Slaney : échelle
-    # linéaire sous 1 kHz et filtres normalisés en aire.
+    # défaut de librosa (htk=False, norm="slaney") suivent une autre convention.
     mel_power = librosa.feature.melspectrogram(
         y=signal,
         sr=config.sample_rate,
@@ -80,7 +88,15 @@ def log_mel_spectrogram(signal: FloatArray, config: FeatureConfig) -> FloatArray
         htk=True,
         norm=None,
     )
-    log_mel = librosa.power_to_db(mel_power, ref=np.max, amin=1e-10, top_db=config.top_db)
+
+    # Étape 2 : passage en dB absolus (R2). ref fixe et top_db=None : un silence vaut −100 dB
+    # et un même son garde les mêmes valeurs quel que soit ce qui l'entoure dans l'extrait.
+    log_mel = librosa.power_to_db(
+        mel_power,
+        ref=config.db_reference,
+        amin=config.db_amin,
+        top_db=None,
+    )
     return np.asarray(log_mel, dtype=np.float32)
 
 
@@ -91,8 +107,9 @@ def mfcc(signal: FloatArray, config: FeatureConfig, with_deltas: bool = True) ->
     coefficients. Les deltas sont des régressions locales sur delta_width trames.
     Forme : (n_mfcc, n_frames), ou (3·n_mfcc, n_frames) avec les deltas, empilés c, Δ, ΔΔ.
 
-    Lève ValueError si le signal n'est pas un vecteur mono non vide.
+    Lève ValueError si le signal n'est pas mono, est vide, ou est trop court pour les deltas.
     """
+    # Étape 1 : log-Mel, puis DCT-II orthonormée pour décorréler les bandes (R3).
     log_mel = log_mel_spectrogram(signal, config)
     coefficients = librosa.feature.mfcc(
         S=log_mel,
@@ -103,17 +120,38 @@ def mfcc(signal: FloatArray, config: FeatureConfig, with_deltas: bool = True) ->
     )
     if not with_deltas:
         return np.asarray(coefficients, dtype=np.float32)
+
+    # Étape 2 : deltas sur delta_width trames ; il faut au moins autant de trames que la fenêtre.
+    _check_enough_frames_for_deltas(coefficients.shape[1], config)
     delta = librosa.feature.delta(
         coefficients, width=config.delta_width, order=1, axis=-1, mode="interp"
     )
     delta2 = librosa.feature.delta(
         coefficients, width=config.delta_width, order=2, axis=-1, mode="interp"
     )
-    return np.concatenate([coefficients, delta, delta2], axis=0).astype(np.float32)
+
+    # Étape 3 : empilement c, Δ, ΔΔ, soit 3 × n_mfcc valeurs par trame.
+    stacked = np.concatenate([coefficients, delta, delta2], axis=0)
+    return np.asarray(stacked, dtype=np.float32)
 
 
-def _check_signal(signal: FloatArray) -> None:
+def _check_signal(signal: FloatArray, config: FeatureConfig) -> None:
+    """Vérifie que le signal est mono et dure au moins une trame (n_fft échantillons)."""
     if signal.ndim != 1:
         raise ValueError(f"Le signal doit être mono (1 dimension), reçu {signal.ndim} dimensions")
     if signal.size == 0:
         raise ValueError("Le signal est vide")
+    if signal.size < config.n_fft:
+        minimum_ms = 1000 * config.n_fft / config.sample_rate
+        raise ValueError(f"Le signal est trop court : il faut au moins {minimum_ms:.0f} ms")
+
+
+def _check_enough_frames_for_deltas(n_frames: int, config: FeatureConfig) -> None:
+    """Vérifie qu'il y a au moins delta_width trames, sinon les deltas sont incalculables."""
+    if n_frames >= config.delta_width:
+        return
+    minimum_samples = (config.delta_width - 1) * config.hop_length
+    minimum_ms = 1000 * minimum_samples / config.sample_rate
+    raise ValueError(
+        f"Le signal est trop court pour les deltas : il faut au moins {minimum_ms:.0f} ms"
+    )

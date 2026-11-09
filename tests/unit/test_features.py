@@ -53,9 +53,22 @@ def test_features_are_deterministic(sine_wave: np.ndarray, config: FeatureConfig
     np.testing.assert_array_equal(mfcc(sine_wave, config), mfcc(sine_wave, config))
 
 
-def test_log_mel_of_silence_is_finite(config: FeatureConfig) -> None:
-    out = log_mel_spectrogram(np.zeros(16_000, dtype=np.float32), config)
-    assert np.all(np.isfinite(out))
+def test_log_mel_of_silence_is_the_fixed_floor(config: FeatureConfig) -> None:
+    # R2 : un silence vaut −100 dB partout, et non 0 dB comme avec des dB relatifs au maximum.
+    silence = np.zeros(16_000, dtype=np.float32)
+    out = log_mel_spectrogram(silence, config)
+    assert config.db_floor == pytest.approx(-100.0)
+    np.testing.assert_allclose(out, config.db_floor)
+
+
+def test_log_mel_does_not_depend_on_context(sine_wave: np.ndarray, config: FeatureConfig) -> None:
+    # R2 : un même son garde ses valeurs, seul ou suivi d'un son 100 fois plus fort.
+    loud_sound = 100.0 * sine_wave
+    with_loud_neighbour = np.concatenate([sine_wave, loud_sound])
+    alone = log_mel_spectrogram(sine_wave, config)
+    in_context = log_mel_spectrogram(with_loud_neighbour, config)
+    # On compare les 90 premières trames, dont la fenêtre ne touche pas le son fort.
+    np.testing.assert_allclose(alone[:, :90], in_context[:, :90], atol=1e-3)
 
 
 def test_deltas_of_stationary_sine_vanish(sine_wave: np.ndarray, config: FeatureConfig) -> None:
@@ -77,3 +90,19 @@ def test_invalid_signal_raises(signal: np.ndarray, config: FeatureConfig) -> Non
         log_mel_spectrogram(signal, config)
     with pytest.raises(ValueError):
         mfcc(signal, config)
+
+
+def test_signal_shorter_than_one_frame_raises(config: FeatureConfig) -> None:
+    # 100 échantillons, soit 6 ms : moins qu'une trame de 25 ms.
+    too_short = np.zeros(100, dtype=np.float32)
+    with pytest.raises(ValueError, match="trop court"):
+        log_mel_spectrogram(too_short, config)
+
+
+def test_signal_too_short_for_deltas_raises(config: FeatureConfig) -> None:
+    # 1 000 échantillons, soit 62 ms : 7 trames, moins que les 9 de la fenêtre des deltas.
+    short_signal = np.ones(1_000, dtype=np.float32)
+    without_deltas = mfcc(short_signal, config, with_deltas=False)
+    assert without_deltas.shape == (config.n_mfcc, 7)
+    with pytest.raises(ValueError, match="80 ms"):
+        mfcc(short_signal, config)

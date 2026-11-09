@@ -11,5 +11,6 @@ n_mels: 64           # R2
 f_min: 0.0
 f_max: 8000.0        # fréquence de Nyquist à 16 kHz
 n_mfcc: 40           # R3
-top_db: 80.0         # plancher dynamique du log-Mel
+db_reference: 1.0    # R2 : dB absolus (0 dB = puissance 1), jamais relatifs au maximum
+db_amin: 1.0e-10     # R2 : plancher fixe à 10·log10(1e-10) = −100 dB
 delta_width: 9       # R3 : fenêtre de régression des deltas (impair, en trames)
