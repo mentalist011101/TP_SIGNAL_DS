@@ -1,0 +1,19 @@
+# Référence classique MFCC + SVM sur ESC-50 (décisions P3, P4, P5).
+# Lu par echolens.training.esc50_svm.SvmConfig.
+
+# Noyau gaussien (RBF) : frontières de décision non linéaires entre les 50 classes (P5).
+kernel: rbf
+# Largeur du noyau : « scale » = 1 / (nombre de features × variance des features).
+# Après le StandardScaler la variance vaut 1, donc gamma = 1/240.
+gamma: scale
+# Valeurs de C essayées ; C est choisi sur le fold de validation, jamais sur le fold de test
+# (P3). Petit C : marge large et modèle simple ; grand C : colle davantage au train.
+c_grid: [1, 10, 100]
+# Noms français des 5 grandes catégories d'ESC-50, dans l'ordre de target // 10 (classes
+# 0-9, 10-19, 20-29, 30-39, 40-49) : sert à la matrice de confusion agrégée (P4).
+category_names:
+  - animaux
+  - nature et eau
+  - humain non verbal
+  - intérieur et domestique
+  - extérieur et urbain
