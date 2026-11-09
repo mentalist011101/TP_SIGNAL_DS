@@ -6,9 +6,21 @@ Chaque membre utilise **son propre compte**.
 ## Amorçage d'un notebook
 
 ```python
-# Cellule 1 : récupérer le code du dépôt et l'installer (même cœur que l'application)
-!git clone --depth 1 https://github.com/mentalist011101/TP_SIGNAL_DS.git
-%pip install -q -e TP_SIGNAL_DS
+# Cellule 1 : récupérer le code du dépôt et l'installer (même cœur que l'application).
+# BRANCH = "main" sauf pour tester une branche pas encore fusionnée.
+import sys
+
+BRANCH = "main"
+REPO_URL = "https://github.com/mentalist011101/TP_SIGNAL_DS.git"
+CLONE_DIR = "/kaggle/working/TP_SIGNAL_DS"
+
+!rm -rf {CLONE_DIR}
+!git clone --depth 1 --branch {BRANCH} {REPO_URL} {CLONE_DIR}
+%pip install -q -e {CLONE_DIR}
+
+# L'installation éditable n'est visible qu'après un redémarrage du noyau : on ajoute src/
+# au chemin d'import pour utiliser echolens tout de suite.
+sys.path.insert(0, CLONE_DIR + "/src")
 
 # Cellule 2 : secrets (Add-ons → Secrets) — jamais en clair dans le notebook
 from kaggle_secrets import UserSecretsClient
@@ -17,6 +29,12 @@ import os
 os.environ["WANDB_API_KEY"] = secrets.get_secret("WANDB_API_KEY")
 os.environ["HF_TOKEN"] = secrets.get_secret("HF_TOKEN")
 ```
+
+## Notebooks
+
+| Notebook | Tâche | Ce qu'il produit |
+| --- | --- | --- |
+| `c5_esc50_mfcc_svm.ipynb` | C5 : référence MFCC + SVM sur ESC-50 (P3, P4, P5), sans GPU | `esc50.csv` (→ `data/manifests/`), `esc50_mfcc_svm.json` (→ `training/results/`), matrice en 5 catégories (→ `report/figures/`) |
 
 ## Règles
 
