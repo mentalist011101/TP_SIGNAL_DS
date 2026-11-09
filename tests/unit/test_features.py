@@ -106,3 +106,15 @@ def test_signal_too_short_for_deltas_raises(config: FeatureConfig) -> None:
     assert without_deltas.shape == (config.n_mfcc, 7)
     with pytest.raises(ValueError, match="80 ms"):
         mfcc(short_signal, config)
+
+
+def test_display_range_comes_from_yaml(config: FeatureConfig) -> None:
+    assert config.display_db_min == -80.0
+    assert config.display_db_max == 40.0
+    assert config.display_colormap == "magma"
+
+
+@pytest.mark.parametrize(("db_min", "db_max"), [(40.0, 40.0), (40.0, -80.0)])
+def test_empty_or_inverted_display_range_is_rejected(db_min: float, db_max: float) -> None:
+    with pytest.raises(ValueError, match="display_db_min"):
+        FeatureConfig(display_db_min=db_min, display_db_max=db_max)

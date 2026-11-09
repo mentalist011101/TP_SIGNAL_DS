@@ -14,7 +14,7 @@ from typing import Literal
 import librosa
 import numpy as np
 import numpy.typing as npt
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from echolens.config import load_yaml
 
@@ -39,6 +39,20 @@ class FeatureConfig(BaseModel):
     db_reference: float = Field(default=1.0, gt=0)
     db_amin: float = Field(default=1e-10, gt=0)
     delta_width: int = Field(default=9, ge=3)
+    # U6 : échelle de couleurs fixe de l'image du spectrogramme (présentation seulement).
+    display_db_min: float = -80.0
+    display_db_max: float = 40.0
+    display_colormap: str = "magma"
+
+    @model_validator(mode="after")
+    def check_display_range(self) -> FeatureConfig:
+        """Refuse une échelle d'affichage vide ou inversée (display_db_min >= display_db_max)."""
+        if self.display_db_min >= self.display_db_max:
+            raise ValueError(
+                f"display_db_min ({self.display_db_min}) doit être inférieur à "
+                f"display_db_max ({self.display_db_max})"
+            )
+        return self
 
     @property
     def frequency_resolution_hz(self) -> float:

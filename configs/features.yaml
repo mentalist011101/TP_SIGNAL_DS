@@ -14,3 +14,15 @@ n_mfcc: 40           # R3
 db_reference: 1.0    # R2 : dB absolus (0 dB = puissance 1), jamais relatifs au maximum
 db_amin: 1.0e-10     # R2 : plancher fixe à 10·log10(1e-10) = −100 dB
 delta_width: 9       # R3 : fenêtre de régression des deltas (impair, en trames)
+
+# Affichage du spectrogramme (U6) : présentation seulement, le calcul reste celui de R2.
+# Échelle de couleurs FIXE en dB absolus, jamais recalée sur le min/max de chaque extrait :
+# - deux audios sont comparables à l'œil (une même couleur = une même énergie) ;
+# - un audio faible paraît sombre, au lieu d'être « remonté » artificiellement.
+# Mesures de référence avec les paramètres ci-dessus : une sinusoïde pleine amplitude donne
+# environ +38 dB à 440 Hz (jusqu'à +41 dB à 4 kHz), un silence numérique −100 dB (plancher R2).
+# Tout ce qui est sous display_db_min a la couleur la plus sombre, au-dessus de display_db_max
+# la plus claire.
+display_db_min: -80.0
+display_db_max: 40.0
+display_colormap: magma   # palette sombre → claire, lisible aussi en niveaux de gris
