@@ -28,7 +28,7 @@ function describeError(error: Error | null): string | null {
   if (error instanceof ApiError) {
     return error.message
   }
-  return 'Serveur injoignable : lancez le serveur Flask (make run).'
+  return 'Serveur injoignable : vérifiez que l’application est lancée, puis réessayez.'
 }
 
 // Explique pourquoi le bouton Analyser est désactivé ; null quand tout est prêt.
