@@ -1,163 +1,200 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import {
+  ApiError,
+  useAnalysis,
+  useCreateAnalysis,
+  type Analysis,
+  type AnalysisProfile,
+  type AnalysisRequest,
+  type AnalysisTask,
+} from '../api/client.ts'
+import AnalysisStatus from '../components/analyze/AnalysisStatus.tsx'
+import AudioPicker from '../components/analyze/AudioPicker.tsx'
+import SpectrogramPlaceholder from '../components/analyze/SpectrogramPlaceholder.tsx'
+import TaskSelector from '../components/analyze/TaskSelector.tsx'
+import WaveformCanvas from '../components/analyze/WaveformCanvas.tsx'
 
-export default function AnalyzePage() {
-  const [audioUrl, setAudioUrl] = useState('')
-  const [audioName, setAudioName] = useState('')
-  const [isRecording, setIsRecording] = useState(false)
-  const [profile, setProfile] = useState('qualite')
-  const [message, setMessage] = useState('')
-  const [result, setResult] = useState('')
+// Tâches cochées à l'ouverture de la page.
+const DEFAULT_TASKS: AnalysisTask[] = ['emotion', 'sound_event']
 
-  const [emotion, setEmotion] = useState(true)
-  const [event, setEvent] = useState(true)
-  const [transc, setTransc] = useState(false)
-  const [speakers, setSpeakers] = useState(false)
+const ANALYZE_BUTTON_CLASSES =
+  'rounded-md bg-brand-500 px-5 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50'
 
-  const fileRef = useRef<HTMLInputElement>(null)
-  const mediaRef = useRef<MediaRecorder | null>(null)
-  const chunksRef = useRef<Blob[]>([])
-  const waveRef = useRef<HTMLCanvasElement>(null)
-  const specRef = useRef<HTMLCanvasElement>(null)
-  const onFile = (file: File | undefined) => {
-    if (!file) return
-    const url = URL.createObjectURL(file)
-    setAudioUrl(url)
-    setAudioName(file.name)
-    setMessage('Fichier charge : ' + file.name)
-    drawWave(url)
+// Message à afficher pour une erreur : celui de l'API, ou serveur injoignable (erreur réseau).
+function describeError(error: Error | null): string | null {
+  if (error === null) {
+    return null
   }
-  const drawWave = async (url: string) => {
-    try {
-      const ctx = new AudioContext()
-      const res = await fetch(url)
-      const buf = await res.arrayBuffer()
-      const audioBuf = await ctx.decodeAudioData(buf)
-      const data = audioBuf.getChannelData(0)
-      const canvas = waveRef.current
-      if (canvas) {
-        const c = canvas.getContext('2d')!
-        c.fillStyle = '#0f172a'
-        c.fillRect(0, 0, canvas.width, canvas.height)
-        c.strokeStyle = '#22c55e'
-        c.beginPath()
-        for (let x = 0; x < canvas.width; x++) {
-          const v = data[Math.floor((x / canvas.width) * data.length)] || 0
-          const y = canvas.height / 2 + v * 60
-          if (x === 0) c.moveTo(x, y)
-          else c.lineTo(x, y)
-        }
-        c.stroke()
-      }
-
-      const canvas2 = specRef.current
-      if (canvas2) {
-        const c2 = canvas2.getContext('2d')!
-        for (let x = 0; x < canvas2.width; x++) {
-          for (let y = 0; y < canvas2.height; y++) {
-            const v = Math.abs(data[Math.floor((x / canvas2.width) * data.length)] || 0)
-            const n = Math.floor(v * 200 + 20)
-            c2.fillStyle = 'rgb(' + n + ',' + Math.floor(n * 0.6) + ',80)'
-            c2.fillRect(x, y, 1, 1)
-          }
-        }
-      }
-      ctx.close()
-    } catch {
-      setMessage('Impossible de dessiner')
-    }
+  if (error instanceof ApiError) {
+    return error.message
   }
-  const toggleRecord = async () => {
-    if (isRecording) {
-      mediaRef.current?.stop()
-      setIsRecording(false)
+  return 'Serveur injoignable : lancez le serveur Flask (make run).'
+}
+
+// Explique pourquoi le bouton Analyser est désactivé ; null quand tout est prêt.
+function analyzeHint(hasFile: boolean, hasTasks: boolean): string | null {
+  if (!hasFile) {
+    return 'Importez un fichier ou enregistrez-vous au micro pour commencer.'
+  }
+  if (!hasTasks) {
+    return 'Cochez au moins une tâche pour lancer l’analyse.'
+  }
+  return null
+}
+
+// Clé qui change à chaque nouveau fichier (un enregistrement a toujours une date différente).
+function fileKey(file: File): string {
+  return `${file.name}-${file.lastModified}`
+}
+
+// Lecteur audio : l'URL locale (blob:) est créée pour le fichier, puis libérée quand il change.
+function AudioPlayer({ file }: { file: File }) {
+  const audioRef = useRef<HTMLAudioElement>(null)
+  useEffect(() => {
+    const audio = audioRef.current
+    if (audio === null) {
       return
     }
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      const rec = new MediaRecorder(stream)
-      chunksRef.current = []
-      rec.ondataavailable = (e) => {
-        chunksRef.current.push(e.data)
-      }
-      rec.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: 'audio/webm' })
-        const url = URL.createObjectURL(blob)
-        setAudioUrl(url)
-        setAudioName('enregistrement.webm')
-        drawWave(url)
-        setMessage('Enregistrement termine')
-      }
-      rec.start()
-      mediaRef.current = rec
-      setIsRecording(true)
-      setMessage('Enregistrement en cours...')
-    } catch {
-      setMessage('Micro non autorise')
+    const objectUrl = URL.createObjectURL(file)
+    audio.src = objectUrl
+    return () => {
+      URL.revokeObjectURL(objectUrl)
     }
-  }
+  }, [file])
+  return <audio ref={audioRef} controls className="w-full" />
+}
 
-  const onAnalyze = () => {
-    if (!audioUrl) {
-      setMessage('D abord importe un fichier')
-      return
-    }
-    setMessage('Analyse lancee - Profil : ' + profile)
-    setResult('Demo : Emotion = Neutre (62%), Evenement = Voix (71%)')
+// Ce que la page sait de l'analyse lancée.
+interface AnalysisRun {
+  start: (request: AnalysisRequest) => void
+  reset: () => void
+  analysis: Analysis | undefined
+  isSubmitting: boolean
+  errorMessage: string | null
+}
+
+// Envoi (POST) puis suivi (GET chaque seconde) d'une analyse.
+function useAnalysisRun(): AnalysisRun {
+  const createAnalysis = useCreateAnalysis()
+  const createdAnalysis = createAnalysis.data
+  const analysisId = createdAnalysis === undefined ? null : createdAnalysis.id
+  const analysisQuery = useAnalysis(analysisId)
+  // Tant que le premier GET n'a pas répondu, on affiche l'analyse renvoyée par le POST.
+  const latestAnalysis = analysisQuery.data ?? createdAnalysis
+  const error = createAnalysis.error ?? analysisQuery.error
+  return {
+    start: createAnalysis.mutate,
+    reset: createAnalysis.reset,
+    analysis: latestAnalysis,
+    isSubmitting: createAnalysis.isPending,
+    errorMessage: describeError(error),
   }
+}
+
+// Lecteur, forme d'onde et emplacement du spectrogramme de l'audio choisi.
+// La page lui donne une clé par fichier : un nouvel audio repart d'un aperçu vierge.
+function AudioPreview({ file }: { file: File }) {
   return (
-    <div style={{ maxWidth: 900, margin: '0 auto', padding: 16 }}>
-      {' '}
-      <h1>Analyser un audio</h1> <p>Importe ou enregistre, puis analyse.</p>
-      <div style={{ display: 'flex', gap: 12 }}>
-        <input
-          ref={fileRef}
-          type="file"
-          accept=".wav,.mp3,.flac,.ogg,.webm"
-          hidden
-          onChange={(e) => onFile(e.target.files?.[0])}
-        />
-        <button onClick={() => fileRef.current?.click()}>Importer un fichier</button>
-        <button onClick={toggleRecord}>{isRecording ? 'Arreter' : 'Enregistrer au micro'}</button>
-      </div>
-      {audioName && <p>Fichier : {audioName}</p>}
-      {message && <p>{message}</p>}
-      <h3>Que veux-tu analyser ?</h3>
-      <label style={{ display: 'block' }}>
-        <input type="checkbox" checked={emotion} onChange={() => setEmotion(!emotion)} />
-        Emotion
-      </label>
-      <label style={{ display: 'block' }}>
-        <input type="checkbox" checked={event} onChange={() => setEvent(!event)} />
-        Evenement sonore
-      </label>
-      <label style={{ display: 'block' }}>
-        <input type="checkbox" checked={transc} onChange={() => setTransc(!transc)} />
-        Transcription
-      </label>
-      <label style={{ display: 'block' }}>
-        <input type="checkbox" checked={speakers} onChange={() => setSpeakers(!speakers)} />
-        Locuteurs
-      </label>
-      <label style={{ display: 'block', marginTop: 12 }}>
-        Profil :
-        <select value={profile} onChange={(e) => setProfile(e.target.value)}>
-          <option value="qualite">Qualite</option>
-          <option value="temps-reel">Temps reel</option>
-        </select>
-      </label>
-      <button onClick={onAnalyze} style={{ marginTop: 16, padding: '10px 20px' }}>
-        ANALYSER
-      </button>
-      {audioUrl && (
-        <div style={{ marginTop: 20 }}>
-          <audio controls src={audioUrl} style={{ width: '100%' }} />
-          <h3>Forme d onde</h3>
-          <canvas ref={waveRef} width={850} height={140} style={{ width: '100%' }} />
-          <h3>Spectrogramme</h3>
-          <canvas ref={specRef} width={850} height={160} style={{ width: '100%' }} />
-        </div>
-      )}
-      {result && <p>{result}</p>}
+    <div className="space-y-3">
+      <p className="text-sm text-slate-600 dark:text-slate-300">Fichier : {file.name}</p>
+      <AudioPlayer file={file} />
+      <h2 className="font-medium">Forme d’onde</h2>
+      <WaveformCanvas file={file} />
+      <h2 className="font-medium">Spectrogramme</h2>
+      <SpectrogramPlaceholder />
     </div>
+  )
+}
+
+interface AnalyzeButtonProps {
+  hint: string | null
+  isSubmitting: boolean
+  onClick: () => void
+}
+
+// Bouton Analyser, désactivé avec une explication tant qu'il manque le fichier ou une tâche.
+function AnalyzeButton({ hint, isSubmitting, onClick }: AnalyzeButtonProps) {
+  const isDisabled = hint !== null || isSubmitting
+  return (
+    <div className="space-y-2">
+      <button
+        type="button"
+        className={ANALYZE_BUTTON_CLASSES}
+        disabled={isDisabled}
+        onClick={onClick}
+      >
+        Analyser
+      </button>
+      {hint !== null && <p className="text-sm text-slate-500">{hint}</p>}
+    </div>
+  )
+}
+
+interface AnalysisPanelProps {
+  run: AnalysisRun
+  hint: string | null
+  onAnalyze: () => void
+}
+
+// Bouton Analyser suivi du statut de l'analyse lancée.
+function AnalysisPanel({ run, hint, onAnalyze }: AnalysisPanelProps) {
+  return (
+    <>
+      <AnalyzeButton hint={hint} isSubmitting={run.isSubmitting} onClick={onAnalyze} />
+      <AnalysisStatus
+        analysis={run.analysis}
+        isSubmitting={run.isSubmitting}
+        errorMessage={run.errorMessage}
+      />
+    </>
+  )
+}
+
+// Titre et consigne de la page.
+function PageIntro() {
+  return (
+    <>
+      <h1 className="text-2xl font-semibold tracking-tight">Analyser un audio</h1>
+      <p className="text-slate-600 dark:text-slate-300">
+        Importez un fichier ou enregistrez-vous au micro, choisissez les tâches, puis lancez
+        l’analyse.
+      </p>
+    </>
+  )
+}
+
+// Page Analyser : choix de l'audio, des tâches et du profil, puis suivi de l'analyse.
+export default function AnalyzePage() {
+  const [audioFile, setAudioFile] = useState<File | null>(null)
+  const [tasks, setTasks] = useState<AnalysisTask[]>(DEFAULT_TASKS)
+  const [profile, setProfile] = useState<AnalysisProfile>('quality')
+  const run = useAnalysisRun()
+  const hint = analyzeHint(audioFile !== null, tasks.length > 0)
+
+  // Un nouvel audio efface le suivi de l'analyse précédente.
+  function handleAudioSelected(file: File) {
+    setAudioFile(file)
+    run.reset()
+  }
+
+  function handleAnalyze() {
+    if (audioFile !== null) {
+      run.start({ file: audioFile, tasks, profile })
+    }
+  }
+
+  return (
+    <section className="space-y-6">
+      <PageIntro />
+      <AudioPicker onAudioSelected={handleAudioSelected} />
+      {audioFile !== null && <AudioPreview key={fileKey(audioFile)} file={audioFile} />}
+      <TaskSelector
+        tasks={tasks}
+        profile={profile}
+        onTasksChange={setTasks}
+        onProfileChange={setProfile}
+      />
+      <AnalysisPanel run={run} hint={hint} onAnalyze={handleAnalyze} />
+    </section>
   )
 }
