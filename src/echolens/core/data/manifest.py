@@ -13,7 +13,11 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import Literal
 
+import soundfile as sf
 from pydantic import BaseModel, Field
+
+# Genre d'un locuteur dans un manifeste : F ou M.
+Gender = Literal["F", "M"]
 
 # Ordre fixe des colonnes dans tous les fichiers CSV.
 MANIFEST_COLUMNS = [
@@ -43,7 +47,7 @@ class ManifestRow(BaseModel):
     # Vide pour les jeux sans classe, comme OpenSLR 57 (transcription).
     label: str | None = None
     speaker: str | None = None
-    gender: Literal["F", "M"] | None = None
+    gender: Gender | None = None
     duration_s: float = Field(gt=0)
     # Fold officiel d'ESC-50 (1 à 5, P3).
     fold: int | None = None
@@ -116,6 +120,25 @@ def audio_path(row: ManifestRow, datasets_dir: Path) -> Path:
     """Renvoie le chemin complet du fichier audio d'une ligne de manifeste."""
     root = dataset_root(row.dataset, datasets_dir)
     return root / row.path
+
+
+def audio_duration_s(path: Path) -> float:
+    """Durée d'un fichier audio en secondes, lue dans son en-tête (sans décoder le son).
+
+    Lève ValueError, avec le nom du fichier, s'il est illisible ou s'il dure 0 s : un fichier
+    défectueux n'est jamais ignoré en silence. Les seules exceptions sont les listes
+    KNOWN_BAD_FILES de chaque jeu, exclues avant cet appel.
+    """
+    try:
+        info = sf.info(str(path))
+    # soundfile signale un fichier absent, tronqué ou d'octets nuls par une LibsndfileError,
+    # sous-classe de RuntimeError.
+    except RuntimeError as error:
+        raise ValueError(f"Fichier audio illisible : {path} ({error})") from error
+    if info.frames == 0:
+        raise ValueError(f"Fichier audio vide (0 s) : {path}")
+    duration_s = float(info.frames / info.samplerate)
+    return duration_s
 
 
 def check_manifest(
