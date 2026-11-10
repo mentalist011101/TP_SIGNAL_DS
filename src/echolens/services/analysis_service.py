@@ -22,11 +22,14 @@ from werkzeug.utils import secure_filename
 from echolens.config import AppSettings
 from echolens.core.audio import AudioDecodeError, AudioTooLongError, is_silent, load_audio
 from echolens.core.audio.io import TARGET_SAMPLE_RATE
+from echolens.core.features import FeatureConfig, log_mel_spectrogram
+from echolens.services.spectrogram_image import save_spectrogram_png
 from echolens.services.storage import AnalysisRecord, AnalysisStatus
 
 # Format de l'audio conservé : WAV PCM 16 bits, mono 16 kHz (D2).
 CONVERTED_AUDIO_NAME = "audio.wav"
 CONVERTED_AUDIO_SUBTYPE = "PCM_16"
+SPECTROGRAM_IMAGE_NAME = "spectrogram.png"
 INTERRUPTED_MESSAGE = "Traitement interrompu par un redémarrage du serveur : relancez l'analyse."
 
 
@@ -44,6 +47,8 @@ class AnalysisService:
     def __init__(self, settings: AppSettings, session_factory: sessionmaker[Session]) -> None:
         self.settings = settings
         self.session_factory = session_factory
+        # Paramètres des features lus une seule fois : les mêmes que l'entraînement (R5).
+        self.feature_config = FeatureConfig.from_yaml(settings.features_path)
         self.executor = ThreadPoolExecutor(max_workers=settings.analysis_workers)
         self._fail_interrupted_analyses()
 
@@ -122,6 +127,10 @@ class AnalysisService:
         """Chemin de l'audio converti en 16 kHz mono (audio.wav)."""
         return self.analysis_dir(analysis_id) / CONVERTED_AUDIO_NAME
 
+    def spectrogram_path(self, analysis_id: str) -> Path:
+        """Chemin de l'image du spectrogramme log-Mel (spectrogram.png) (EF-04, U6)."""
+        return self.analysis_dir(analysis_id) / SPECTROGRAM_IMAGE_NAME
+
     def _fail_interrupted_analyses(self) -> None:
         # Les threads ne survivent pas à un redémarrage : une analyse encore pending ou
         # processing au démarrage ne finira jamais. On la passe en failed pour que l'interface
@@ -168,11 +177,12 @@ class AnalysisService:
         self.executor.submit(self._process, analysis_id)
 
     def _process(self, analysis_id: str) -> None:
-        # Traitement d'une analyse. Les étapes suivantes (spectrogramme, modèles) s'ajouteront
-        # après la conversion, dans le même bloc try.
+        # Traitement d'une analyse : conversion, puis spectrogramme. Les étapes suivantes
+        # (modèles) s'ajouteront après le spectrogramme, dans le même bloc try.
         self._update(analysis_id, status=AnalysisStatus.PROCESSING)
         try:
             duration_s = self._convert_audio(analysis_id)
+            self._save_spectrogram(analysis_id)
         except Exception as error:
             # Frontière du thread : toute erreur doit finir en statut failed, sinon elle
             # serait perdue dans le pool et l'analyse resterait « processing » pour toujours.
@@ -191,6 +201,17 @@ class AnalysisService:
         sf.write(destination, clipped, TARGET_SAMPLE_RATE, subtype=CONVERTED_AUDIO_SUBTYPE)
         duration_s = signal.size / TARGET_SAMPLE_RATE
         return duration_s
+
+    def _save_spectrogram(self, analysis_id: str) -> None:
+        # Étape 1 : relecture de l'audio converti par le point d'entrée unique du cœur (D1, D2).
+        audio_path = self.converted_audio_path(analysis_id)
+        signal = load_audio(audio_path)
+        # Étape 2 : log-Mel calculé par core, le même code que l'entrée des modèles (R2, R5).
+        # Lève ValueError (message en français) si l'audio dure moins d'une trame de 25 ms.
+        log_mel = log_mel_spectrogram(signal, self.feature_config)
+        # Étape 3 : présentation seulement, en PNG à échelle de couleurs fixe (U6).
+        image_path = self.spectrogram_path(analysis_id)
+        save_spectrogram_png(log_mel, image_path, self.feature_config)
 
     def _original_audio_path(self, analysis_id: str) -> Path:
         # L'extension est conservée dans le nom original.<ext> : on retrouve le fichier dans
