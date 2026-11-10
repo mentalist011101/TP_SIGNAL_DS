@@ -57,6 +57,25 @@ def test_cremad_malformed_name_is_rejected(tmp_path: Path) -> None:
         build_cremad_manifest(tmp_path, demographics)
 
 
+def test_cremad_known_misnamed_file_is_read_with_its_official_name(tmp_path: Path) -> None:
+    write_wav(tmp_path / "AudioWAV" / "1040_ITH_SAD_X.wav")
+    demographics = write_demographics(tmp_path / "demo.csv", {"1040": "Male"})
+
+    rows = build_cremad_manifest(tmp_path, demographics)
+
+    # Le chemin garde le vrai nom du fichier ; l'intensité vient du nom officiel (XX).
+    assert rows[0].path == "AudioWAV/1040_ITH_SAD_X.wav"
+    assert rows[0].intensity == "XX"
+    assert rows[0].label == "SAD"
+
+
+def test_cremad_other_single_x_intensity_is_rejected(tmp_path: Path) -> None:
+    write_wav(tmp_path / "AudioWAV" / "1041_ITH_SAD_X.wav")
+    demographics = write_demographics(tmp_path / "demo.csv", {"1041": "Male"})
+    with pytest.raises(ValueError, match="Nom de fichier CREMA-D inattendu"):
+        build_cremad_manifest(tmp_path, demographics)
+
+
 def test_cremad_actor_missing_from_demographics_is_rejected(tmp_path: Path) -> None:
     write_wav(tmp_path / "AudioWAV" / "1091_DFA_NEU_XX.wav")
     demographics = write_demographics(tmp_path / "demo.csv", {"1001": "Male"})

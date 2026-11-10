@@ -28,6 +28,11 @@ GENDER_CODES: dict[str, Gender] = {"Male": "M", "Female": "F"}
 # Chaque entrée : le nom du fichier, et en commentaire ce qui ne va pas et où on l'a constaté.
 # Vide tant qu'on n'a rien trouvé : tout autre fichier défectueux fait échouer la construction.
 KNOWN_BAD_FILES: frozenset[str] = frozenset()
+# Fichiers mal nommés connus : nom dans la copie → nom officiel, dont on lit les champs.
+# 1040_ITH_SAD_X.wav : intensité « X » au lieu de « XX » dans la copie Kaggle ejlok1/cremad,
+# seule différence avec le dépôt officiel CheyneyComputerScience/CREMA-D (7 442 fichiers
+# comparés le 10/11/2026). Le chemin du manifeste garde le vrai nom du fichier dans la copie.
+KNOWN_MISNAMED_FILES = {"1040_ITH_SAD_X.wav": "1040_ITH_SAD_XX.wav"}
 
 
 def build_cremad_manifest(dataset_root: Path, demographics_path: Path) -> list[ManifestRow]:
@@ -68,8 +73,10 @@ def load_cremad_genders(demographics_path: Path) -> dict[str, Gender]:
 
 
 def _row_from_file(audio_path: Path, gender_of_actor: dict[str, Gender]) -> ManifestRow:
-    # Étape 1 : les quatre champs du nom, acteur_phrase_émotion_intensité.
-    actor, emotion, intensity = _parse_cremad_name(audio_path.name)
+    # Étape 1 : les quatre champs du nom, acteur_phrase_émotion_intensité, lus sur le nom
+    # officiel quand la copie le déforme (KNOWN_MISNAMED_FILES).
+    official_name = KNOWN_MISNAMED_FILES.get(audio_path.name, audio_path.name)
+    actor, emotion, intensity = _parse_cremad_name(official_name)
     # Étape 2 : le genre, qui n'est pas dans le nom mais dans VideoDemographics.csv.
     if actor not in gender_of_actor:
         raise ValueError(
