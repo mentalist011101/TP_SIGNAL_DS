@@ -16,7 +16,8 @@ CLONE_DIR = "/kaggle/working/TP_SIGNAL_DS"
 
 !rm -rf {CLONE_DIR}
 !git clone --depth 1 --branch {BRANCH} {REPO_URL} {CLONE_DIR}
-%pip install -q -e {CLONE_DIR}
+# Kaggle tourne sous Python 3.13, au-delà de requires-python (<3.13) du dépôt.
+%pip install -q --ignore-requires-python -e {CLONE_DIR}
 
 # L'installation éditable n'est visible qu'après un redémarrage du noyau : on ajoute src/
 # au chemin d'import pour utiliser echolens tout de suite.
