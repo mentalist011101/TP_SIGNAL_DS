@@ -17,6 +17,7 @@ dependencies = [
     "scipy>=1.12",
     "soundfile>=0.12",
     "gunicorn>=22.0",
+    "librosa>=0.10",
 ]
 
 [project.optional-dependencies]
@@ -94,6 +95,7 @@ addopts = "-q --strict-markers"
 markers = [
     "slow: tests longs (modèles réels), exclus de la CI par défaut",
     "ml: tests nécessitant les dépendances [ml] (torch, transformers)",
+    "ffmpeg: tests nécessitant ffmpeg, sautés s'il est absent (la CI l'installe)",
 ]
 
 [tool.coverage.run]
