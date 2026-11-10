@@ -57,6 +57,19 @@ def test_manifest_fields_come_from_metadata(tmp_path: Path) -> None:
     assert rows[2].fold == 2
 
 
+def test_known_official_exception_is_accepted(tmp_path: Path) -> None:
+    # Cas réel d'ESC-50 : la source 134049 sert à hen (fold 2) et à rooster (fold 3).
+    records = [
+        record("2-134049-A-6.wav", "2", "6", "hen", "134049"),
+        record("3-134049-A-1.wav", "3", "1", "rooster", "134049"),
+    ]
+    write_mini_esc50(tmp_path, records)
+
+    rows = build_esc50_manifest(tmp_path)
+
+    assert [row.fold for row in rows] == [2, 3]
+
+
 def test_same_source_in_two_folds_is_rejected(tmp_path: Path) -> None:
     records = [
         record("1-100032-A-0.wav", "1", "0", "dog", "100032"),

@@ -17,6 +17,11 @@ from echolens.core.data.manifest import ManifestRow, check_manifest
 DATASET_ID = "esc50"
 METADATA_FILE = Path("meta") / "esc50.csv"
 AUDIO_FOLDER = "audio"
+# Exceptions du jeu officiel : ces 4 enregistrements Freesound ont servi à deux classes
+# voisines (clock_alarm / clock_tick, hen / rooster) placées dans deux folds différents
+# (9 extraits). On garde les folds officiels pour rester comparable à la littérature (P3) ;
+# toute autre source répartie sur deux folds reste refusée.
+KNOWN_CROSS_FOLD_SOURCES = frozenset({"131943", "134049", "209698", "234879"})
 
 
 def build_esc50_manifest(dataset_root: Path) -> list[ManifestRow]:
@@ -33,8 +38,9 @@ def build_esc50_manifest(dataset_root: Path) -> list[ManifestRow]:
             row = _row_from_record(record, dataset_root)
             rows.append(row)
 
-    # Contrôle final : chemins uniques, et chaque source dans un seul fold (P3).
-    check_manifest(rows)
+    # Contrôle final : chemins uniques, et chaque source dans un seul fold (P3), sauf les
+    # exceptions connues du jeu officiel.
+    check_manifest(rows, allowed_cross_fold_sources=KNOWN_CROSS_FOLD_SOURCES)
     return rows
 
 

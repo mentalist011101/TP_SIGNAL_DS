@@ -108,6 +108,11 @@ def test_source_split_across_folds_is_rejected() -> None:
         check_manifest(rows)
 
 
+def test_allowed_source_may_cross_folds() -> None:
+    rows = [make_row("a.wav", fold=1), make_row("b.wav", fold=2)]
+    check_manifest(rows, allowed_cross_fold_sources=frozenset({"100032"}))
+
+
 def test_valid_manifest_passes() -> None:
     rows = [make_row("a.wav", fold=1), make_row("b.wav", fold=1, source="200000")]
     check_manifest(rows)
