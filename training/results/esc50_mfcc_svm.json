@@ -1,0 +1,81 @@
+{
+  "experiment": "esc50_mfcc_svm",
+  "date": "2026-11-10T14:14:34.672124+00:00",
+  "branch": "feat/c5-esc50-svm",
+  "commit": "672185e10e64632671ecd689cffedc000c7626ee",
+  "macro_f1_mean": 0.40285717656189696,
+  "macro_f1_std": 0.039743638614187865,
+  "accuracy_mean": 0.417,
+  "accuracy_std": 0.035192328709535536,
+  "chosen_c": [
+    10.0,
+    10.0,
+    10.0,
+    10.0,
+    10.0
+  ],
+  "per_fold": [
+    {
+      "test_fold": 1,
+      "chosen_c": 10.0,
+      "macro_f1": 0.3507340518547275,
+      "accuracy": 0.3725
+    },
+    {
+      "test_fold": 2,
+      "chosen_c": 10.0,
+      "macro_f1": 0.37686899435647575,
+      "accuracy": 0.3975
+    },
+    {
+      "test_fold": 3,
+      "chosen_c": 10.0,
+      "macro_f1": 0.4210349140024063,
+      "accuracy": 0.435
+    },
+    {
+      "test_fold": 4,
+      "chosen_c": 10.0,
+      "macro_f1": 0.4673140453410798,
+      "accuracy": 0.475
+    },
+    {
+      "test_fold": 5,
+      "chosen_c": 10.0,
+      "macro_f1": 0.3983338772547953,
+      "accuracy": 0.405
+    }
+  ],
+  "features_config": {
+    "sample_rate": 16000,
+    "n_fft": 400,
+    "hop_length": 160,
+    "window": "hann",
+    "center": true,
+    "pad_mode": "reflect",
+    "power": 2.0,
+    "n_mels": 64,
+    "f_min": 0.0,
+    "f_max": 8000.0,
+    "n_mfcc": 40,
+    "db_reference": 1.0,
+    "db_amin": 1e-10,
+    "delta_width": 9
+  },
+  "svm_config": {
+    "kernel": "rbf",
+    "gamma": "scale",
+    "c_grid": [
+      1,
+      10,
+      100
+    ],
+    "category_names": [
+      "animaux",
+      "nature et eau",
+      "humain non verbal",
+      "intérieur et domestique",
+      "extérieur et urbain"
+    ]
+  }
+}
