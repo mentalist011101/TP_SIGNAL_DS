@@ -629,6 +629,7 @@ dev = [
     { name = "pytest" },
     { name = "pytest-cov" },
     { name = "ruff" },
+    { name = "scikit-learn" },
     { name = "types-pyyaml" },
 ]
 
@@ -670,6 +671,7 @@ dev = [
     { name = "pytest", specifier = ">=8.2" },
     { name = "pytest-cov", specifier = ">=5.0" },
     { name = "ruff", specifier = ">=0.6" },
+    { name = "scikit-learn", specifier = ">=1.9.1" },
     { name = "types-pyyaml", specifier = ">=6.0" },
 ]
 

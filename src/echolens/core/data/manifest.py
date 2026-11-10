@@ -118,16 +118,19 @@ def audio_path(row: ManifestRow, datasets_dir: Path) -> Path:
     return root / row.path
 
 
-def check_manifest(rows: list[ManifestRow]) -> None:
+def check_manifest(
+    rows: list[ManifestRow], allowed_cross_fold_sources: frozenset[str] = frozenset()
+) -> None:
     """Vérifie la cohérence d'un manifeste ; lève ValueError au premier problème trouvé.
 
     Règles : un seul jeu par manifeste, chaque chemin une seule fois, et une même source
     jamais répartie sur deux folds (sinon le même enregistrement serait à la fois en
-    entraînement et en test, P3).
+    entraînement et en test, P3). allowed_cross_fold_sources liste les exceptions connues
+    d'un jeu dont les folds officiels ne respectent pas cette règle (voir esc50.py).
     """
     _check_single_dataset(rows)
     _check_unique_paths(rows)
-    _check_sources_stay_in_one_fold(rows)
+    _check_sources_stay_in_one_fold(rows, allowed_cross_fold_sources)
 
 
 def _check_header(header: Sequence[str] | None, path: Path) -> None:
@@ -171,10 +174,14 @@ def _check_unique_paths(rows: list[ManifestRow]) -> None:
         seen_paths.add(row.path)
 
 
-def _check_sources_stay_in_one_fold(rows: list[ManifestRow]) -> None:
+def _check_sources_stay_in_one_fold(
+    rows: list[ManifestRow], allowed_cross_fold_sources: frozenset[str]
+) -> None:
     fold_of_source: dict[str, int] = {}
     for row in rows:
         if row.source is None or row.fold is None:
+            continue
+        if row.source in allowed_cross_fold_sources:
             continue
         known_fold = fold_of_source.get(row.source)
         if known_fold is None:

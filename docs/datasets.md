@@ -21,6 +21,11 @@ sont dans `configs/labels.yaml`.
 - **P1** : émotions, aucun locuteur commun entre train, validation et test.
 - **P2** : harmonisation sur 6 classes : neutral, happy, sad, angry, fear, disgust.
 - **P3** : ESC-50, validation croisée sur les 5 folds officiels, jamais remélangés.
+  Exception connue du jeu officiel : 4 enregistrements Freesound (`src_file` 131943, 134049,
+  209698, 234879, soit 9 extraits) ont servi à deux classes voisines (clock_alarm / clock_tick,
+  hen / rooster) placées dans deux folds. On garde les folds officiels, pour rester comparable
+  à la littérature, et ces 4 sources sont tolérées par `check_manifest`
+  (`KNOWN_CROSS_FOLD_SOURCES` dans `core/data/esc50.py`) ; toute autre source à cheval est refusée.
 - **R4** : statistiques de normalisation calculées sur le train uniquement.
 
 ## Format des manifestes
