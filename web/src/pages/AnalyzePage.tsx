@@ -18,7 +18,7 @@ import WaveformCanvas from '../components/analyze/WaveformCanvas.tsx'
 const DEFAULT_TASKS: AnalysisTask[] = ['emotion', 'sound_event']
 
 const ANALYZE_BUTTON_CLASSES =
-  'rounded-btn bg-accent px-5 py-2 text-sm font-semibold text-on-night transition-colors duration-200 ease-out-soft hover:bg-accent-deep disabled:cursor-not-allowed disabled:opacity-50'
+  'rounded-btn bg-accent px-5 py-2 text-sm font-semibold text-on-accent transition-colors duration-200 ease-out-soft hover:bg-accent-deep disabled:cursor-not-allowed disabled:opacity-50'
 
 // Message à afficher pour une erreur : celui de l'API, ou serveur injoignable (erreur réseau).
 function describeError(error: Error | null): string | null {

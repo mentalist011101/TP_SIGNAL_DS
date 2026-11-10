@@ -16,19 +16,24 @@ interface AnalysisStatusProps {
   errorMessage: string | null
 }
 
-// Durée en secondes, au format français (virgule décimale) ; inconnue tant que ce n'est pas fini.
-function formatDuration(durationSeconds: number | null): string {
+// Durée en secondes, au format français (virgule décimale) : le nombre en mono, l'unité dans la
+// police du texte (en mono, l'espace et le « s » paraissaient détachés). Inconnue tant que ce
+// n'est pas fini.
+function DurationValue({ durationSeconds }: { durationSeconds: number | null }) {
   if (durationSeconds === null) {
-    return 'connue à la fin du traitement'
+    return <span>connue à la fin du traitement</span>
   }
   const formatted = durationSeconds.toLocaleString('fr-FR', { maximumFractionDigits: 1 })
-  return `${formatted} s`
+  return (
+    <span>
+      <span className="font-mono">{formatted}</span> s
+    </span>
+  )
 }
 
 // Détail d'une analyse : fichier, statut, durée, puis résultat ou raison de l'échec.
 function AnalysisDetails({ analysis }: { analysis: Analysis }) {
   const statusLabel = STATUS_LABELS[analysis.status]
-  const duration = formatDuration(analysis.duration_s)
   return (
     <div className={PANEL_CLASSES}>
       <p>
@@ -36,7 +41,7 @@ function AnalysisDetails({ analysis }: { analysis: Analysis }) {
       </p>
       <p>Statut : {statusLabel}</p>
       <p>
-        Durée : <span className="font-mono">{duration}</span>
+        Durée : <DurationValue durationSeconds={analysis.duration_s} />
       </p>
       {analysis.status === 'failed' && (
         <p className="text-danger">Raison : {analysis.error_message}</p>

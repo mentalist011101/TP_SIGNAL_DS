@@ -23,6 +23,8 @@ Les noms disent le **rôle**, jamais la couleur.
 | `accent` | `#4a7a3a` | `#4a7a3a` | Tout ce qui se clique |
 | `accent-deep` | `#355a29` | `#355a29` | Accent au survol |
 | `accent-soft` | `#9cc58a` | `#9cc58a` | Texte ou tracé sur fond sombre (forme d'onde) |
+| `on-accent` | `#ffffff` | `#ffffff` | Texte posé sur l'accent (bouton principal) |
+| `accent-ink` | `#4a7a3a` | `#9cc58a` | Accent employé comme texte (liens) ou contour de focus |
 | `danger` | `#b4400f` | `#e8763a` | Erreurs uniquement |
 
 Polices : `font-display` (Archivo 700/800), `font-sans` (Inter 400/500/600), `font-mono`
@@ -35,6 +37,12 @@ Polices : `font-display` (Archivo 700/800), `font-sans` (Inter 400/500/600), `fo
   les composants. `npm run check:tokens` le vérifie, en local et dans la CI. Le canvas lit les
   jetons avec `readCssColor` (`web/src/theme.ts`).
 - **Accent = ce qui se clique** : bouton principal, cases à cocher, focus. Rien d'autre.
+- **Contraste WCAG AA (4,5:1 pour le texte)** :
+  - texte d'un bouton principal en `on-accent` (blanc) : 5,08:1 sur l'accent, alors que
+    `on-night` ne donnait que 4,41:1 ;
+  - en mode sombre, **jamais l'accent comme couleur de texte** : il ne fait que 3,60:1 sur le
+    papier sombre. Liens et focus utilisent `accent-ink`, qui vaut `accent-soft` en sombre
+    (9,36:1 sur le papier sombre) et l'accent en clair (4,58:1 sur le papier clair).
 - **Danger = les erreurs** : messages d'échec, refus de fichier. Pas pour décorer.
 - **Magma réservé aux données** : la palette du spectrogramme ne sert à rien d'autre, et
   l'interface n'utilise pas ses couleurs (d'où un accent vert, absent de magma).
@@ -47,5 +55,5 @@ Polices : `font-display` (Archivo 700/800), `font-sans` (Inter 400/500/600), `fo
 
 Jetons, polices, rayons, ombres et grain viennent de la charte du portfolio de Luciano
 (`src/app/globals.css`), qui fait foi. Différences propres à EchoLens : l'accent vert mousse et
-le jeton `on-night`, le danger en rouille (la couleur d'accent du portfolio), et le thème sombre
+les jetons `on-night`, `on-accent` et `accent-ink`, le danger en rouille (la couleur d'accent du portfolio), et le thème sombre
 qui suit la préférence du système au lieu d'un bouton.

@@ -29,6 +29,11 @@
   --color-accent-deep: #355a29;
   /* Accent clair, pour le texte ou le tracé sur fond sombre (forme d'onde). */
   --color-accent-soft: #9cc58a;
+  /* Texte posé sur l'accent (bouton principal) : blanc, 5,08:1 sur l'accent (WCAG AA). */
+  --color-on-accent: #ffffff;
+  /* Accent employé comme TEXTE (liens) ou contour de focus : accent en clair, accent-soft en
+     sombre, car l'accent ne fait que 3,6:1 sur le papier sombre. */
+  --color-accent-ink: #4a7a3a;
   /* Erreurs uniquement. */
   --color-danger: #b4400f;
 
@@ -76,6 +81,8 @@
     --color-rule-strong: rgba(255, 255, 255, 0.26);
     /* La rouille est éclaircie pour rester lisible sur fond sombre. */
     --color-danger: #e8763a;
+    /* Jamais l'accent comme texte en sombre : accent-soft (9,36:1 sur le papier sombre). */
+    --color-accent-ink: #9cc58a;
     --shadow-card: 0 1px 1px rgba(0, 0, 0, 0.4), 0 10px 24px -14px rgba(0, 0, 0, 0.65);
     --pattern-grain-1: rgba(255, 255, 255, 0.045);
     --pattern-grain-2: rgba(255, 255, 255, 0.03);
@@ -98,7 +105,7 @@
   }
 
   :focus-visible {
-    outline: 2px solid var(--color-accent);
+    outline: 2px solid var(--color-accent-ink);
     outline-offset: 3px;
   }
 }
