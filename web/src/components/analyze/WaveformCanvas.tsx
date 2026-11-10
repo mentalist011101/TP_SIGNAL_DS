@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
+import { readCssColor } from '../../theme.ts'
 
 // Résolution interne du dessin, en pixels ; le canvas est ensuite étiré à la largeur de la page.
 const CANVAS_WIDTH = 1000
 const CANVAS_HEIGHT = 160
 
-// Couleurs du dessin : le canvas ne connaît pas les classes Tailwind (slate-900, emerald-500).
-const BACKGROUND_COLOR = '#0f172a'
-const WAVE_COLOR = '#10b981'
+// Couleurs du dessin : le canvas ne connaît pas les classes Tailwind, on lit donc les jetons de
+// la charte (fond night, tracé accent-soft) au moment de dessiner.
+const BACKGROUND_TOKEN = '--color-night'
+const WAVE_TOKEN = '--color-accent-soft'
 
 // Hauteur minimale d'un trait, pour qu'un silence reste visible sous la forme d'une ligne.
 const MIN_STROKE_HEIGHT = 1
@@ -72,9 +74,9 @@ function sampleToY(value: number, height: number): number {
 function drawWaveform(context: CanvasRenderingContext2D, samples: Float32Array): void {
   const width = context.canvas.width
   const height = context.canvas.height
-  context.fillStyle = BACKGROUND_COLOR
+  context.fillStyle = readCssColor(BACKGROUND_TOKEN)
   context.fillRect(0, 0, width, height)
-  context.strokeStyle = WAVE_COLOR
+  context.strokeStyle = readCssColor(WAVE_TOKEN)
   context.beginPath()
   for (let x = 0; x < width; x++) {
     const range = columnRange(samples, x, width)
@@ -120,7 +122,7 @@ export default function WaveformCanvas({ file }: WaveformCanvasProps) {
 
   if (hasError) {
     return (
-      <p className="text-sm text-red-600">Impossible de dessiner la forme d’onde de cet audio.</p>
+      <p className="text-sm text-danger">Impossible de dessiner la forme d’onde de cet audio.</p>
     )
   }
   return (
@@ -128,7 +130,7 @@ export default function WaveformCanvas({ file }: WaveformCanvasProps) {
       ref={canvasRef}
       width={CANVAS_WIDTH}
       height={CANVAS_HEIGHT}
-      className="h-40 w-full rounded-md"
+      className="h-40 w-full rounded-card"
     />
   )
 }

@@ -18,7 +18,7 @@ import WaveformCanvas from '../components/analyze/WaveformCanvas.tsx'
 const DEFAULT_TASKS: AnalysisTask[] = ['emotion', 'sound_event']
 
 const ANALYZE_BUTTON_CLASSES =
-  'rounded-md bg-brand-500 px-5 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50'
+  'rounded-btn bg-accent px-5 py-2 text-sm font-semibold text-on-night transition-colors duration-200 ease-out-soft hover:bg-accent-deep disabled:cursor-not-allowed disabled:opacity-50'
 
 // Message à afficher pour une erreur : celui de l'API, ou serveur injoignable (erreur réseau).
 function describeError(error: Error | null): string | null {
@@ -102,11 +102,13 @@ interface AudioPreviewProps {
 function AudioPreview({ file, analysis }: AudioPreviewProps) {
   return (
     <div className="space-y-3">
-      <p className="text-sm text-slate-600 dark:text-slate-300">Fichier : {file.name}</p>
+      <p className="text-sm text-ink-soft">
+        Fichier : <span className="font-mono">{file.name}</span>
+      </p>
       <AudioPlayer file={file} />
-      <h2 className="font-medium">Forme d’onde</h2>
+      <h2 className="font-display text-lg font-bold">Forme d’onde</h2>
       <WaveformCanvas file={file} />
-      <h2 className="font-medium">Spectrogramme</h2>
+      <h2 className="font-display text-lg font-bold">Spectrogramme</h2>
       <SpectrogramView analysis={analysis} />
     </div>
   )
@@ -131,7 +133,7 @@ function AnalyzeButton({ hint, isSubmitting, onClick }: AnalyzeButtonProps) {
       >
         Analyser
       </button>
-      {hint !== null && <p className="text-sm text-slate-500">{hint}</p>}
+      {hint !== null && <p className="text-sm text-ink-soft">{hint}</p>}
     </div>
   )
 }
@@ -160,8 +162,8 @@ function AnalysisPanel({ run, hint, onAnalyze }: AnalysisPanelProps) {
 function PageIntro() {
   return (
     <>
-      <h1 className="text-2xl font-semibold tracking-tight">Analyser un audio</h1>
-      <p className="text-slate-600 dark:text-slate-300">
+      <h1 className="font-display text-3xl font-extrabold tracking-tight">Analyser un audio</h1>
+      <p className="text-ink-soft">
         Importez un fichier ou enregistrez-vous au micro, choisissez les tâches, puis lancez
         l’analyse.
       </p>

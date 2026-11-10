@@ -8,8 +8,7 @@ const STATUS_LABELS: Record<AnalysisStatusValue, string> = {
   failed: 'Échec',
 }
 
-const PANEL_CLASSES =
-  'space-y-1 rounded-md border border-slate-200 bg-white p-4 text-sm dark:border-slate-800 dark:bg-slate-900'
+const PANEL_CLASSES = 'space-y-1 rounded-card border border-rule bg-card p-4 text-sm shadow-card'
 
 interface AnalysisStatusProps {
   analysis: Analysis | undefined
@@ -32,14 +31,18 @@ function AnalysisDetails({ analysis }: { analysis: Analysis }) {
   const duration = formatDuration(analysis.duration_s)
   return (
     <div className={PANEL_CLASSES}>
-      <p>Fichier : {analysis.original_filename}</p>
+      <p>
+        Fichier : <span className="font-mono">{analysis.original_filename}</span>
+      </p>
       <p>Statut : {statusLabel}</p>
-      <p>Durée : {duration}</p>
+      <p>
+        Durée : <span className="font-mono">{duration}</span>
+      </p>
       {analysis.status === 'failed' && (
-        <p className="text-red-600">Raison : {analysis.error_message}</p>
+        <p className="text-danger">Raison : {analysis.error_message}</p>
       )}
       {analysis.status === 'done' && (
-        <p className="text-slate-500">Résultats disponibles quand les modèles seront branchés.</p>
+        <p className="text-ink-faint">Résultats disponibles quand les modèles seront branchés.</p>
       )}
     </div>
   )
@@ -48,10 +51,10 @@ function AnalysisDetails({ analysis }: { analysis: Analysis }) {
 // Suivi de l'analyse : envoi en cours, erreur de l'API, ou détail de l'analyse.
 export default function AnalysisStatus(props: AnalysisStatusProps) {
   if (props.isSubmitting) {
-    return <p className="text-sm text-slate-500">Envoi du fichier au serveur…</p>
+    return <p className="text-sm text-ink-soft">Envoi du fichier au serveur…</p>
   }
   if (props.errorMessage !== null) {
-    return <p className="text-sm text-red-600">{props.errorMessage}</p>
+    return <p className="text-sm text-danger">{props.errorMessage}</p>
   }
   if (props.analysis === undefined) {
     return null
