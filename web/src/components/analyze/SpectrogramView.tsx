@@ -6,7 +6,7 @@ const MESSAGE_CLASSES =
 
 // Étiquettes posées sur l'image : fond sombre pour rester lisibles sur toutes les couleurs.
 const FREQUENCY_LABEL_CLASSES =
-  'absolute left-1 rounded bg-black/60 px-1 text-[10px] leading-4 text-white'
+  'absolute left-1 whitespace-nowrap rounded bg-black/60 px-1 text-[10px] leading-4 text-white'
 
 // Pas des graduations de temps : 1 s jusqu'à 10 s, 10 s jusqu'à 60 s, 30 s au-delà.
 const SHORT_AUDIO_MAX_S = 10
@@ -126,7 +126,11 @@ function TimeAxis({ durationSeconds }: { durationSeconds: number }) {
   return (
     <div className="relative h-4 w-full text-[10px] text-slate-500">
       {ticks.map((tick) => (
-        <span key={tick.seconds} className="absolute top-0" style={timeLabelStyle(tick)}>
+        <span
+          key={tick.seconds}
+          className="absolute top-0 whitespace-nowrap"
+          style={timeLabelStyle(tick)}
+        >
           {tick.seconds} s
         </span>
       ))}
