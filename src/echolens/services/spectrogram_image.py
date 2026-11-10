@@ -12,6 +12,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import matplotlib
+import matplotlib.colors
 import matplotlib.image
 
 from echolens.core.features import FeatureConfig, FloatArray
@@ -37,3 +39,19 @@ def save_spectrogram_png(log_mel: FloatArray, path: Path, config: FeatureConfig)
         origin="lower",
         format="png",
     )
+
+
+def colormap_stops(config: FeatureConfig, count: int) -> list[str]:
+    """Couleurs « #rrggbb » régulièrement réparties sur la palette, de la plus sombre à la plus
+    claire : la légende de l'image, de display_db_min à display_db_max (U6).
+
+    Le front s'en sert pour un dégradé CSS : il n'a pas à connaître la palette matplotlib.
+    """
+    colormap = matplotlib.colormaps[config.display_colormap]
+    stops = []
+    for index in range(count):
+        # Position sur la palette : 0 (display_db_min) … 1 (display_db_max).
+        position = index / (count - 1)
+        rgba = colormap(position)
+        stops.append(matplotlib.colors.to_hex(rgba))
+    return stops
