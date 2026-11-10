@@ -23,6 +23,10 @@ data/*
 !data/manifests/
 data/manifests/*
 !data/manifests/*.csv
+# Les découpages (identifiants d'acteurs, sans audio) sont versionnés (P1).
+!data/splits/
+data/splits/*
+!data/splits/*.csv
 models/*
 !models/README.md
 var/
