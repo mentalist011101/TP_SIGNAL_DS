@@ -44,6 +44,7 @@ class FeatureConfig(BaseModel):
     display_db_max: float = 40.0
     display_colormap: str = "magma"
     display_frequency_ticks_hz: tuple[float, ...] = (250.0, 500.0, 1000.0, 2000.0, 4000.0, 8000.0)
+    display_legend_stops: int = Field(default=6, ge=2)
 
     @model_validator(mode="after")
     def check_display_range(self) -> FeatureConfig:

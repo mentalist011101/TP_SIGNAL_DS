@@ -35,6 +35,7 @@ from echolens.services.analysis_service import (
     AnalysisRejectedError,
     AnalysisService,
 )
+from echolens.services.spectrogram_image import colormap_stops
 from echolens.services.storage import AnalysisRecord, AnalysisStatus
 
 blp = Blueprint(
@@ -107,6 +108,13 @@ class SpectrogramInfoSchema(Schema):
     colormap = fields.String(
         metadata={"description": "Nom de la palette matplotlib utilisée (par exemple magma)."}
     )
+    colormap_stops = fields.List(
+        fields.String(),
+        metadata={
+            "description": "Couleurs de la légende, de db_min à db_max, pour un dégradé CSS "
+            "(format « #rrggbb », de la plus sombre à la plus claire)."
+        },
+    )
 
 
 class AnalysisSchema(Schema):
@@ -149,7 +157,10 @@ class AnalysisSchema(Schema):
     )
     profile = fields.String(
         validate=validate.OneOf(PROFILES),
-        metadata={"description": "Profil : quality (fichier importé) ou realtime (flux micro)."},
+        metadata={
+            "description": "Profil (EF-07), qui choisit les modèles : quality : modèles "
+            "les plus précis ; realtime : modèles légers, utilisés aussi pour le micro en direct."
+        },
     )
     audio_url = fields.Method(
         "get_audio_url",
@@ -223,7 +234,11 @@ class AnalysisFormSchema(Schema):
     profile = fields.String(
         load_default=Profile.QUALITY.value,
         validate=validate.OneOf(PROFILES, error="Profil inconnu : « {input} »."),
-        metadata={"description": "quality (par défaut) ou realtime."},
+        metadata={
+            "description": "Profil (EF-07), qui choisit les modèles : quality (par défaut) : "
+            "modèles les plus précis ; realtime : modèles légers, utilisés aussi pour le micro "
+            "en direct."
+        },
     )
 
 
@@ -366,4 +381,5 @@ def _spectrogram_info(record: AnalysisRecord) -> dict[str, Any] | None:
         "db_min": config.display_db_min,
         "db_max": config.display_db_max,
         "colormap": config.display_colormap,
+        "colormap_stops": colormap_stops(config, config.display_legend_stops),
     }

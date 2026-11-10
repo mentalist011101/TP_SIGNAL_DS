@@ -21,7 +21,11 @@ class Task(StrEnum):
 
 
 class Profile(StrEnum):
-    """Profil d'usage : qualité (fichiers importés) ou temps réel (flux micro)."""
+    """Profil d'analyse (EF-07) : il choisit les modèles, pas la source du son.
+
+    quality : modèles les plus précis ; realtime : modèles légers, utilisés aussi pour le micro
+    en direct.
+    """
 
     QUALITY = "quality"
     REALTIME = "realtime"

@@ -10,7 +10,7 @@ import {
 } from '../api/client.ts'
 import AnalysisStatus from '../components/analyze/AnalysisStatus.tsx'
 import AudioPicker from '../components/analyze/AudioPicker.tsx'
-import SpectrogramPlaceholder from '../components/analyze/SpectrogramPlaceholder.tsx'
+import SpectrogramView from '../components/analyze/SpectrogramView.tsx'
 import TaskSelector from '../components/analyze/TaskSelector.tsx'
 import WaveformCanvas from '../components/analyze/WaveformCanvas.tsx'
 
@@ -28,7 +28,7 @@ function describeError(error: Error | null): string | null {
   if (error instanceof ApiError) {
     return error.message
   }
-  return 'Serveur injoignable : lancez le serveur Flask (make run).'
+  return 'Serveur injoignable : vérifiez que l’application est lancée, puis réessayez.'
 }
 
 // Explique pourquoi le bouton Analyser est désactivé ; null quand tout est prêt.
@@ -91,9 +91,15 @@ function useAnalysisRun(): AnalysisRun {
   }
 }
 
-// Lecteur, forme d'onde et emplacement du spectrogramme de l'audio choisi.
+interface AudioPreviewProps {
+  file: File
+  analysis: Analysis | undefined
+}
+
+// Lecteur, forme d'onde et spectrogramme de l'audio choisi. La forme d'onde et l'image du
+// spectrogramme ont la même largeur (w-full) et couvrent la même durée : elles sont alignées.
 // La page lui donne une clé par fichier : un nouvel audio repart d'un aperçu vierge.
-function AudioPreview({ file }: { file: File }) {
+function AudioPreview({ file, analysis }: AudioPreviewProps) {
   return (
     <div className="space-y-3">
       <p className="text-sm text-slate-600 dark:text-slate-300">Fichier : {file.name}</p>
@@ -101,7 +107,7 @@ function AudioPreview({ file }: { file: File }) {
       <h2 className="font-medium">Forme d’onde</h2>
       <WaveformCanvas file={file} />
       <h2 className="font-medium">Spectrogramme</h2>
-      <SpectrogramPlaceholder />
+      <SpectrogramView analysis={analysis} />
     </div>
   )
 }
@@ -187,7 +193,9 @@ export default function AnalyzePage() {
     <section className="space-y-6">
       <PageIntro />
       <AudioPicker onAudioSelected={handleAudioSelected} />
-      {audioFile !== null && <AudioPreview key={fileKey(audioFile)} file={audioFile} />}
+      {audioFile !== null && (
+        <AudioPreview key={fileKey(audioFile)} file={audioFile} analysis={run.analysis} />
+      )}
       <TaskSelector
         tasks={tasks}
         profile={profile}

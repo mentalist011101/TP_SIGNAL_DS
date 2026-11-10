@@ -74,6 +74,26 @@ export type AnalysisTask = 'emotion' | 'sound_event' | 'transcription' | 'speake
 export type AnalysisProfile = 'quality' | 'realtime'
 export type AnalysisStatusValue = 'pending' | 'processing' | 'done' | 'failed'
 
+// Une graduation de l'axe des fréquences : position = hauteur relative depuis le bas de
+// l'image (0 en bas, 1 en haut). L'axe suit l'échelle Mel : ne pas interpoler en Hz.
+export interface FrequencyTick {
+  hz: number
+  position: number
+}
+
+// Axes et légende de l'image du spectrogramme, calculés par le serveur (U6, R5).
+export interface SpectrogramInfo {
+  n_mels: number
+  f_min_hz: number
+  f_max_hz: number
+  frequency_ticks: FrequencyTick[]
+  frame_step_s: number
+  db_min: number
+  db_max: number
+  colormap: string
+  colormap_stops: string[]
+}
+
 export interface Analysis {
   id: string
   created_at: string
@@ -84,6 +104,8 @@ export interface Analysis {
   tasks: AnalysisTask[]
   profile: AnalysisProfile
   audio_url: string | null
+  spectrogram_url: string | null
+  spectrogram: SpectrogramInfo | null
 }
 
 export interface AnalysisRequest {

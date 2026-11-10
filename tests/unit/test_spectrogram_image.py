@@ -1,13 +1,15 @@
+import re
 from pathlib import Path
 
 import matplotlib
+import matplotlib.colors
 import matplotlib.image
 import numpy as np
 import pytest
 
 from echolens.config import CONFIG_DIR
 from echolens.core.features import FeatureConfig
-from echolens.services.spectrogram_image import save_spectrogram_png
+from echolens.services.spectrogram_image import colormap_stops, save_spectrogram_png
 
 N_FRAMES = 50
 SILENCE_DB = -100.0
@@ -74,3 +76,17 @@ def test_low_frequencies_are_at_the_bottom(tmp_path: Path, config: FeatureConfig
     tolerance = 1 / 255
     np.testing.assert_allclose(bottom_row[0], brightest, atol=tolerance)
     np.testing.assert_allclose(top_row[0], darkest, atol=tolerance)
+
+
+def luminance(hex_color: str) -> float:
+    """Luminosité perçue d'une couleur « #rrggbb », de 0 (noir) à 1 (blanc)."""
+    red, green, blue = matplotlib.colors.to_rgb(hex_color)
+    return 0.2126 * red + 0.7152 * green + 0.0722 * blue
+
+
+def test_colormap_stops_are_hex_colors_from_dark_to_light(config: FeatureConfig) -> None:
+    stops = colormap_stops(config, config.display_legend_stops)
+    assert len(stops) == 6
+    for stop in stops:
+        assert re.fullmatch(r"#[0-9a-f]{6}", stop)
+    assert luminance(stops[0]) < luminance(stops[-1])

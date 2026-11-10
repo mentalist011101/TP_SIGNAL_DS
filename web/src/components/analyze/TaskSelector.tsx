@@ -9,10 +9,17 @@ const TASK_OPTIONS: { value: AnalysisTask; label: string }[] = [
   { value: 'speaker', label: 'Locuteur' },
 ]
 
+// Le profil choisit les modèles, pas la source du son (EF-07).
 const PROFILE_OPTIONS: { value: AnalysisProfile; label: string }[] = [
   { value: 'quality', label: 'Qualité' },
   { value: 'realtime', label: 'Temps réel' },
 ]
+
+// Phrase d'aide affichée sous la liste, selon le profil choisi.
+const PROFILE_HELP: Record<AnalysisProfile, string> = {
+  quality: 'Modèles les plus précis, analyse plus lente.',
+  realtime: 'Modèles légers et rapides, ceux du micro en direct.',
+}
 
 const SELECT_CLASSES =
   'rounded-md border border-slate-300 bg-white px-2 py-1 dark:border-slate-700 dark:bg-slate-900'
@@ -56,7 +63,7 @@ function TaskCheckboxes({ tasks, onTasksChange }: TaskCheckboxesProps) {
   ))
 }
 
-// Liste déroulante du profil : qualité (fichier importé) ou temps réel.
+// Liste déroulante du profil, suivie d'une phrase qui explique le choix.
 function ProfileSelect({ profile, onProfileChange }: ProfileSelectProps) {
   function handleChange(event: ChangeEvent<HTMLSelectElement>) {
     // Les seules valeurs possibles sont celles de PROFILE_OPTIONS.
@@ -64,17 +71,21 @@ function ProfileSelect({ profile, onProfileChange }: ProfileSelectProps) {
     onProfileChange(newProfile)
   }
 
+  const help = PROFILE_HELP[profile]
   return (
-    <label className="flex items-center gap-2 pt-2">
-      Profil :
-      <select className={SELECT_CLASSES} value={profile} onChange={handleChange}>
-        {PROFILE_OPTIONS.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-    </label>
+    <div className="space-y-1 pt-2">
+      <label className="flex items-center gap-2">
+        Profil :
+        <select className={SELECT_CLASSES} value={profile} onChange={handleChange}>
+          {PROFILE_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <p className="text-sm text-slate-500">{help}</p>
+    </div>
   )
 }
 

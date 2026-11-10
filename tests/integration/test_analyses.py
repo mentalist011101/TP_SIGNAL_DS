@@ -274,6 +274,7 @@ def test_analysis_describes_its_spectrogram(client: FlaskClient) -> None:
     assert spectrogram["db_min"] == -80.0
     assert spectrogram["db_max"] == 40.0
     assert spectrogram["colormap"] == "magma"
+    assert len(spectrogram["colormap_stops"]) == 6
 
     # Graduations présentes, croissantes en Hz comme en hauteur, de 250 Hz à 8 kHz (en haut).
     ticks = spectrogram["frequency_ticks"]
