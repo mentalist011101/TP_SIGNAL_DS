@@ -9,6 +9,7 @@
     "lint": "oxlint src",
     "format": "prettier --write src",
     "format:check": "prettier --check src",
+    "check:tokens": "node scripts/check-tokens.mjs",
     "gen:api": "npx -y openapi-typescript http://localhost:5000/api/v1/openapi.json -o src/api/schema.d.ts",
     "preview": "vite preview"
   },
