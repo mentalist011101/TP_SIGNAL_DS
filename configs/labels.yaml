@@ -1,8 +1,8 @@
 # Classes d'émotion communes à tous les jeux (décision P2).
 # id : identifiant utilisé dans le code, les modèles et l'API (anglais).
 # label_fr : libellé affiché dans l'interface.
-# La correspondance depuis les étiquettes d'origine de chaque jeu n'est pas ici :
-# elle sera fixée par les règles de Lynn (Ly2).
+# La correspondance depuis les étiquettes d'origine de chaque jeu est plus bas
+# (label_mapping), d'après les règles de protocole de Lynn (Ly2).
 emotions:
   - id: neutral
     label_fr: Neutre
@@ -16,3 +16,33 @@ emotions:
     label_fr: Peur
   - id: disgust
     label_fr: Dégoût
+
+# Correspondance des étiquettes d'origine vers les 6 classes communes (P2, Ly2).
+# Une ligne par étiquette d'origine du jeu, y compris celles que l'on exclut :
+#   null = étiquette exclue (calme et surprise, absents de CREMA-D, notre jeu principal).
+# Une étiquette absente de cette liste fait échouer le code : on ne devine jamais.
+label_mapping:
+  cremad:
+    NEU: neutral
+    HAP: happy
+    SAD: sad
+    ANG: angry
+    FEA: fear
+    DIS: disgust
+  ravdess:
+    "01": neutral
+    "02": null      # calme : jeu à part, absent des autres jeux
+    "03": happy
+    "04": sad
+    "05": angry
+    "06": fear
+    "07": disgust
+    "08": null      # surprise : absente de CREMA-D
+  cafe:
+    N: neutral
+    J: happy
+    T: sad
+    C: angry
+    P: fear
+    D: disgust
+    S: null         # surprise : absente de CREMA-D
