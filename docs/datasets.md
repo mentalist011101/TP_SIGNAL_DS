@@ -78,11 +78,36 @@ fixés par les scripts de téléchargement.
 ```csv
 dataset,path,label,speaker,gender,duration_s,fold,official_split,subset,intensity,source,transcript
 esc50,audio/1-100032-A-0.wav,dog,,,5.0,1,,,,100032,
-cremad,AudioWAV/1001_DFA_ANG_XX.wav,ANG,1001,M,2.275,,,,XX,,
-ravdess,Actor_01/03-01-05-01-01-01-01.wav,05,01,M,3.737,,,,01,,
+cremad,AudioWAV/1001_DFA_ANG_XX.wav,ANG,1001,M,2.2755625,,,,XX,,
+ravdess,Actor_01/03-01-05-01-01-01-01.wav,05,01,M,3.8705416666666665,,,,01,,
 cafe,Colère/Faible/01-C-1-1.wav,C,01,,2.9,,,,1,,
 openslr57,speech/train/ca16/gabon_m_074/gabon_m_074_001.wav,,gabon_m_074,M,4.2,,train,ca16,,,bonjour à tous
 ```
+
+## Sources réellement utilisées
+
+Les manifestes de `data/manifests/` ont été construits sur Kaggle par les notebooks de
+`training/notebooks/`, à partir de ces copies :
+
+| Jeu | Copie utilisée | Contrôle |
+| --- | --- | --- |
+| ESC-50 | archive officielle GitHub (https://github.com/karolpiczak/ESC-50) | 2 000 extraits, 400 par fold |
+| CREMA-D | copie Kaggle `ejlok1/cremad` (https://www.kaggle.com/datasets/ejlok1/cremad), dossier `AudioWAV` | 7 442 WAV ; noms comparés un à un au dépôt officiel CheyneyComputerScience/CREMA-D |
+| CREMA-D, genre | `VideoDemographics.csv` du dépôt officiel (https://github.com/CheyneyComputerScience/CREMA-D), téléchargé à chaque exécution, jamais commité (I8) | 91 acteurs, 48 M et 43 F |
+| RAVDESS | copie Kaggle `uwrfkaggler/ravdess-emotional-speech-audio` (https://www.kaggle.com/datasets/uwrfkaggler/ravdess-emotional-speech-audio), dossiers `Actor_01` … `Actor_24` à la racine | 1 440 WAV ; la copie contient chaque fichier **en double** (une seconde fois sous `audio_speech_actors_01-24/`) : un seul des deux dossiers est pris, les doublons ne sont jamais comptés |
+
+Écart connu : la copie Kaggle de CREMA-D nomme un fichier `1040_ITH_SAD_X.wav` (intensité `X`)
+au lieu de `1040_ITH_SAD_XX.wav` dans le dépôt officiel ; c'est la seule différence sur les
+7 442 fichiers. `KNOWN_MISNAMED_FILES` (`core/data/cremad.py`) lit ses champs sur le nom
+officiel ; le chemin du manifeste garde le nom réel du fichier dans la copie.
+
+## Fichiers défectueux
+
+Un fichier illisible ou de durée nulle n'est **jamais** ignoré en silence : la construction du
+manifeste échoue en le nommant (`audio_duration_s` dans `core/data/manifest.py`). Seuls les
+fichiers listés dans la constante `KNOWN_BAD_FILES` du module du jeu sont exclus, chacun avec un
+commentaire qui dit ce qui ne va pas et où on l'a constaté. Pour CREMA-D et RAVDESS, ces listes
+sont vides : aucun fichier défectueux dans les copies utilisées.
 
 ## Où se trouvent les informations dans chaque jeu
 

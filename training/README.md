@@ -35,6 +35,7 @@ os.environ["HF_TOKEN"] = secrets.get_secret("HF_TOKEN")
 
 | Notebook | Tâche | Ce qu'il produit |
 | --- | --- | --- |
+| `c3_manifests_emotions.ipynb` | C3 : manifestes de CREMA-D et de RAVDESS (P1, P9), sans GPU ni ffmpeg | `cremad.csv` et `ravdess.csv` (→ `data/manifests/`) |
 | `c5_esc50_mfcc_svm.ipynb` | C5 : référence MFCC + SVM sur ESC-50 (P3, P4, P5), sans GPU | `esc50.csv` (→ `data/manifests/`), `esc50_mfcc_svm.json` (→ `training/results/`), matrice en 5 catégories (→ `report/figures/`) |
 
 ## Règles
