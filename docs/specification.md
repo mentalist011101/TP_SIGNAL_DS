@@ -116,11 +116,11 @@ Détail des jeux, des manifestes et de la racine des jeux : `docs/datasets.md`,
 | ID | Décision |
 | --- | --- |
 | P1 | Émotions : découpage indépendant du locuteur, aucun acteur dans deux découpages ; 70 / 15 / 15 tiré séparément par genre, graine 42, une seule fois ; le résultat (identifiants d'acteurs, sans audio) est versionné dans `data/splits/` |
-| P2 | 6 classes d'émotion communes : neutral, happy, sad, angry, fear, disgust ; correspondance depuis les étiquettes d'origine fixée par les règles de protocole (Ly2) |
+| P2 | 6 classes d'émotion communes : neutral, happy, sad, angry, fear, disgust ; correspondance depuis les étiquettes d'origine fixée par les règles de protocole (`docs/protocole.md`) |
 | P3 | ESC-50 : validation croisée sur les 5 folds officiels, jamais remélangés ; les extraits d'une même source restent dans le même fold. Au tour k, le fold k+1 sert seulement à régler époques et hyperparamètres, puis on réentraîne sur les 4 folds hors test (comparabilité avec la littérature) |
 | P4 | Métrique principale F1 macro ; plus accuracy, F1 par classe, matrice normalisée (agrégée en 5 catégories pour ESC-50) |
 | P5 | Référence classique MFCC + SVM ou MLP |
-| P6 | Augmentation au train seulement : bruit à SNR contrôlé, décalage, gain, SpecAugment, mixup |
+| P6 | Augmentation au train seulement : bruit à SNR contrôlé, décalage, gain, SpecAugment, mixup ; masques appliqués après la standardisation (R4), valeur 0 = moyenne du train |
 | P7 | Trois niveaux de test : en domaine, hors domaine (CaFE, ACE), nos enregistrements |
 | P8 | Test de McNemar entre familles, intervalles de confiance par bootstrap |
 | P9 | Un manifeste CSV par jeu au format commun (`echolens.core.data.manifest`), étiquette d'origine conservée telle quelle |
@@ -128,6 +128,8 @@ Détail des jeux, des manifestes et de la racine des jeux : `docs/datasets.md`,
 | P11 | Identification du locuteur : les phrases de chaque locuteur sont séparées entre enregistrement et test (les découpages officiels séparent les locuteurs, ce qui empêcherait de les reconnaître) |
 | P12 | WER : référence et transcription normalisées de la même façon : minuscules, ponctuation retirée sauf apostrophe et trait d'union internes, apostrophes unifiées (« c' est » devient « c'est »), nombres en chiffres écrits en lettres (« 7 h 30 » devient « sept heures trente »), espaces réduits |
 | P13 | Enregistrements de l'équipe : consentement signé avant tout enregistrement ; nommage `<personne>_<appareil>_<partie>_<numéro sur 2 chiffres>_<étiquette>` ; genre de p01 à p04 dans une table sans noms ; audios uniquement sur le Drive privé, jamais sur GitHub ; test seulement |
+
+Le détail des règles fait foi dans `docs/protocole.md`.
 
 ## 8. Brique 4 — Modèles
 
@@ -229,3 +231,4 @@ et `/docs`.
 | 6 nov. 2026 | R2 : dB absolus avec plancher fixe (revue de la PR #1) ; D5 : VAD sans torch, segments d'au moins 100 ms ; I12 : règle « code simple » et répartition du code par brique |
 | 6 nov. 2026 | Brique 3 : licence ODbL de CREMA-D, version 48 kHz de CaFE, décisions P9 à P12 après exploration des fichiers réels |
 | 9 nov. 2026 | Brique 3, d'après les règles de protocole de Lynn (Ly2, Ly5) : P1 précisé (tirage par genre, découpage versionné), P3 (réglage sur le fold k+1 puis réentraînement sur 4 folds), P12 (règle de normalisation fixée, nombres en lettres), P13 (enregistrements de l'équipe) ; R2 appliqué dans le code (PR #1) |
+| 11 nov. 2026 | Protocole publié dans docs/protocole.md (Ly2 et Ly5 de Lynn, décisions du 9 au 11 novembre) ; P6 : valeur des masques |
