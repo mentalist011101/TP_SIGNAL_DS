@@ -2,11 +2,11 @@ import { useState, type CSSProperties } from 'react'
 import type { Analysis, FrequencyTick, SpectrogramInfo } from '../../api/client.ts'
 
 const MESSAGE_CLASSES =
-  'flex h-40 items-center justify-center rounded-md border border-dashed border-slate-300 text-sm text-slate-500 dark:border-slate-700'
+  'flex h-40 items-center justify-center rounded-card border border-dashed border-rule-strong bg-card text-sm text-ink-soft'
 
 // Étiquettes posées sur l'image : fond sombre pour rester lisibles sur toutes les couleurs.
 const FREQUENCY_LABEL_CLASSES =
-  'absolute left-1 whitespace-nowrap rounded bg-black/60 px-1 text-[10px] leading-4 text-white'
+  'absolute left-1 whitespace-nowrap rounded bg-night/70 px-1 font-mono text-[10px] leading-4 text-on-night'
 
 // Pas des graduations de temps : 1 s jusqu'à 10 s, 10 s jusqu'à 60 s, 30 s au-delà.
 const SHORT_AUDIO_MAX_S = 10
@@ -108,7 +108,7 @@ function SpectrogramImage({ url, info }: { url: string; info: SpectrogramInfo })
       <img
         src={url}
         alt="Spectrogramme log-Mel de l’audio analysé"
-        className="h-40 w-full rounded-md"
+        className="h-40 w-full rounded-card"
         onError={() => setHasError(true)}
       />
       {info.frequency_ticks.map((tick) => (
@@ -124,7 +124,7 @@ function SpectrogramImage({ url, info }: { url: string; info: SpectrogramInfo })
 function TimeAxis({ durationSeconds }: { durationSeconds: number }) {
   const ticks = timeTicks(durationSeconds)
   return (
-    <div className="relative h-4 w-full text-[10px] text-slate-500">
+    <div className="relative h-4 w-full font-mono text-[10px] text-ink-soft">
       {ticks.map((tick) => (
         <span
           key={tick.seconds}
@@ -142,10 +142,10 @@ function TimeAxis({ durationSeconds }: { durationSeconds: number }) {
 function ColorLegend({ info }: { info: SpectrogramInfo }) {
   const gradientStyle = { backgroundImage: legendGradient(info.colormap_stops) }
   return (
-    <div className="flex items-center gap-2 text-xs text-slate-500">
-      <span>{formatDb(info.db_min)}</span>
+    <div className="flex items-center gap-2 text-xs text-ink-soft">
+      <span className="font-mono">{formatDb(info.db_min)}</span>
       <div className="h-3 w-48 rounded" style={gradientStyle} />
-      <span>{formatDb(info.db_max)}</span>
+      <span className="font-mono">{formatDb(info.db_max)}</span>
       <span>(énergie de chaque bande)</span>
     </div>
   )

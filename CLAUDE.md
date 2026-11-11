@@ -121,6 +121,7 @@ par le porteur de la brique ; Luciano la relit, l'améliore si besoin et la fusi
 | Paramètres des features | `configs/features.yaml` |
 | Modèles disponibles | `configs/registry.yaml` |
 | Décisions d'architecture | `docs/adr/` |
+| Charte graphique (jetons, règles) | [`docs/design.md`](docs/design.md) |
 | Fiches de révision pour l'oral | `docs/fiches/` |
 | Notebooks Kaggle | `training/notebooks/` |
 | Rapport et Beamer | `report/`, `slides/` |

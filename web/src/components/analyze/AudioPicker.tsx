@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type ChangeEvent, type RefObject } from 'r
 const ACCEPTED_FORMATS = '.wav,.mp3,.flac,.ogg,.webm,.m4a'
 
 const BUTTON_CLASSES =
-  'rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800'
+  'rounded-btn border border-rule-strong bg-card px-4 py-2 text-sm font-medium text-ink shadow-hard-sm transition-colors duration-200 ease-out-soft hover:bg-paper-alt'
 
 type AudioHandler = (file: File) => void
 
@@ -142,9 +142,11 @@ export default function AudioPicker({ onAudioSelected }: AudioPickerProps) {
           {microphone.isRecording ? 'Arrêter l’enregistrement' : 'Enregistrer au micro'}
         </button>
       </div>
-      {microphone.isRecording && <p className="text-sm text-red-600">● Enregistrement en cours…</p>}
+      {microphone.isRecording && (
+        <p className="font-mono text-sm text-ink-soft">● Enregistrement en cours…</p>
+      )}
       {microphone.errorMessage !== null && (
-        <p className="text-sm text-red-600">{microphone.errorMessage}</p>
+        <p className="text-sm text-danger">{microphone.errorMessage}</p>
       )}
     </div>
   )

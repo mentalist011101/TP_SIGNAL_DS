@@ -21,8 +21,7 @@ const PROFILE_HELP: Record<AnalysisProfile, string> = {
   realtime: 'Modèles légers et rapides, ceux du micro en direct.',
 }
 
-const SELECT_CLASSES =
-  'rounded-md border border-slate-300 bg-white px-2 py-1 dark:border-slate-700 dark:bg-slate-900'
+const SELECT_CLASSES = 'rounded-btn border border-rule-strong bg-card px-2 py-1 text-ink'
 
 interface TaskCheckboxesProps {
   tasks: AnalysisTask[]
@@ -55,6 +54,7 @@ function TaskCheckboxes({ tasks, onTasksChange }: TaskCheckboxesProps) {
     <label key={option.value} className="flex items-center gap-2">
       <input
         type="checkbox"
+        className="accent-accent"
         checked={tasks.includes(option.value)}
         onChange={() => handleTaskChange(option.value)}
       />
@@ -84,7 +84,7 @@ function ProfileSelect({ profile, onProfileChange }: ProfileSelectProps) {
           ))}
         </select>
       </label>
-      <p className="text-sm text-slate-500">{help}</p>
+      <p className="text-sm text-ink-soft">{help}</p>
     </div>
   )
 }
@@ -93,7 +93,7 @@ function ProfileSelect({ profile, onProfileChange }: ProfileSelectProps) {
 export default function TaskSelector(props: TaskSelectorProps) {
   return (
     <fieldset className="space-y-3">
-      <legend className="font-medium">Que souhaitez-vous analyser ?</legend>
+      <legend className="font-display text-lg font-bold">Que souhaitez-vous analyser ?</legend>
       <TaskCheckboxes tasks={props.tasks} onTasksChange={props.onTasksChange} />
       <ProfileSelect profile={props.profile} onProfileChange={props.onProfileChange} />
     </fieldset>
