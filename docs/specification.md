@@ -115,7 +115,7 @@ Détail des jeux, des manifestes et de la racine des jeux : `docs/datasets.md`,
 
 | ID | Décision |
 | --- | --- |
-| P1 | Émotions : découpage indépendant du locuteur, aucun acteur dans deux découpages ; 70 / 15 / 15 tiré séparément par genre, graine 42, une seule fois ; le résultat (identifiants d'acteurs, sans audio) est versionné dans `data/splits/` |
+| P1 | Émotions : découpage indépendant du locuteur, aucun acteur dans deux découpages ; validation et test reçoivent chacun round(15 % × nombre d'acteurs) acteurs, moitié hommes, moitié femmes, le reste en entraînement ; graine 42, tirage unique ; le résultat (identifiants d'acteurs, sans audio) est versionné dans `data/splits/` |
 | P2 | 6 classes d'émotion communes : neutral, happy, sad, angry, fear, disgust ; correspondance depuis les étiquettes d'origine fixée par les règles de protocole (`docs/protocole.md`) |
 | P3 | ESC-50 : validation croisée sur les 5 folds officiels, jamais remélangés ; les extraits d'une même source restent dans le même fold. Au tour k, le fold k+1 sert seulement à régler époques et hyperparamètres, puis on réentraîne sur les 4 folds hors test (comparabilité avec la littérature) |
 | P4 | Métrique principale F1 macro ; plus accuracy, F1 par classe, matrice normalisée (agrégée en 5 catégories pour ESC-50) |
@@ -231,4 +231,4 @@ et `/docs`.
 | 6 nov. 2026 | R2 : dB absolus avec plancher fixe (revue de la PR #1) ; D5 : VAD sans torch, segments d'au moins 100 ms ; I12 : règle « code simple » et répartition du code par brique |
 | 6 nov. 2026 | Brique 3 : licence ODbL de CREMA-D, version 48 kHz de CaFE, décisions P9 à P12 après exploration des fichiers réels |
 | 9 nov. 2026 | Brique 3, d'après les règles de protocole de Lynn (Ly2, Ly5) : P1 précisé (tirage par genre, découpage versionné), P3 (réglage sur le fold k+1 puis réentraînement sur 4 folds), P12 (règle de normalisation fixée, nombres en lettres), P13 (enregistrements de l'équipe) ; R2 appliqué dans le code (PR #1) |
-| 11 nov. 2026 | Protocole publié dans docs/protocole.md (Ly2 et Ly5 de Lynn, décisions du 9 au 11 novembre) ; P6 : valeur des masques |
+| 11 nov. 2026 | Protocole publié dans docs/protocole.md (Ly2 et Ly5 de Lynn, décisions du 9 au 11 novembre) ; P6 : valeur des masques ; P1 : règle exacte du tirage alignée sur le protocole |
