@@ -69,8 +69,8 @@ est gonflé.
 
 **Règle** (`configs/splits.yaml`, code dans `echolens.core.data.splits`) :
 
-1. La validation et le test reçoivent chacun `round(0,15 × nombre d'acteurs)` acteurs, moitié
-   hommes, moitié femmes. Tous les autres vont à l'entraînement.
+1. La validation et le test reçoivent chacun `round(0,15 × nombre d'acteurs / 2)` acteurs
+   de chaque genre. Tous les autres vont à l'entraînement.
 2. Tirage avec `random.Random(42)` de Python, un seul générateur, d'abord chez les femmes puis
    chez les hommes, sur la liste triée des acteurs de chaque genre : les premiers vont en test,
    les suivants en validation, le reste en entraînement. Le générateur est recréé avec la même

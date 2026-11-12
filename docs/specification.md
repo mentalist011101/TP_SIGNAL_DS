@@ -115,7 +115,7 @@ Détail des jeux, des manifestes et de la racine des jeux : `docs/datasets.md`,
 
 | ID | Décision |
 | --- | --- |
-| P1 | Émotions : découpage indépendant du locuteur, aucun acteur dans deux découpages ; validation et test reçoivent chacun round(15 % × nombre d'acteurs) acteurs, moitié hommes, moitié femmes, le reste en entraînement ; graine 42, tirage unique ; le résultat (identifiants d'acteurs, sans audio) est versionné dans `data/splits/` |
+| P1 | Émotions : découpage indépendant du locuteur, aucun acteur dans deux découpages ; validation et test reçoivent chacun round(15 % × nombre d'acteurs / 2) acteurs de chaque genre, le reste en entraînement ; graine 42, tirage unique ; le résultat (identifiants d'acteurs, sans audio) est versionné dans `data/splits/` |
 | P2 | 6 classes d'émotion communes : neutral, happy, sad, angry, fear, disgust ; correspondance depuis les étiquettes d'origine fixée par les règles de protocole (`docs/protocole.md`) |
 | P3 | ESC-50 : validation croisée sur les 5 folds officiels, jamais remélangés ; les extraits d'une même source restent dans le même fold. Au tour k, le fold k+1 sert seulement à régler époques et hyperparamètres, puis on réentraîne sur les 4 folds hors test (comparabilité avec la littérature) |
 | P4 | Métrique principale F1 macro ; plus accuracy, F1 par classe, matrice normalisée (agrégée en 5 catégories pour ESC-50) |
