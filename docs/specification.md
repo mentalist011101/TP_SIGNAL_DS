@@ -77,8 +77,8 @@ Voir `docs/adr/0001-architecture-en-couches.md`.
 | D1 | Décodage par ffmpeg, dépendance système obligatoire |
 | D2 | Rééchantillonnage en mono 16 kHz float32 ; limite : rien au-dessus de 8 kHz (Nyquist) |
 | D3 | Normalisation RMS vers un niveau cible en dBFS, puis écrêtage de sécurité |
-| D4 | Débruitage (soustraction spectrale ou spectral gating) seulement pour la parole, désactivable, évalué avec et sans |
-| D5 | Segmentation : détection d'activité vocale **sans torch** (Silero VAD en version ONNX, ou webrtcvad) pour la parole ; fenêtres fixes avec recouvrement pour les événements ; fenêtres glissantes pour le flux ; segments d'au moins 100 ms |
+| D4 | Débruitage par spectral gating seulement pour la parole : désactivé par défaut ; force 0,8 provisoire ; ablation au sprint 2 : sans / 0,5 / 0,8 / 1,0 sur la validation, propre et bruitée à 20, 10 et 0 dB, avec le WER (Whisper) et le F1 macro (émotions) ; on retient le meilleur score moyen, la plus faible force en cas d'égalité ; seuil fixé à 1,5 |
+| D5 | Segmentation : détection d'activité vocale **sans torch** (webrtcvad (webrtcvad-wheels), trames de 30 ms, agressivité 2, fusion des écarts < 300 ms, segments ≥ 100 ms, marge de 100 ms) pour la parole ; fenêtres fixes avec recouvrement pour les événements ; fenêtres glissantes pour le flux ; segments d'au moins 100 ms |
 | D6 | Garde-fous : 5 min maximum, formats autorisés, rejet des fichiers silencieux |
 | D7 | OpenAPI généré depuis le code (flask-smorest) |
 | D8 | Flux : PCM 16 kHz Int16 par WebSocket (flask-sock), tampon par session, fenêtre W = 2 s, décalage H = 0,5 s ; transcription déclenchée en fin d'énoncé |
@@ -232,3 +232,4 @@ et `/docs`.
 | 6 nov. 2026 | Brique 3 : licence ODbL de CREMA-D, version 48 kHz de CaFE, décisions P9 à P12 après exploration des fichiers réels |
 | 9 nov. 2026 | Brique 3, d'après les règles de protocole de Lynn (Ly2, Ly5) : P1 précisé (tirage par genre, découpage versionné), P3 (réglage sur le fold k+1 puis réentraînement sur 4 folds), P12 (règle de normalisation fixée, nombres en lettres), P13 (enregistrements de l'équipe) ; R2 appliqué dans le code (PR #1) |
 | 11 nov. 2026 | Protocole publié dans docs/protocole.md (Ly2 et Ly5 de Lynn, décisions du 9 au 11 novembre) ; P6 : valeur des masques ; P1 : règle exacte du tirage alignée sur le protocole |
+| 12 nov. 2026 | Brique 1 (C2, PR #19) : D4 désactivé par défaut, force 0,8 provisoire, protocole d'ablation du sprint 2 ; D5 : webrtcvad à la place de Silero VAD, paramètres de nettoyage des segments fixés ; paramètres dans configs/preprocess.yaml |

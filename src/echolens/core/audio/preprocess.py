@@ -1,6 +1,6 @@
 """Normalisation du niveau (décision D3) et détection de silence (garde-fou D6).
 
-Le débruitage (D4) et la segmentation (D5) seront ajoutés dans ce module en semaine 1.
+Le débruitage (D4) est dans denoise.py, la segmentation (D5, D8) dans segment.py.
 """
 
 from __future__ import annotations

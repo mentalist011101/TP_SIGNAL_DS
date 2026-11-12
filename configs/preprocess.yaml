@@ -1,0 +1,25 @@
+# Brique 1 — débruitage (D4), détection de parole (D5) et fenêtres (D8).
+# Ce fichier est la source unique de ces paramètres : entraînement (Kaggle) et inférence (Flask).
+denoise:
+  enabled: false                  # D4 : désactivé tant que l'ablation du sprint 2
+                                  # n'a pas tranché (sans / 0,5 / 0,8 / 1,0)
+  stationary: true                # un seul profil de bruit pour tout l'extrait
+  prop_decrease: 0.8              # FORCE : le bruit garde 20 % de son amplitude
+                                  # (−14 dB). À 1,0 on crée des artefacts et on abîme
+                                  # la parole (test de Steve : note réduite à ~33 %)
+  n_std_thresh_stationary: 1.5    # SEUIL : est « bruit » ce qui dépasse sa moyenne
+                                  # de moins de 1,5 écart-type
+  n_fft: 1024
+  freq_mask_smooth_hz: 500
+  time_mask_smooth_ms: 50
+vad:
+  aggressiveness: 2               # webrtcvad : 0 (tolérant) à 3 (strict)
+  frame_ms: 30
+  merge_gap_ms: 300               # deux zones de parole séparées de moins de 300 ms
+                                  # sont réunies
+  min_segment_ms: 100             # D5 : segments d'au moins 100 ms
+  padding_ms: 100                 # marge pour ne pas couper les débuts et fins de mots
+windows:
+  events: {window_s: 5.0, hop_s: 2.5}   # durée des extraits d'ESC-50, 50 % de
+                                        # recouvrement
+  stream: {window_s: 2.0, hop_s: 0.5}   # D8, flux micro
