@@ -118,6 +118,7 @@ par le porteur de la brique ; Luciano la relit, l'améliore si besoin et la fusi
 | Besoin | Emplacement |
 | --- | --- |
 | Décisions numérotées (D, R, P, S, U, I, E, H) et exigences | `docs/specification.md` |
+| Règles de protocole (découpages, enregistrements) | `docs/protocole.md` |
 | Paramètres des features | `configs/features.yaml` |
 | Modèles disponibles | `configs/registry.yaml` |
 | Décisions d'architecture | `docs/adr/` |

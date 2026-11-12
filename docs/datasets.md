@@ -18,6 +18,9 @@ sont dans `configs/labels.yaml`.
 
 ## Règles de protocole à respecter dans tout script
 
+Résumé des règles qui touchent aux données ; le détail (correspondance des émotions, découpages,
+enregistrements de l'équipe, tests de fuite) fait foi dans [`docs/protocole.md`](protocole.md).
+
 - **P1** : émotions, aucun locuteur commun entre train, validation et test.
 - **P2** : harmonisation sur 6 classes : neutral, happy, sad, angry, fear, disgust.
 - **P3** : ESC-50, validation croisée sur les 5 folds officiels, jamais remélangés.
