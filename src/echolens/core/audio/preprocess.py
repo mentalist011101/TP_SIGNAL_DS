@@ -1,14 +1,16 @@
-"""Normalisation du niveau (décision D3) et détection de silence (garde-fou D6).
-
-Le débruitage (D4) et la segmentation (D5) seront ajoutés dans ce module en semaine 1.
-"""
+"""Prétraitement du signal : niveau (D3), silence (D6), débruitage (D4), segmentation (D5)."""
 
 from __future__ import annotations
+
+from functools import lru_cache
+from typing import Any
 
 import numpy as np
 import numpy.typing as npt
 
 FloatArray = npt.NDArray[np.float32]
+# Un segment est un couple (début, fin) exprimé en secondes.
+Segment = tuple[float, float]
 
 # Plancher numérique pour éviter log(0) et les divisions par zéro.
 _EPS = 1e-10
@@ -46,3 +48,67 @@ def is_silent(signal: FloatArray, threshold_dbfs: float = -60.0) -> bool:
 def preprocess(signal: FloatArray, target_dbfs: float = -20.0) -> FloatArray:
     """Chaîne de prétraitement commune : normalisation RMS puis écrêtage de sécurité."""
     return peak_limit(rms_normalize(signal, target_dbfs))
+
+
+def denoise(
+    signal: FloatArray,
+    sample_rate: int = 16_000,
+    stationary: bool = True,
+    strength: float = 1.0,
+) -> FloatArray:
+    """Réduit le bruit de fond par « spectral gating » (décision D4).
+
+    Le bruit est estimé dans chaque case temps-fréquence : ce qui reste sous le seuil est
+    atténué, ce qui le dépasse (la parole) est conservé. À réserver à la parole : pour les
+    événements sonores le bruit est le signal, et pour les émotions il peut effacer des
+    indices prosodiques. ``strength`` (de 0 à 1) règle la part de bruit retirée.
+    """
+    # Import local : noisereduce fait partie de l'extra [ml], absent de la CI.
+    import noisereduce
+
+    cleaned = noisereduce.reduce_noise(
+        y=signal, sr=sample_rate, stationary=stationary, prop_decrease=strength
+    )
+    return np.asarray(cleaned, dtype=np.float32)
+
+
+@lru_cache(maxsize=1)
+def _vad_model() -> Any:
+    """Charge Silero VAD une seule fois (le chargement est lent)."""
+    from silero_vad import load_silero_vad
+
+    return load_silero_vad()
+
+
+def detect_speech(signal: FloatArray, sample_rate: int = 16_000) -> list[Segment]:
+    """Repère les zones de parole avec Silero VAD (décision D5).
+
+    Renvoie une liste de segments (début, fin) en secondes, vide si aucune parole.
+    """
+    import torch
+    from silero_vad import get_speech_timestamps
+
+    with torch.no_grad():
+        timestamps = get_speech_timestamps(
+            torch.from_numpy(signal),
+            _vad_model(),
+            sampling_rate=sample_rate,
+            return_seconds=True,
+        )
+    return [(float(item["start"]), float(item["end"])) for item in timestamps]
+
+
+def sliding_windows(duration_s: float, window_s: float, hop_s: float) -> list[Segment]:
+    """Découpe une durée en fenêtres de ``window_s`` décalées de ``hop_s`` (décisions D5, D8).
+
+    Profil flux micro : fenêtre de 2 s, décalage de 0,5 s. Si la dernière fenêtre ne tombe
+    pas pile sur la fin, une fenêtre supplémentaire est alignée sur la fin pour ne rien perdre.
+    Un audio plus court qu'une fenêtre donne une seule fenêtre.
+    """
+    if duration_s <= window_s:
+        return [(0.0, duration_s)]
+    count = int(np.floor((duration_s - window_s) / hop_s + 1e-9)) + 1
+    windows = [(float(i * hop_s), float(i * hop_s + window_s)) for i in range(count)]
+    if windows[-1][1] < duration_s - 1e-9:
+        windows.append((duration_s - window_s, duration_s))
+    return windows
