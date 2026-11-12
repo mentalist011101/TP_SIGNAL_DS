@@ -1,0 +1,16 @@
+# Découpages sans fuite (décisions P1, P3, P7 ; règles de protocole Ly2).
+# Ce fichier est la source unique des paramètres de découpage.
+
+# P1 : graine du tirage des acteurs. Le découpage est tiré une seule fois, puis versionné
+# dans data/splits/ ; on ne le retire jamais.
+seed: 42
+# P1 : part des acteurs en validation et en test (70 / 15 / 15). Ces deux parts sont
+# réparties à égalité entre hommes et femmes, pour mesurer les biais de genre (E4).
+validation_ratio: 0.15
+test_ratio: 0.15
+# Jeux d'émotions qui servent à l'entraînement : leurs acteurs sont découpés.
+training_emotion_datasets: [cremad, ravdess]
+# P7 : jeux réservés au test, qui n'ont jamais de ligne en train ni en validation.
+test_only_datasets: [cafe, ace, openslr57, team]
+# P3 : ESC-50 a 5 folds officiels, utilisés tels quels en validation croisée.
+esc50_fold_count: 5

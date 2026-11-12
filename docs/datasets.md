@@ -112,6 +112,37 @@ fichiers listés dans la constante `KNOWN_BAD_FILES` du module du jeu sont exclu
 commentaire qui dit ce qui ne va pas et où on l'a constaté. Pour CREMA-D et RAVDESS, ces listes
 sont vides : aucun fichier défectueux dans les copies utilisées.
 
+## Correspondance des émotions et découpages (C4)
+
+Les règles viennent de Ly2 ; le code est dans `echolens.core.data.emotions` et
+`echolens.core.data.splits`, les paramètres dans `configs/labels.yaml` (`label_mapping`) et
+`configs/splits.yaml`.
+
+- **Émotions (P2)** : chaque étiquette d'origine est traduite en l'une des 6 classes communes,
+  ou exclue (`null`) : calme (`02`) et surprise (`08`) de RAVDESS, surprise (`S`) de CaFE.
+  Une étiquette absente de la table fait échouer le code.
+- **Acteurs (P1)** : `training/scripts/make_emotion_split.py` tire une seule fois, graine 42,
+  la partie de chaque acteur de CREMA-D et de RAVDESS. Validation et test reçoivent chacun
+  15 % des acteurs, **autant d'hommes que de femmes** (pour l'analyse des biais, E4) ; le reste
+  va en train. Le résultat, `data/splits/emotion_split.csv` (une ligne par acteur, sans audio),
+  est versionné et ne se retire jamais.
+
+| Jeu | Train | Validation | Test |
+| --- | --- | --- | --- |
+| CREMA-D | 63 (34 H, 29 F) | 14 (7 H, 7 F) | 14 (7 H, 7 F) |
+| RAVDESS | 16 (8 H, 8 F) | 4 (2 H, 2 F) | 4 (2 H, 2 F) |
+
+- **ESC-50 (P3)** : `esc50_round(k, 5)` donne, au tour k, le fold de test k, le fold de
+  validation (k + 1, et 1 après 5) qui sert seulement à régler époques et hyperparamètres sur
+  3 folds d'entraînement, puis les 4 folds hors test de l'entraînement final (comparabilité
+  avec la littérature). Un modèle sans early stopping (MFCC + SVM) s'entraîne directement sur
+  les 4 folds.
+- **Hors domaine (P7)** : CaFE, ACE, OpenSLR 57 et nos enregistrements (`team`) sont toujours
+  en test ; `split_of_row` ne leur donne jamais d'autre partie.
+- **Tests** : `tests/unit/test_splits.py` vérifie chaque règle, y compris sur les vrais
+  manifestes (effectifs de Ly2 : 7 442 extraits gardés pour CREMA-D, 1 056 gardés et 384 exclus
+  pour RAVDESS) et sur le découpage versionné.
+
 ## Où se trouvent les informations dans chaque jeu
 
 Chaque jeu range ses métadonnées à sa façon ; les scripts de construction des manifestes doivent
