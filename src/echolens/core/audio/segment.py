@@ -158,7 +158,8 @@ def _drop_short_segments(segments: list[Segment], min_duration_ms: int) -> list[
 
 def _add_padding(segments: list[Segment], padding_ms: int) -> list[Segment]:
     # Étape 4 : marge pour ne pas couper les débuts et fins de mots. Deux segments gardés
-    # sont séparés d'au moins merge_gap_ms (300) : leurs marges (2 × 100) ne se touchent pas.
+    # sont séparés d'au moins merge_gap_ms, et VadConfig garantit 2 × padding_ms ≤
+    # merge_gap_ms : les marges de deux segments voisins ne se chevauchent pas.
     padding_s = padding_ms / 1000
     padded: list[Segment] = []
     for segment in segments:

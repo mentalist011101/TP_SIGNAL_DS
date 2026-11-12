@@ -1,5 +1,6 @@
 import numpy as np
 import pytest
+from pydantic import ValidationError
 
 from echolens.core.audio.preprocess_config import VadConfig, load_preprocess_config
 from echolens.core.audio.segment import (
@@ -77,6 +78,14 @@ def test_padding_is_clipped_at_start_and_end_of_audio() -> None:
     assert segments[0].end_s == pytest.approx(0.6)
     assert segments[1].start_s == pytest.approx(1.4)
     assert segments[1].end_s == 2.0
+
+
+def test_padding_wider_than_half_the_merge_gap_is_refused() -> None:
+    # 2 × 200 ms > 300 ms : les marges de deux segments voisins se chevaucheraient.
+    with pytest.raises(ValidationError, match="chevaucheraient"):
+        VadConfig(
+            aggressiveness=2, frame_ms=30, merge_gap_ms=300, min_segment_ms=100, padding_ms=200
+        )
 
 
 def test_last_incomplete_frame_is_ignored() -> None:

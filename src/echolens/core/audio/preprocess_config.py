@@ -9,7 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from echolens.config import CONFIG_DIR, load_yaml
 
@@ -39,6 +39,18 @@ class VadConfig(BaseModel):
     merge_gap_ms: int = Field(ge=0)
     min_segment_ms: int = Field(ge=0)
     padding_ms: int = Field(ge=0)
+
+    @model_validator(mode="after")
+    def check_padding_fits_in_gap(self) -> VadConfig:
+        """Refuse 2 × padding_ms > merge_gap_ms : deux segments gardés sont séparés d'au
+        moins merge_gap_ms, et chacun reçoit padding_ms de marge de chaque côté."""
+        if 2 * self.padding_ms > self.merge_gap_ms:
+            raise ValueError(
+                f"padding_ms ({self.padding_ms}) est trop grand pour merge_gap_ms "
+                f"({self.merge_gap_ms}) : les marges de deux segments voisins se "
+                "chevaucheraient (il faut 2 × padding_ms ≤ merge_gap_ms)"
+            )
+        return self
 
 
 class WindowConfig(BaseModel):
