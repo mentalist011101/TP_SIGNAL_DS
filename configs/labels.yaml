@@ -2,7 +2,7 @@
 # id : identifiant utilisé dans le code, les modèles et l'API (anglais).
 # label_fr : libellé affiché dans l'interface.
 # La correspondance depuis les étiquettes d'origine de chaque jeu est plus bas
-# (label_mapping), d'après les règles de protocole de Lynn (Ly2).
+# (label_mapping), voir docs/protocole.md (d'après Ly2 de Lynn).
 emotions:
   - id: neutral
     label_fr: Neutre

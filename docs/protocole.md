@@ -30,7 +30,7 @@ Un jeu de test n'entre jamais en entraînement ni en validation.
 
 On garde 6 classes communes : `neutral`, `happy`, `sad`, `angry`, `fear`, `disgust`. Le
 manifeste garde l'étiquette d'origine ; la correspondance s'applique ensuite, dans le code
-(`configs/labels.yaml`).
+(`echolens.core.data.emotions`, table `label_mapping` de `configs/labels.yaml`).
 
 | Classe commune | CREMA-D | RAVDESS | CaFE | ACE |
 | --- | --- | --- | --- | --- |
@@ -67,15 +67,19 @@ On répartit les **acteurs**, jamais les fichiers, entre entraînement, validati
 Sinon le modèle reconnaît la voix d'un acteur déjà entendu au lieu de l'émotion, et le score
 est gonflé.
 
-**Règle** (`configs/protocol.yaml`) :
+**Règle** (`configs/splits.yaml`, code dans `echolens.core.data.splits`) :
 
 1. La validation et le test reçoivent chacun `round(0,15 × nombre d'acteurs)` acteurs, moitié
    hommes, moitié femmes. Tous les autres vont à l'entraînement.
-2. Tirage avec la graine 42, sur la liste triée des acteurs de chaque genre : d'abord la
-   validation, puis le test.
+2. Tirage avec `random.Random(42)` de Python, un seul générateur, d'abord chez les femmes puis
+   chez les hommes, sur la liste triée des acteurs de chaque genre : les premiers vont en test,
+   les suivants en validation, le reste en entraînement. Le générateur est recréé avec la même
+   graine pour chaque jeu (`split_emotion_speakers`).
 3. Le résultat est écrit une seule fois dans `data/splits/emotion_split.csv` (une ligne par
-   acteur, sans audio) et versionné. On ne le retire jamais au hasard ensuite.
-4. Les identifiants sont préfixés par le jeu (`cremad_1001`, `ravdess_01`).
+   acteur, sans audio) par `training/scripts/make_emotion_split.py`, et versionné. On ne le
+   retire jamais au hasard ensuite.
+4. Un acteur est identifié par le couple jeu et identifiant : colonnes `dataset` et `speaker`
+   (`cremad`, `1001`), comme dans les manifestes.
 
 | Jeu | Acteurs | Entraînement | Validation | Test |
 | --- | --- | --- | --- | --- |
