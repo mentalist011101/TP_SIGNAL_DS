@@ -237,7 +237,6 @@ packaging==26.3
     #   matplotlib
     #   onnxruntime
     #   pooch
-    #   silero-vad
     #   speechbrain
     #   transformers
     #   webargs
@@ -306,8 +305,6 @@ setuptools==84.2.1
     # via torch
 shellingham==1.5.4
     # via typer
-silero-vad==6.2.3
-    # via echolens
 simple-websocket==1.1.0
     # via flask-sock
 soundfile==0.14.0
@@ -332,7 +329,6 @@ tokenizers==0.23.3
 torch==2.15.0
     # via
     #   echolens
-    #   silero-vad
     #   speechbrain
     #   torchaudio
 torchaudio==2.11.1
@@ -376,6 +372,8 @@ urllib3==2.8.0
     # via requests
 webargs==8.7.1
     # via flask-smorest
+webrtcvad-wheels==2.0.14.post1
+    # via echolens
 werkzeug==3.1.9
     # via
     #   flask
