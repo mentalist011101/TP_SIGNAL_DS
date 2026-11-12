@@ -14,6 +14,8 @@ from echolens.core.audio.segment import (
 SAMPLE_RATE = 16_000
 # Trames de 10 ms dans les tests de flags_to_segments : 1 trame = 0,01 s.
 FRAME_S = 0.01
+# Retard toléré de webrtcvad en fin de voix (80 ms mesurés, voir le test de la voix).
+WEBRTCVAD_END_DELAY_S = 0.1
 
 
 def vad_config() -> VadConfig:
@@ -91,10 +93,19 @@ def test_detect_speech_finds_voice_like_signal_between_silences() -> None:
     # 1 s de silence, 1,5 s de voix de synthèse (de 1,0 à 2,5 s), 1 s de silence.
     silence = np.zeros(SAMPLE_RATE, dtype=np.float32)
     signal = np.concatenate([silence, voice_like(1.5), silence])
-    segments = detect_speech(signal, vad_config())
+    config = vad_config()
+    segments = detect_speech(signal, config)
+    # Tolérance tirée de la configuration : la marge ajoutée de chaque côté, plus une trame
+    # (la décision de webrtcvad tombe sur une grille de frame_ms).
+    tolerance_s = (config.padding_ms + config.frame_ms) / 1000
     assert len(segments) >= 1
-    assert segments[0].start_s == pytest.approx(1.0, abs=0.2)
-    assert segments[-1].end_s == pytest.approx(2.5, abs=0.2)
+    assert segments[0].start_s == pytest.approx(1.0, abs=tolerance_s)
+    # En fin de voix, webrtcvad continue de répondre « parole » quelques trames après la fin.
+    # Mesure observée : dernière trame de parole à 2,58 s pour une voix qui finit à 2,5 s,
+    # soit 80 ms de retard, et fin détectée à 2,68 s une fois la marge de 100 ms ajoutée.
+    # On tolère 100 ms de retard.
+    end_tolerance_s = tolerance_s + WEBRTCVAD_END_DELAY_S
+    assert segments[-1].end_s == pytest.approx(2.5, abs=end_tolerance_s)
 
 
 def test_sliding_windows_stream_profile() -> None:
