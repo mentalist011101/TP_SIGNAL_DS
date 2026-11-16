@@ -6,6 +6,7 @@ from echolens.training.evaluation import (
     macro_f1,
     mean_and_std,
     normalized_confusion,
+    scores_by_group,
     to_categories,
 )
 
@@ -49,3 +50,30 @@ def test_mean_and_std() -> None:
     mean, std = mean_and_std([0.4, 0.6])
     assert mean == pytest.approx(0.5)
     assert std == pytest.approx(0.1)
+
+
+def test_scores_by_group_matches_hand_computation() -> None:
+    y_true = np.array([0, 0, 1, 1, 0, 1])
+    y_pred = np.array([0, 1, 1, 1, 0, 1])
+    groups = ["F", "F", "F", "F", "H", "H"]
+
+    scores = scores_by_group(y_true, y_pred, groups)
+
+    # Groupe F : classe 0 → P=1, R=1/2, F1=2/3 ; classe 1 → P=2/3, R=1, F1=4/5.
+    # Macro = (2/3 + 4/5) / 2 = 11/15.
+    assert scores["F"] == pytest.approx(11 / 15)
+    # Groupe H : tout est correct.
+    assert scores["H"] == pytest.approx(1.0)
+
+
+def test_scores_by_group_accepts_other_metric() -> None:
+    y_true = np.array([0, 0, 1, 1, 0, 1])
+    y_pred = np.array([0, 1, 1, 1, 0, 1])
+    groups = ["F", "F", "F", "F", "H", "H"]
+    scores = scores_by_group(y_true, y_pred, groups, metric=accuracy)
+    assert scores == {"F": pytest.approx(0.75), "H": pytest.approx(1.0)}
+
+
+def test_scores_by_group_rejects_length_mismatch() -> None:
+    with pytest.raises(ValueError):
+        scores_by_group(np.array([0, 1]), np.array([0, 1]), ["F"])

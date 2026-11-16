@@ -15,6 +15,6 @@
 | Membre | Brique défendue |
 | --- | --- |
 | Luciano | Architecture, modèles (familles A et B), intégration |
-| Steve | Briques 1 et 2 (signal, STFT, Mel, MFCC) et métriques |
+| Steve | Briques 1 et 2 (échantillonnage, normalisation, débruitage, STFT, spectrogramme Mel, MFCC) ; métriques (F1, matrice de confusion, WER, EER) ; partie « équations » du rapport |
 | Lynn | Brique 3 (données, protocole, analyse d'erreurs) |
 | Nicole | Brique 7 (interface, démonstration) et comparaison des résultats |

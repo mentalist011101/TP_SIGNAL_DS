@@ -5,7 +5,7 @@ Les étiquettes sont des entiers de 0 à n_classes − 1.
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 
 import numpy as np
 import numpy.typing as npt
@@ -55,3 +55,25 @@ def mean_and_std(values: Sequence[float]) -> tuple[float, float]:
     mean = float(array.mean())
     std = float(array.std())
     return mean, std
+
+
+def scores_by_group(
+    y_true: IntArray,
+    y_pred: IntArray,
+    groups: Sequence[str],
+    metric: Callable[[IntArray, IntArray], float] = macro_f1,
+) -> dict[str, float]:
+    """Calcule une métrique séparément pour chaque groupe (genre, locuteur) (E4).
+
+    ``groups[i]`` est le groupe de l'extrait i. Renvoie {nom du groupe: score}, trié par nom.
+    """
+    group_array = np.asarray(groups)
+    if not (len(y_true) == len(y_pred) == len(group_array)):
+        raise ValueError("y_true, y_pred et groups doivent avoir la même longueur")
+
+    scores: dict[str, float] = {}
+    for name in sorted(set(group_array.tolist())):
+        # Masque booléen : True pour les extraits de ce groupe seulement.
+        mask = group_array == name
+        scores[name] = metric(y_true[mask], y_pred[mask])
+    return scores
