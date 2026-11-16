@@ -2,7 +2,9 @@ import numpy as np
 import pytest
 
 from echolens.training.evaluation import (
+    EvaluationConfig,
     accuracy,
+    bootstrap_ci,
     macro_f1,
     mean_and_std,
     normalized_confusion,
@@ -77,3 +79,32 @@ def test_scores_by_group_accepts_other_metric() -> None:
 def test_scores_by_group_rejects_length_mismatch() -> None:
     with pytest.raises(ValueError):
         scores_by_group(np.array([0, 1]), np.array([0, 1]), ["F"])
+
+
+def test_bootstrap_ci_of_perfect_predictions_is_degenerate() -> None:
+    # Tout est juste : chaque faux échantillon donne 1, donc l'intervalle vaut [1, 1].
+    labels = np.array([0, 1, 0, 1, 0, 1])
+    low, high = bootstrap_ci(labels, labels, EvaluationConfig(n_bootstrap=200))
+    assert (low, high) == (pytest.approx(1.0), pytest.approx(1.0))
+
+
+def test_bootstrap_ci_contains_the_point_estimate() -> None:
+    # 100 extraits, 70 justes : l'accuracy vaut 0,70 et doit tomber dans l'intervalle.
+    y_true = np.zeros(100, dtype=np.int_)
+    y_pred = np.concatenate([np.zeros(70, dtype=np.int_), np.ones(30, dtype=np.int_)])
+    low, high = bootstrap_ci(y_true, y_pred, EvaluationConfig(n_bootstrap=500), metric=accuracy)
+    assert low < 0.70 < high
+    # Écart-type théorique ≈ sqrt(0,7 × 0,3 / 100) ≈ 0,046 : l'intervalle fait ≈ ±0,09.
+    assert 0.12 < high - low < 0.25
+
+
+def test_bootstrap_ci_is_reproducible_with_the_same_seed() -> None:
+    y_true = np.array([0, 1, 0, 1, 1, 0, 1, 0])
+    y_pred = np.array([0, 1, 1, 1, 0, 0, 1, 0])
+    config = EvaluationConfig(n_bootstrap=100, seed=7)
+    assert bootstrap_ci(y_true, y_pred, config) == bootstrap_ci(y_true, y_pred, config)
+
+
+def test_bootstrap_ci_rejects_length_mismatch() -> None:
+    with pytest.raises(ValueError):
+        bootstrap_ci(np.array([0, 1]), np.array([0]), EvaluationConfig())

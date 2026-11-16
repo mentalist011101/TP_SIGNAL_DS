@@ -6,13 +6,31 @@ Les étiquettes sont des entiers de 0 à n_classes − 1.
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
+from pathlib import Path
 
 import numpy as np
 import numpy.typing as npt
+from pydantic import BaseModel, Field
 from sklearn.metrics import accuracy_score, confusion_matrix, f1_score
+
+from echolens.config import load_yaml
 
 IntArray = npt.NDArray[np.int_]
 FloatMatrix = npt.NDArray[np.float64]
+
+
+class EvaluationConfig(BaseModel):
+    """Paramètres de l'évaluation comparée, lus dans configs/evaluation.yaml."""
+
+    n_bootstrap: int = Field(default=1000, gt=0)
+    confidence: float = Field(default=0.95, gt=0, lt=1)
+    ece_bins: int = Field(default=10, gt=0)
+    seed: int = 42
+
+    @classmethod
+    def from_yaml(cls, path: Path) -> EvaluationConfig:
+        """Charge la configuration depuis un fichier YAML."""
+        return cls(**load_yaml(path))
 
 
 def macro_f1(y_true: IntArray, y_pred: IntArray) -> float:
@@ -77,3 +95,31 @@ def scores_by_group(
         mask = group_array == name
         scores[name] = metric(y_true[mask], y_pred[mask])
     return scores
+
+
+def bootstrap_ci(
+    y_true: IntArray,
+    y_pred: IntArray,
+    config: EvaluationConfig,
+    metric: Callable[[IntArray, IntArray], float] = macro_f1,
+) -> tuple[float, float]:
+    """Intervalle de confiance par bootstrap percentile d'une métrique (P8).
+
+    On rééchantillonne les extraits avec remise ``n_bootstrap`` fois, on recalcule la métrique
+    à chaque tirage, puis on prend les percentiles qui encadrent ``confidence`` des scores.
+    """
+    if len(y_true) != len(y_pred):
+        raise ValueError("y_true et y_pred doivent avoir la même longueur")
+
+    rng = np.random.default_rng(config.seed)
+    n = len(y_true)
+    scores = np.empty(config.n_bootstrap, dtype=np.float64)
+    for i in range(config.n_bootstrap):
+        # Les indices tirés avec remise donnent un faux jeu de test de même taille.
+        picked = rng.integers(0, n, size=n)
+        scores[i] = metric(y_true[picked], y_pred[picked])
+
+    # Pour 95 % : on garde le centre, en coupant 2,5 % de chaque côté.
+    tail = (1.0 - config.confidence) / 2.0
+    low, high = np.quantile(scores, [tail, 1.0 - tail])
+    return float(low), float(high)
