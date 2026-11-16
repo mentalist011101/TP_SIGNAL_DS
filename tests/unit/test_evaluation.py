@@ -6,6 +6,7 @@ from echolens.training.evaluation import (
     accuracy,
     bootstrap_ci,
     macro_f1,
+    mcnemar_test,
     mean_and_std,
     normalized_confusion,
     scores_by_group,
@@ -108,3 +109,51 @@ def test_bootstrap_ci_is_reproducible_with_the_same_seed() -> None:
 def test_bootstrap_ci_rejects_length_mismatch() -> None:
     with pytest.raises(ValueError):
         bootstrap_ci(np.array([0, 1]), np.array([0]), EvaluationConfig())
+
+
+def test_mcnemar_exact_matches_hand_computation() -> None:
+    # 10 extraits : 4 où les deux ont raison, 1 où A seul a raison, 5 où B seul a raison.
+    y_true = np.zeros(10, dtype=np.int_)
+    pred_a = np.array([0, 0, 0, 0, 0, 1, 1, 1, 1, 1])
+    pred_b = np.array([0, 0, 0, 0, 1, 0, 0, 0, 0, 0])
+    result = mcnemar_test(y_true, pred_a, pred_b, EvaluationConfig())
+
+    assert (result.both_right, result.only_a_right, result.only_b_right) == (4, 1, 5)
+    assert result.exact
+    # 6 désaccords, P(X ≤ 1) = (1 + 6) / 64 = 7/64 ; bilatéral : 2 × 7/64 = 14/64.
+    assert result.p_value == pytest.approx(14 / 64)
+
+
+def test_mcnemar_chi2_matches_hand_computation() -> None:
+    # 40 désaccords : A seul juste 30 fois, B seul juste 10 fois.
+    y_true = np.zeros(40, dtype=np.int_)
+    pred_a = np.array([0] * 30 + [1] * 10)
+    pred_b = np.array([1] * 30 + [0] * 10)
+    result = mcnemar_test(y_true, pred_a, pred_b, EvaluationConfig())
+
+    assert not result.exact
+    # (|30 − 10| − 1)² / 40 = 361 / 40 = 9,025 ; p = P(χ²₁ > 9,025) ≈ 0,0027.
+    assert result.statistic == pytest.approx(9.025)
+    assert result.p_value == pytest.approx(0.00266, abs=2e-4)
+
+
+def test_mcnemar_is_symmetric_in_the_two_models() -> None:
+    y_true = np.zeros(10, dtype=np.int_)
+    pred_a = np.array([0, 0, 0, 0, 0, 1, 1, 1, 1, 1])
+    pred_b = np.array([0, 0, 0, 0, 1, 0, 0, 0, 0, 0])
+    config = EvaluationConfig()
+    forward = mcnemar_test(y_true, pred_a, pred_b, config)
+    backward = mcnemar_test(y_true, pred_b, pred_a, config)
+    assert forward.p_value == pytest.approx(backward.p_value)
+
+
+def test_mcnemar_identical_models_give_p_value_one() -> None:
+    y_true = np.array([0, 1, 0, 1])
+    pred = np.array([0, 1, 1, 1])
+    result = mcnemar_test(y_true, pred, pred, EvaluationConfig())
+    assert result.p_value == pytest.approx(1.0)
+
+
+def test_mcnemar_rejects_length_mismatch() -> None:
+    with pytest.raises(ValueError):
+        mcnemar_test(np.array([0, 1]), np.array([0, 1]), np.array([0]), EvaluationConfig())

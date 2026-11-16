@@ -3,3 +3,4 @@ n_bootstrap: 1000     # nombre de rééchantillonnages pour les intervalles de c
 confidence: 0.95      # niveau de l'intervalle (95 %)
 ece_bins: 10          # nombre d'intervalles de l'ECE (utilisé plus tard)
 seed: 42              # graine : mêmes intervalles à chaque exécution
+mcnemar_exact_below: 25   # en dessous de ce nombre de désaccords, test exact (binomial)
