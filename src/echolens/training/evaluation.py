@@ -13,7 +13,7 @@ import numpy as np
 import numpy.typing as npt
 from pydantic import BaseModel, Field
 from scipy.stats import binomtest, chi2
-from sklearn.metrics import accuracy_score, confusion_matrix, f1_score
+from sklearn.metrics import accuracy_score, confusion_matrix, f1_score, roc_curve
 
 from echolens.config import load_yaml
 
@@ -226,3 +226,32 @@ def expected_calibration_error(
         # Chaque intervalle pèse selon la part des extraits qu'il contient.
         ece += count / n * abs(bin_accuracy[b] - bin_confidence[b])
     return CalibrationResult(float(ece), bin_confidence, bin_accuracy, bin_counts)
+
+
+@dataclass(frozen=True)
+class EerResult:
+    """Taux d'égale erreur et seuil de décision correspondant."""
+
+    eer: float
+    threshold: float
+
+
+def equal_error_rate(labels: IntArray, scores: FloatArray) -> EerResult:
+    """Taux d'égale erreur (EER) pour la vérification du locuteur (E1).
+
+    ``labels`` vaut 1 pour une paire du même locuteur et 0 sinon ; ``scores`` est la similarité
+    (plus haut = plus probable que ce soit la même personne). On accepte si score ≥ seuil.
+    L'EER est le taux d'erreur au seuil où fausses acceptations et faux rejets s'égalent.
+    """
+    if len(labels) != len(scores):
+        raise ValueError("labels et scores doivent avoir la même longueur")
+    if set(labels.tolist()) != {0, 1}:
+        raise ValueError("labels doit contenir à la fois des paires positives (1) et négatives (0)")
+
+    # Pour chaque seuil possible : fpr = fausses acceptations, tpr = bonnes acceptations.
+    fpr, tpr, thresholds = roc_curve(labels, scores, drop_intermediate=False)
+    # Faux rejets = 1 − bonnes acceptations. On cherche le seuil où les deux erreurs sont égales.
+    fnr = 1.0 - tpr
+    best = int(np.argmin(np.abs(fnr - fpr)))
+    eer = float((fpr[best] + fnr[best]) / 2.0)
+    return EerResult(eer, float(thresholds[best]))

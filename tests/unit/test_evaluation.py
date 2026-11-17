@@ -1,10 +1,12 @@
 import numpy as np
 import pytest
 
+from echolens.config import CONFIG_DIR
 from echolens.training.evaluation import (
     EvaluationConfig,
     accuracy,
     bootstrap_ci,
+    equal_error_rate,
     expected_calibration_error,
     macro_f1,
     mcnemar_test,
@@ -200,3 +202,38 @@ def test_ece_detects_overconfidence() -> None:
 def test_ece_rejects_length_mismatch() -> None:
     with pytest.raises(ValueError):
         expected_calibration_error(np.array([0, 1]), np.eye(3), EvaluationConfig())
+
+
+def test_eer_matches_hand_computation() -> None:
+    # 4 paires positives et 4 négatives ; on accepte si score ≥ seuil.
+    labels = np.array([1, 1, 1, 1, 0, 0, 0, 0])
+    scores = np.array([0.9, 0.8, 0.7, 0.4, 0.6, 0.3, 0.2, 0.1])
+    result = equal_error_rate(labels, scores)
+    # Seuil 0,6 : 3 positives sur 4 acceptées (FRR = 1/4), 1 négative sur 4 acceptée (FAR = 1/4).
+    assert result.eer == pytest.approx(0.25)
+    assert result.threshold == pytest.approx(0.6)
+
+
+def test_eer_of_perfectly_separated_scores_is_zero() -> None:
+    labels = np.array([1, 1, 0, 0])
+    scores = np.array([0.9, 0.8, 0.2, 0.1])
+    assert equal_error_rate(labels, scores).eer == pytest.approx(0.0)
+
+
+def test_eer_rejects_length_mismatch() -> None:
+    with pytest.raises(ValueError):
+        equal_error_rate(np.array([1, 0]), np.array([0.5]))
+
+
+def test_eer_requires_both_kinds_of_pairs() -> None:
+    with pytest.raises(ValueError):
+        equal_error_rate(np.array([1, 1, 1]), np.array([0.9, 0.8, 0.7]))
+
+
+def test_evaluation_yaml_loads_and_matches_defaults() -> None:
+    config = EvaluationConfig.from_yaml(CONFIG_DIR / "evaluation.yaml")
+    assert config.n_bootstrap == 1000
+    assert config.confidence == pytest.approx(0.95)
+    assert config.ece_bins == 10
+    assert config.seed == 42
+    assert config.mcnemar_exact_below == 25
