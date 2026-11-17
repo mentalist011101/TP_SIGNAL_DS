@@ -5,6 +5,7 @@ from echolens.training.evaluation import (
     EvaluationConfig,
     accuracy,
     bootstrap_ci,
+    expected_calibration_error,
     macro_f1,
     mcnemar_test,
     mean_and_std,
@@ -157,3 +158,45 @@ def test_mcnemar_identical_models_give_p_value_one() -> None:
 def test_mcnemar_rejects_length_mismatch() -> None:
     with pytest.raises(ValueError):
         mcnemar_test(np.array([0, 1]), np.array([0, 1]), np.array([0]), EvaluationConfig())
+
+
+def test_ece_matches_hand_computation() -> None:
+    # 4 extraits, 3 classes, 2 intervalles : ]0 ; 0,5] et ]0,5 ; 1].
+    probabilities = np.array(
+        [
+            [0.90, 0.05, 0.05],  # confiance 0,9, prédit 0, vrai 0 → juste
+            [0.80, 0.10, 0.10],  # confiance 0,8, prédit 0, vrai 1 → faux
+            [0.40, 0.35, 0.25],  # confiance 0,4, prédit 0, vrai 0 → juste
+            [0.40, 0.30, 0.30],  # confiance 0,4, prédit 0, vrai 2 → faux
+        ]
+    )
+    y_true = np.array([0, 1, 0, 2])
+    result = expected_calibration_error(y_true, probabilities, EvaluationConfig(ece_bins=2))
+
+    assert list(result.bin_counts) == [2, 2]
+    # Intervalle bas : confiance 0,4, exactitude 0,5 → écart 0,1.
+    # Intervalle haut : confiance 0,85, exactitude 0,5 → écart 0,35.
+    np.testing.assert_allclose(result.bin_confidence, [0.40, 0.85])
+    np.testing.assert_allclose(result.bin_accuracy, [0.5, 0.5])
+    # ECE = 2/4 × 0,1 + 2/4 × 0,35 = 0,225.
+    assert result.ece == pytest.approx(0.225)
+
+
+def test_ece_of_confident_and_correct_model_is_zero() -> None:
+    probabilities = np.eye(3)
+    y_true = np.array([0, 1, 2])
+    result = expected_calibration_error(y_true, probabilities, EvaluationConfig())
+    assert result.ece == pytest.approx(0.0)
+
+
+def test_ece_detects_overconfidence() -> None:
+    # Le modèle affirme 99 % mais se trompe une fois sur deux : ECE proche de 0,49.
+    probabilities = np.array([[0.99, 0.01]] * 4)
+    y_true = np.array([0, 0, 1, 1])
+    result = expected_calibration_error(y_true, probabilities, EvaluationConfig())
+    assert result.ece == pytest.approx(0.49)
+
+
+def test_ece_rejects_length_mismatch() -> None:
+    with pytest.raises(ValueError):
+        expected_calibration_error(np.array([0, 1]), np.eye(3), EvaluationConfig())

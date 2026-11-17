@@ -19,6 +19,7 @@ from echolens.config import load_yaml
 
 IntArray = npt.NDArray[np.int_]
 FloatMatrix = npt.NDArray[np.float64]
+FloatArray = npt.NDArray[np.float64]
 
 
 class EvaluationConfig(BaseModel):
@@ -176,3 +177,52 @@ def mcnemar_test(
     statistic = (abs(only_a - only_b) - 1) ** 2 / disagreements
     p_value = float(chi2.sf(statistic, df=1))
     return McNemarResult(both_right, only_a, only_b, both_wrong, statistic, p_value, exact=False)
+
+
+@dataclass(frozen=True)
+class CalibrationResult:
+    """ECE et données du diagramme de fiabilité (un élément par intervalle de confiance)."""
+
+    ece: float
+    bin_confidence: FloatArray  # confiance moyenne dans chaque intervalle
+    bin_accuracy: FloatArray  # part des prédictions justes dans chaque intervalle
+    bin_counts: IntArray  # nombre d'extraits dans chaque intervalle
+
+
+def expected_calibration_error(
+    y_true: IntArray,
+    probabilities: FloatMatrix,
+    config: EvaluationConfig,
+) -> CalibrationResult:
+    """Erreur de calibration attendue (ECE) et diagramme de fiabilité (E2, ENF-06).
+
+    ``probabilities`` a la forme (extraits, classes). La confiance d'un extrait est sa plus
+    grande probabilité. ECE = Σ (part des extraits de l'intervalle) × |exactitude − confiance|.
+    Un intervalle vide garde des valeurs à 0 et un effectif de 0.
+    """
+    if probabilities.ndim != 2 or len(y_true) != len(probabilities):
+        raise ValueError("probabilities doit avoir la forme (extraits, classes) comme y_true")
+
+    confidence = probabilities.max(axis=1)
+    correct = (probabilities.argmax(axis=1) == y_true).astype(np.float64)
+
+    # Intervalles de largeur égale ; chacun contient ]borne basse, borne haute].
+    edges = np.linspace(0.0, 1.0, config.ece_bins + 1)
+    bin_index = np.digitize(confidence, edges[1:-1], right=True)
+
+    n = len(y_true)
+    bin_confidence = np.zeros(config.ece_bins, dtype=np.float64)
+    bin_accuracy = np.zeros(config.ece_bins, dtype=np.float64)
+    bin_counts = np.zeros(config.ece_bins, dtype=np.int_)
+    ece = 0.0
+    for b in range(config.ece_bins):
+        in_bin = bin_index == b
+        count = int(in_bin.sum())
+        if count == 0:
+            continue
+        bin_counts[b] = count
+        bin_confidence[b] = confidence[in_bin].mean()
+        bin_accuracy[b] = correct[in_bin].mean()
+        # Chaque intervalle pèse selon la part des extraits qu'il contient.
+        ece += count / n * abs(bin_accuracy[b] - bin_confidence[b])
+    return CalibrationResult(float(ece), bin_confidence, bin_accuracy, bin_counts)
