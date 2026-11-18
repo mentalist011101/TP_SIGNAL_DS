@@ -5,13 +5,14 @@ prediction) téléchargées depuis les sorties Kaggle, et écrit
 training/results/esc50_comparisons.json :
 - CNN contre CRNN ;
 - le meilleur des deux (F1 macro moyen sur les 5 tours) contre la référence MFCC + SVM ;
-- le meilleur des deux contre le meilleur encodeur de la famille B, si ses prédictions sont
-  données (graine 42 de C11).
+- le meilleur des deux contre le meilleur encodeur de la famille B, si son dossier de sortie
+  C11 est donné (c11/esc50/<encodeur>/fold<k>/test_seed42.npz : probabilités des extraits du
+  fold k, dans l'ordre du manifeste).
 Chaque comparaison : test de McNemar et F1 macro avec son intervalle bootstrap à 95 %.
 
 Usage, depuis la racine du dépôt :
     uv run python training/scripts/compare_esc50.py --predictions-dir <dossier des CSV>
-    (ajouter --family-b <csv> --family-b-name <encodeur> quand C11 est disponible)
+    (ajouter --family-b-dir <sortie C11>/c11/esc50/<encodeur> --family-b-name <encodeur>)
 """
 
 from __future__ import annotations
@@ -21,14 +22,20 @@ import json
 from pathlib import Path
 from typing import Any
 
+import numpy as np
+
 from echolens.config import CONFIG_DIR, REPO_ROOT
-from echolens.training.evaluation import EvaluationConfig, load_predictions
+from echolens.core.data.manifest import load_manifest
+from echolens.training.esc50_svm import esc50_target
+from echolens.training.evaluation import ClipPrediction, EvaluationConfig, load_predictions
 from echolens.training.family_a_report import compare_models
 
 RESULTS_DIR = REPO_ROOT / "training" / "results"
 OUTPUT_PATH = RESULTS_DIR / "esc50_comparisons.json"
 SVM_PREDICTIONS = "esc50_mfcc_svm_test_predictions.csv"
+MANIFEST_PATH = REPO_ROOT / "data" / "manifests" / "esc50.csv"
 FAMILY_A = ["cnn", "crnn"]
+FOLD_COUNT = 5
 
 
 def main() -> None:
@@ -48,8 +55,8 @@ def main() -> None:
         compare_models(best, family_a[best], "mfcc_svm", svm, config),
     ]
     # Étape 3 : famille B, seulement si ses prédictions sont fournies.
-    if arguments.family_b is not None:
-        family_b = load_predictions(arguments.family_b)
+    if arguments.family_b_dir is not None:
+        family_b = _family_b_predictions(arguments.family_b_dir)
         name_b = arguments.family_b_name
         comparisons.append(compare_models(best, family_a[best], name_b, family_b, config))
     report: dict[str, Any] = {"best_family_a": best, "comparisons": comparisons}
@@ -61,9 +68,28 @@ def main() -> None:
 def _parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Comparaisons McNemar sur ESC-50 (P8)")
     parser.add_argument("--predictions-dir", type=Path, required=True)
-    parser.add_argument("--family-b", type=Path, default=None)
+    parser.add_argument("--family-b-dir", type=Path, default=None)
     parser.add_argument("--family-b-name", default="famille_b")
     return parser.parse_args()
+
+
+def _family_b_predictions(directory: Path) -> list[ClipPrediction]:
+    # Les lignes de test_seed42.npz du fold k suivent l'ordre du manifeste dans ce fold.
+    rows = load_manifest(MANIFEST_PATH)
+    predictions: list[ClipPrediction] = []
+    for fold in range(1, FOLD_COUNT + 1):
+        fold_rows = [row for row in rows if row.fold == fold]
+        with np.load(directory / f"fold{fold}" / "test_seed42.npz") as content:
+            targets = content["targets"]
+            probabilities = content["probabilities"]
+        predicted = probabilities.argmax(axis=1)
+        for position, row in enumerate(fold_rows):
+            target = int(targets[position])
+            if target != esc50_target(row.path):
+                raise ValueError(f"Classe différente du manifeste pour {row.path}")
+            item = ClipPrediction(row.path, fold, target, int(predicted[position]))
+            predictions.append(item)
+    return predictions
 
 
 def _best_architecture() -> str:
