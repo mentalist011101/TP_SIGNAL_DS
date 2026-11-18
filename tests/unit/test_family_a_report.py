@@ -1,5 +1,6 @@
 """Résultats de la famille A sans torch : choix du réglage, scores, prédictions réunies (P3, P8)."""
 
+import json
 from pathlib import Path
 
 import numpy as np
@@ -179,6 +180,8 @@ def test_round_arrays_are_saved_with_attention(tmp_path: Path) -> None:
         assert {"seed42_predictions", "seed43_probabilities", "seed42_attention"} <= names
         assert "validation_attention" not in names
         np.testing.assert_array_equal(content["test_indices"], [0, 1, 2])
+    details = json.loads((tmp_path / "crnn_fold2.json").read_text(encoding="utf-8"))
+    assert details["chosen_epochs"] == 42
 
 
 def test_compare_models_counts_disagreements() -> None:

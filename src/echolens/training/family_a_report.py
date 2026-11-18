@@ -11,6 +11,7 @@ Règles de calcul :
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -239,7 +240,10 @@ def ranked_classes(
 
 
 def save_round_arrays(round_result: RoundResult, architecture: str, directory: Path) -> Path:
-    """Écrit les prédictions, probabilités et poids d'attention d'un tour (.npz, sortie Kaggle)."""
+    """Écrit les prédictions, probabilités et poids d'attention d'un tour (.npz, sortie Kaggle).
+
+    Le réglage du tour (round_details) est écrit à côté, dans un .json de même nom.
+    """
     tuning = round_result.tuning
     arrays: dict[str, np.ndarray] = {
         "test_indices": round_result.indices.test,
@@ -260,7 +264,12 @@ def save_round_arrays(round_result: RoundResult, architecture: str, directory: P
         if run.attention is not None:
             arrays[f"seed{run.seed}_attention"] = run.attention
     directory.mkdir(parents=True, exist_ok=True)
-    path = directory / f"{architecture}_fold{round_result.test_fold}.npz"
+    # Réglage et scores du tour en JSON à côté : tout se reconstruit sans réentraîner.
+    stem = f"{architecture}_fold{round_result.test_fold}"
+    details = round_details(round_result)
+    details_text = json.dumps(details, ensure_ascii=False, indent=2)
+    (directory / f"{stem}.json").write_text(details_text, encoding="utf-8")
+    path = directory / f"{stem}.npz"
     # Les annotations de numpy confondent **arrays avec l'option allow_pickle : on les ignore.
     np.savez(path, **arrays)  # type: ignore[arg-type]
     return path
