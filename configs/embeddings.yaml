@@ -1,0 +1,32 @@
+# Brique 4, famille B (C10) : représentations des encodeurs gelés, calculées une seule fois
+# (R6) puis publiées en datasets Kaggle privés, pour entraîner les têtes (C11) sans recalcul.
+# Chaque extrait donne la moyenne temporelle de chaque couche (hidden_states, entrée
+# comprise) : un tableau (couches, dimension). La somme pondérée des couches est apprise
+# ensuite, sur ces moyennes (la moyenne commute avec la somme pondérée).
+
+# D2 : tous les extraits entrent en mono 16 kHz (load_audio), sans débruitage ni VAD.
+sample_rate: 16000
+
+encoders:
+  # Révisions figées : hash de commit du dépôt Hugging Face au 16 novembre 2026
+  # (HfApi().model_info(checkpoint).sha). Le même hash redonne exactement les mêmes poids.
+  - id: wav2vec2-base
+    checkpoint: facebook/wav2vec2-base         # pré-entraîné seul, sans fine-tuning ASR
+    revision: 0b5b8e868dd84f03fd87d01f9c4ff0f080fecfe8
+    kind: ssl                                  # 13 sorties (entrée + 12 couches) × 768
+  - id: mhubert-147
+    checkpoint: utter-project/mHuBERT-147      # HuBERT multilingue, 147 langues (H2)
+    revision: 7ad3fc0bc5106c58c9c13526abccad527150d135
+    kind: ssl                                  # 13 × 768
+  - id: whisper-base
+    checkpoint: openai/whisper-base            # encodeur seul, le décodeur n'est pas utilisé
+    revision: e37978b90ca9030d5170a5c07aadb050351a65bb
+    kind: whisper                              # 7 sorties (entrée + 6 couches) × 512
+    # Une trame de sortie de l'encodeur couvre 320 échantillons (pas de 10 ms du log-Mel,
+    # puis convolution de pas 2) : 50 trames par seconde.
+    samples_per_output_frame: 320
+    # L'encodeur reçoit toujours 30 s (3 000 trames log-Mel) et rend 1 500 trames.
+    max_output_frames: 1500
+
+# Jeux traités, chacun lu dans son manifeste versionné data/manifests/<id>.csv.
+datasets: [esc50, cremad, ravdess]

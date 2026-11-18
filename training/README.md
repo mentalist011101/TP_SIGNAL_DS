@@ -37,6 +37,7 @@ os.environ["HF_TOKEN"] = secrets.get_secret("HF_TOKEN")
 | --- | --- | --- |
 | `c3_manifests_emotions.ipynb` | C3 : manifestes de CREMA-D et de RAVDESS (P1, P9), sans GPU ni ffmpeg | `cremad.csv` et `ravdess.csv` (→ `data/manifests/`) |
 | `c5_esc50_mfcc_svm.ipynb` | C5 : référence MFCC + SVM sur ESC-50 (P3, P4, P5), sans GPU | `esc50.csv` (→ `data/manifests/`), `esc50_mfcc_svm.json` (→ `training/results/`), matrice en 5 catégories (→ `report/figures/`) |
+| `c10_embeddings.ipynb` | C10 : moyennes par couche des encodeurs gelés de la famille B (Brique 4, R6, R7), GPU T4 | datasets Kaggle privés `echolens-emb-wav2vec2-base`, `echolens-emb-mhubert-147`, `echolens-emb-whisper-base` (avec `padded/`), jamais sur GitHub |
 
 ## Règles
 
