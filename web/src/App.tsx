@@ -5,6 +5,7 @@ import ComparePage from './pages/ComparePage.tsx'
 import HistoryPage from './pages/HistoryPage.tsx'
 import LivePage from './pages/LivePage.tsx'
 import ModelsPage from './pages/ModelsPage.tsx'
+import ResultPage from './pages/ResultPage.tsx'
 import SpeakersPage from './pages/SpeakersPage.tsx'
 
 // Table des routes : une page par fonctionnalité de la spécification (brique 7).
@@ -16,6 +17,7 @@ export default function App() {
         <Route path="direct" element={<LivePage />} />
         <Route path="comparer" element={<ComparePage />} />
         <Route path="historique" element={<HistoryPage />} />
+        <Route path="analyses/:analysisId" element={<ResultPage />} />
         <Route path="locuteurs" element={<SpeakersPage />} />
         <Route path="modeles" element={<ModelsPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
