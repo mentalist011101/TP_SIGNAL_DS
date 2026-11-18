@@ -8,7 +8,9 @@ const STATUS_LABELS: Record<AnalysisStatusValue, string> = {
   failed: 'Échec',
 }
 
-const PANEL_CLASSES = 'space-y-1 rounded-card border border-rule bg-card p-4 text-sm shadow-card'
+// Zone en retrait (paper-alt) : le panneau est posé dans la carte de l'étape 3, pas une carte de
+// plus.
+const PANEL_CLASSES = 'space-y-1 rounded-card bg-paper-alt p-3 text-sm'
 
 interface AnalysisStatusProps {
   analysis: Analysis | undefined

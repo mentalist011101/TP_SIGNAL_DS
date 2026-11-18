@@ -93,7 +93,8 @@ function ProfileSelect({ profile, onProfileChange }: ProfileSelectProps) {
 export default function TaskSelector(props: TaskSelectorProps) {
   return (
     <fieldset className="space-y-3">
-      <legend className="font-display text-lg font-bold">Que souhaitez-vous analyser ?</legend>
+      {/* Titre déjà affiché par la carte de l'étape 2 : gardé pour les lecteurs d'écran. */}
+      <legend className="sr-only">Que souhaitez-vous analyser ?</legend>
       <TaskCheckboxes tasks={props.tasks} onTasksChange={props.onTasksChange} />
       <ProfileSelect profile={props.profile} onProfileChange={props.onProfileChange} />
     </fieldset>
