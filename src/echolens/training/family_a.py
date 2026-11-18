@@ -141,7 +141,7 @@ def standardize(log_mels: FloatArray, statistics: BandStatistics) -> FloatArray:
     std_per_band = statistics.std.reshape(1, band_count, 1)
     centered = log_mels - mean_per_band
     standardized = centered / std_per_band
-    return standardized.astype(np.float32)
+    return np.asarray(standardized, dtype=np.float32)
 
 
 def random_gain(
@@ -158,8 +158,10 @@ def random_gain(
     # Forme (extraits, 1, 1) : une constante par extrait, la même sur toutes ses bandes et trames.
     gain_shape = (clip_count, 1, 1)
     gains_db = generator.uniform(low=-max_gain_db, high=max_gain_db, size=gain_shape)
+    # Tirage en float32 : sinon tout le lot passerait en float64 (deux fois plus lent).
+    gains_db = gains_db.astype(np.float32)
     gained = log_mels + gains_db
-    return np.asarray(gained, dtype=np.float32)
+    return gained
 
 
 def circular_time_shift(log_mels: FloatArray, generator: np.random.Generator) -> FloatArray:
@@ -231,8 +233,8 @@ def mixup(
     mixed_inputs = mix_weight * inputs + (1.0 - mix_weight) * partner_inputs
     mixed_targets = mix_weight * targets + (1.0 - mix_weight) * partner_targets
     return MixedBatch(
-        inputs=mixed_inputs.astype(np.float32),
-        targets=mixed_targets.astype(np.float32),
+        inputs=np.asarray(mixed_inputs, dtype=np.float32),
+        targets=np.asarray(mixed_targets, dtype=np.float32),
         mix_weight=mix_weight,
         partner_indices=partner_indices.astype(np.int_),
     )
