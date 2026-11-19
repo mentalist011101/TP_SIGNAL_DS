@@ -86,15 +86,15 @@ ignore_missing_imports = true
 module = "echolens.api.*"
 disallow_untyped_decorators = false
 
-# Réseaux de la famille A : la CI n'installe pas torch, nn.Module y est donc vu comme Any.
-[[tool.mypy.overrides]]
-module = "echolens.training.family_a_models"
-disallow_subclassing_any = false
-
 # Le cœur de calcul est typé strictement (règle d'architecture, voir CLAUDE.md).
 [[tool.mypy.overrides]]
 module = "echolens.core.*"
 strict = true
+
+# Sans l'extra [ml] (CI), torch n'est pas installé : nn.Module y est de type Any.
+[[tool.mypy.overrides]]
+module = ["echolens.training.head_training", "echolens.training.family_a_models"]
+disallow_subclassing_any = false
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
