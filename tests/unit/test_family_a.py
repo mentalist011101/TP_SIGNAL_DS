@@ -64,7 +64,7 @@ def test_yaml_config_is_valid() -> None:
     assert config.augmentation.time_mask_max_frames == 40
     assert config.training.learning_rates == [1e-3, 3e-4]
     assert config.training.final_seeds == [42, 43, 44]
-    assert config.training.patience == 15
+    assert config.training.patience is None
     assert config.training.max_epochs == 150
 
 

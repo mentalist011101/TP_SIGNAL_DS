@@ -22,7 +22,7 @@ from echolens.training.family_a_models import (  # noqa: E402
     predict,
     predicted_classes,
     train_fixed_epochs,
-    train_with_early_stopping,
+    train_with_validation,
 )
 
 pytestmark = pytest.mark.ml
@@ -112,7 +112,7 @@ def test_small_training_on_separable_data_reaches_f1_of_one(architecture: str) -
     config = tiny_config()
     train = separable_spectrograms(clips_per_class=12, seed=0)
     validation = separable_spectrograms(clips_per_class=4, seed=1)
-    stopped = train_with_early_stopping(
+    stopped = train_with_validation(
         architecture, train, validation, SMALL_CLASSES, 1e-2, 42, config, CPU
     )
     assert stopped.best_validation_f1 == pytest.approx(1.0)
@@ -130,9 +130,7 @@ def test_without_patience_tuning_runs_every_epoch_and_keeps_the_best() -> None:
     config = tiny_config(max_epochs=12, patience=None)
     train = separable_spectrograms(clips_per_class=12, seed=0)
     validation = separable_spectrograms(clips_per_class=4, seed=1)
-    stopped = train_with_early_stopping(
-        "cnn", train, validation, SMALL_CLASSES, 1e-2, 42, config, CPU
-    )
+    stopped = train_with_validation("cnn", train, validation, SMALL_CLASSES, 1e-2, 42, config, CPU)
     assert stopped.trained.epochs_run == 12
     assert len(stopped.validation_f1_history) == 12
     assert stopped.best_validation_f1 == max(stopped.validation_f1_history)
