@@ -4,6 +4,7 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+from pydantic import ValidationError
 
 from echolens.config import CONFIG_DIR
 from echolens.core.data.manifest import ManifestRow
@@ -14,6 +15,7 @@ from echolens.training.family_a import (
     AugmentationConfig,
     BandStatistics,
     LogMelSet,
+    TrainingConfig,
     augment_batch,
     band_statistics,
     circular_time_shift,
@@ -64,6 +66,17 @@ def test_yaml_config_is_valid() -> None:
     assert config.training.final_seeds == [42, 43, 44]
     assert config.training.patience == 15
     assert config.training.max_epochs == 150
+
+
+def test_patience_is_optional_but_positive() -> None:
+    training = load_family_a_config().training
+    content = training.model_dump()
+    content["patience"] = None
+    without_early_stopping = TrainingConfig(**content)
+    assert without_early_stopping.patience is None
+    content["patience"] = 0
+    with pytest.raises(ValidationError):
+        TrainingConfig(**content)
 
 
 def test_band_statistics_match_hand_computation() -> None:
