@@ -64,7 +64,8 @@ class TrainingConfig(BaseModel):
     batch_size: int = Field(gt=0)
     weight_decay: float = Field(ge=0)
     max_epochs: int = Field(gt=0)
-    patience: int = Field(gt=0)
+    # None : pas d'arrêt anticipé, le réglage va jusqu'à max_epochs (meilleure époque gardée).
+    patience: int | None = Field(gt=0)
     learning_rates: list[float] = Field(min_length=1)
     tuning_seed: int
     final_seeds: list[int] = Field(min_length=1)

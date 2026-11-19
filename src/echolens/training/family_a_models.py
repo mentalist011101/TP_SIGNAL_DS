@@ -226,7 +226,8 @@ def train_with_early_stopping(
     """Réglage (P3) : entraîne au plus max_epochs époques, garde la meilleure sur la validation.
 
     Après chaque époque, F1 macro sur la validation ; on s'arrête après `patience` époques
-    sans amélioration et on recharge les poids de la meilleure époque.
+    sans amélioration (jamais si patience vaut None) et on recharge les poids de la meilleure
+    époque.
     """
     state = _start_training(architecture, train, class_count, learning_rate, seed, config, device)
     history: list[float] = []
@@ -244,7 +245,10 @@ def train_with_early_stopping(
             best_epoch = epoch
             best_weights = copy.deepcopy(state.network.state_dict())
         # Étape 3 : `patience` époques de suite sans faire mieux → on arrête.
-        if epoch - best_epoch >= config.training.patience:
+        patience = config.training.patience
+        if patience is None:
+            continue
+        if epoch - best_epoch >= patience:
             break
     # On revient aux poids de la meilleure époque.
     state.network.load_state_dict(best_weights)
