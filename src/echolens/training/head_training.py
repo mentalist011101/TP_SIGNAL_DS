@@ -124,7 +124,8 @@ def train_with_early_stopping(
 ) -> EarlyStoppingResult:
     """Entraîne au plus max_epochs époques ; garde l'époque au meilleur F1 macro de validation.
 
-    Arrêt après patience époques sans amélioration stricte du F1 macro de validation.
+    Arrêt après patience époques sans amélioration stricte du F1 macro de validation ; jamais
+    d'arrêt si patience vaut None (courbe complète).
     """
     model = _new_head(train, setting, config, class_count, seed)
     optimizer, schedule = _optimizer_and_schedule(model, setting, config)
@@ -140,7 +141,11 @@ def train_with_early_stopping(
             best_f1 = validation_f1
             best_epoch = epoch
             best_state = copy.deepcopy(model.state_dict())
-        elif epoch - best_epoch >= config.patience:
+            continue
+        # Sans patience, on parcourt toute la courbe ; la meilleure époque est gardée.
+        if config.patience is None:
+            continue
+        if epoch - best_epoch >= config.patience:
             break
     model.load_state_dict(best_state)
     return EarlyStoppingResult(model=model, best_epoch=best_epoch, best_f1=best_f1)
