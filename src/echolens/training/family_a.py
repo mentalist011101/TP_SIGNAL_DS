@@ -158,10 +158,10 @@ def random_gain(
     # Forme (extraits, 1, 1) : une constante par extrait, la même sur toutes ses bandes et trames.
     gain_shape = (clip_count, 1, 1)
     gains_db = generator.uniform(low=-max_gain_db, high=max_gain_db, size=gain_shape)
-    # Tirage en float32 : sinon tout le lot passerait en float64 (deux fois plus lent).
-    gains_db = gains_db.astype(np.float32)
-    gained = log_mels + gains_db
-    return gained
+    # Tirage converti en float32 : sinon tout le lot passerait en float64 (plus lent).
+    gains_db_float32 = gains_db.astype(np.float32)
+    gained = log_mels + gains_db_float32
+    return np.asarray(gained, dtype=np.float32)
 
 
 def circular_time_shift(log_mels: FloatArray, generator: np.random.Generator) -> FloatArray:
