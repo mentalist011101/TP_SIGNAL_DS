@@ -62,7 +62,7 @@ class TrainedNetwork:
 
 
 @dataclass(frozen=True)
-class EarlyStoppedNetwork:
+class ValidatedNetwork:
     """Résultat du réglage : le réseau de la meilleure époque et la courbe de validation."""
 
     trained: TrainedNetwork
@@ -213,7 +213,7 @@ def seed_everything(seed: int) -> None:
     torch.backends.cudnn.benchmark = False
 
 
-def train_with_early_stopping(
+def train_with_validation(
     architecture: Architecture,
     train: LabeledSpectrograms,
     validation: LabeledSpectrograms,
@@ -222,11 +222,12 @@ def train_with_early_stopping(
     seed: int,
     config: FamilyAConfig,
     device: torch.device,
-) -> EarlyStoppedNetwork:
-    """Réglage (P3) : entraîne au plus max_epochs époques, garde la meilleure sur la validation.
+) -> ValidatedNetwork:
+    """Réglage (P3) : entraîne jusqu'à max_epochs époques, garde la meilleure sur la validation.
 
-    Après chaque époque, F1 macro sur la validation ; on s'arrête après `patience` époques
-    sans amélioration et on recharge les poids de la meilleure époque.
+    Après chaque époque, F1 macro sur la validation. Avec patience à None (configuration
+    actuelle), on parcourt la courbe complète ; avec un entier, on s'arrête après `patience`
+    époques sans amélioration. Puis on recharge les poids de la meilleure époque.
     """
     state = _start_training(architecture, train, class_count, learning_rate, seed, config, device)
     history: list[float] = []
@@ -235,7 +236,7 @@ def train_with_early_stopping(
     best_weights = copy.deepcopy(state.network.state_dict())
     for epoch in range(1, config.training.max_epochs + 1):
         train_one_epoch(state, train, class_count, config, device)
-        # Étape 1 : F1 macro sur la validation, critère de l'early stopping.
+        # Étape 1 : F1 macro sur la validation, qui choisit la meilleure époque.
         score = validation_macro_f1(state.network, validation, state.statistics, config, device)
         history.append(score)
         # Étape 2 : meilleure époque jusqu'ici → on garde une copie de ses poids.
@@ -243,13 +244,16 @@ def train_with_early_stopping(
             best_f1 = score
             best_epoch = epoch
             best_weights = copy.deepcopy(state.network.state_dict())
-        # Étape 3 : `patience` époques de suite sans faire mieux → on arrête.
-        if epoch - best_epoch >= config.training.patience:
+        # Étape 3 : arrêt anticipé seulement si une patience est donnée.
+        patience = config.training.patience
+        if patience is None:
+            continue
+        if epoch - best_epoch >= patience:
             break
     # On revient aux poids de la meilleure époque.
     state.network.load_state_dict(best_weights)
     trained = TrainedNetwork(state.network, state.statistics, epochs_run=len(history))
-    return EarlyStoppedNetwork(
+    return ValidatedNetwork(
         trained=trained,
         best_epoch=best_epoch,
         best_validation_f1=best_f1,
@@ -351,7 +355,7 @@ def validation_macro_f1(
     config: FamilyAConfig,
     device: torch.device,
 ) -> float:
-    """F1 macro sur la validation, critère de l'early stopping (Brique 4)."""
+    """F1 macro sur la validation, qui choisit la meilleure époque (Brique 4)."""
     predictions = predict(network, validation.log_mels, statistics, config, device)
     y_pred = predicted_classes(predictions)
     return macro_f1(validation.labels, y_pred)

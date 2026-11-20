@@ -34,12 +34,17 @@ training:
   batch_size: 32
   # Valeur par défaut de torch, écrite pour ne rien laisser d'implicite.
   weight_decay: 0.01
-  # Réglage sur le fold k + 1 : early stopping sur le F1 macro, au plus 150 époques, arrêt
-  # après 15 époques sans amélioration. Le cosinus descend sur 150 époques au réglage comme
-  # à l'entraînement final, qui s'arrête au nombre d'époques retenu : le taux
-  # d'apprentissage suit donc exactement la même courbe dans les deux cas.
+  # Réglage sur le fold k + 1, courbe complète (décision du 19 nov. 2026) : pour chaque taux
+  # d'apprentissage, 150 époques sans arrêt anticipé, avec le F1 macro de validation après
+  # chaque époque. On retient le couple (taux, époque) au meilleur F1. Avec une patience de 15,
+  # l'arrêt tombait pendant le palier bruité à taux élevé (diagnostic C9 : CNN 0,659 à
+  # l'époque 43 contre 0,767 à l'époque 145). Un entier n réactiverait l'arrêt après
+  # n époques sans amélioration.
+  # Le cosinus descend sur 150 époques au réglage comme à l'entraînement final, qui s'arrête
+  # au nombre d'époques retenu : le taux d'apprentissage suit donc exactement la même courbe
+  # dans les deux cas.
   max_epochs: 150
-  patience: 15
+  patience: null
   # Taux d'apprentissage essayés au réglage ; en cas d'égalité, le premier est gardé.
   learning_rates: [1.0e-3, 3.0e-4]
   tuning_seed: 42

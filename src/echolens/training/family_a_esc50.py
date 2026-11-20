@@ -1,8 +1,9 @@
 """Famille A (C9) : un tour de validation croisée sur ESC-50 (P3), avec torch.
 
 Au tour k : réglage du taux d'apprentissage et du nombre d'époques en entraînant sur 3 folds,
-avec early stopping sur le fold k + 1 ; puis, réglages fixés, entraînement final sur les 4 folds
-hors test, une fois par graine, et une seule évaluation sur le fold k. La boucle elle-même
+en suivant le F1 du fold k + 1 sur la courbe complète des 150 époques ; puis, réglages fixés,
+entraînement final sur les 4 folds hors test, une fois par graine, et une seule évaluation sur
+le fold k. La boucle elle-même
 (echolens.training.family_a_models) ne sait rien d'ESC-50.
 """
 
@@ -23,7 +24,7 @@ from echolens.training.family_a_models import (
     predict,
     predicted_classes,
     train_fixed_epochs,
-    train_with_early_stopping,
+    train_with_validation,
 )
 from echolens.training.family_a_report import (
     RoundIndices,
@@ -49,7 +50,7 @@ def run_esc50_round(
     # Étape 1 : rôle des folds de ce tour, puis positions des extraits de chaque partie.
     roles = esc50_round(test_fold, fold_count)
     indices = round_indices(log_mel_set, roles)
-    # Étape 2 : réglage sur 3 folds avec early stopping sur le fold k + 1, sans voir le test.
+    # Étape 2 : réglage sur 3 folds, meilleure époque choisie sur le fold k + 1, sans le test.
     tuning_train = _subset(log_mel_set, indices.tuning_train)
     validation = _subset(log_mel_set, indices.validation)
     tuning = tune(architecture, tuning_train, validation, class_count, config, device)
@@ -150,11 +151,11 @@ def _tuning_trials(
     config: FamilyAConfig,
     device: torch.device,
 ) -> tuple[list[TuningTrial], list[TrainedNetwork]]:
-    # Un entraînement avec early stopping par taux d'apprentissage, même graine pour tous.
+    # Un entraînement par taux d'apprentissage, même graine pour tous ; la validation suit.
     trials = []
     networks = []
     for learning_rate in config.training.learning_rates:
-        stopped = train_with_early_stopping(
+        stopped = train_with_validation(
             architecture,
             tuning_train,
             validation,

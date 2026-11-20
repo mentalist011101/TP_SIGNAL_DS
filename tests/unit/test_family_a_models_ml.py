@@ -22,7 +22,7 @@ from echolens.training.family_a_models import (  # noqa: E402
     predict,
     predicted_classes,
     train_fixed_epochs,
-    train_with_early_stopping,
+    train_with_validation,
 )
 
 pytestmark = pytest.mark.ml
@@ -36,7 +36,7 @@ SMALL_CLASSES = 3
 BANDS_PER_CLASS = 8
 
 
-def tiny_config(max_epochs: int = 60, patience: int = 15) -> FamilyAConfig:
+def tiny_config(max_epochs: int = 60, patience: int | None = 15) -> FamilyAConfig:
     """La configuration du dépôt, avec de tout petits réseaux pour aller vite sur CPU."""
     base = load_family_a_config()
     network = base.network.model_copy(update={"channels": [4, 8, 8, 16], "gru_hidden_size": 8})
@@ -112,7 +112,7 @@ def test_small_training_on_separable_data_reaches_f1_of_one(architecture: str) -
     config = tiny_config()
     train = separable_spectrograms(clips_per_class=12, seed=0)
     validation = separable_spectrograms(clips_per_class=4, seed=1)
-    stopped = train_with_early_stopping(
+    stopped = train_with_validation(
         architecture, train, validation, SMALL_CLASSES, 1e-2, 42, config, CPU
     )
     assert stopped.best_validation_f1 == pytest.approx(1.0)
@@ -123,6 +123,19 @@ def test_small_training_on_separable_data_reaches_f1_of_one(architecture: str) -
     predictions = predict(trained.network, validation.log_mels, trained.statistics, config, CPU)
     y_pred = predicted_classes(predictions)
     assert macro_f1(validation.labels, y_pred) == pytest.approx(1.0)
+
+
+def test_without_patience_tuning_runs_every_epoch_and_keeps_the_best() -> None:
+    # Données faciles : F1 = 1 très tôt, une patience de 2 arrêterait bien avant 12 époques.
+    config = tiny_config(max_epochs=12, patience=None)
+    train = separable_spectrograms(clips_per_class=12, seed=0)
+    validation = separable_spectrograms(clips_per_class=4, seed=1)
+    stopped = train_with_validation("cnn", train, validation, SMALL_CLASSES, 1e-2, 42, config, CPU)
+    assert stopped.trained.epochs_run == 12
+    assert len(stopped.validation_f1_history) == 12
+    assert stopped.best_validation_f1 == max(stopped.validation_f1_history)
+    best_position = stopped.validation_f1_history.index(stopped.best_validation_f1)
+    assert stopped.best_epoch == best_position + 1
 
 
 def test_same_seed_gives_same_trained_network() -> None:
