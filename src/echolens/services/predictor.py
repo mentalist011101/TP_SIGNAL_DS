@@ -1,9 +1,9 @@
 """Prédicteurs : ce qui transforme des fenêtres de signal en probabilités par classe (Brique 6).
 
 Le reste de l'application ne connaît que l'interface Predictor. Le prédicteur utilisé est
-choisi dans configs/app.yaml (inference_backend), jamais en dur. Ici, seul le faux prédicteur
-« demo » existe : il permet de construire et de tester tout le contrat des résultats (API,
-base, interface) avant de brancher les vrais modèles (C13, PR 2).
+choisi dans configs/app.yaml (inference_backend), jamais en dur :
+- « demo » : faux prédicteur déterministe, sans torch (développement du front, CI) ;
+- « models » : vrais modèles du registre (echolens.services.model_predictor, C13).
 """
 
 from __future__ import annotations
@@ -14,8 +14,11 @@ from typing import Protocol
 
 import numpy as np
 
+from echolens.config import AppSettings
+from echolens.core.data.class_labels import ClassLabels
+from echolens.core.features import FeatureConfig
 from echolens.core.inference import FloatArray, ProbabilityArray
-from echolens.core.models.registry import Profile, Task
+from echolens.core.models.registry import ModelRegistry, Profile, Task
 
 DEMO_MODEL_ID = "demo"
 DEMO_MODEL_VERSION = "0"
@@ -83,11 +86,30 @@ class DemoPredictor:
         return probabilities
 
 
-def make_predictor(backend: str, class_counts: dict[Task, int]) -> Predictor:
-    """Crée le prédicteur choisi dans configs/app.yaml (inference_backend)."""
-    if backend == DEMO_MODEL_ID:
-        return DemoPredictor(class_counts)
-    raise ValueError(f"Prédicteur inconnu dans configs/app.yaml : « {backend} »")
+def make_predictor(settings: AppSettings, labels: ClassLabels) -> Predictor:
+    """Crée le prédicteur choisi par inference_backend (configs/app.yaml).
+
+    « demo » : faux prédicteur, sans torch. « models » : vrais modèles du registre ; torch
+    n'est importé qu'à ce moment-là, si bien que le mode demo et la CI s'en passent.
+    """
+    if settings.inference_backend == DEMO_MODEL_ID:
+        return DemoPredictor(class_counts(labels))
+    from echolens.services.model_predictor import ModelPredictor
+
+    registry = ModelRegistry.from_yaml(settings.registry_path)
+    feature_config = FeatureConfig.from_yaml(settings.features_path)
+    predictor = ModelPredictor(
+        registry, labels, feature_config, settings.features_path, settings.models_dir
+    )
+    # Préchauffage pour la démo : les modèles sont chargés au démarrage, pas à la 1re analyse.
+    if settings.preload_models:
+        predictor.preload()
+    return predictor
+
+
+def class_counts(labels: ClassLabels) -> dict[Task, int]:
+    """Nombre de classes de chaque tâche de classification, lu dans configs/labels.yaml."""
+    return {Task.EMOTION: len(labels.emotions), Task.SOUND_EVENT: len(labels.esc50_classes)}
 
 
 def _demo_probabilities(task: Task, window: FloatArray, class_count: int) -> ProbabilityArray:

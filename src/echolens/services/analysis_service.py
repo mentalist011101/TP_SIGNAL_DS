@@ -33,7 +33,7 @@ from echolens.core.data.class_labels import load_class_labels
 from echolens.core.features import FeatureConfig, log_mel_spectrogram
 from echolens.core.inference import load_inference_config
 from echolens.services.predictor import make_predictor
-from echolens.services.results import ResultContext, build_results, class_counts
+from echolens.services.results import ResultContext, build_results
 from echolens.services.spectrogram_image import save_spectrogram_png
 from echolens.services.storage import AnalysisRecord, AnalysisStatus
 
@@ -270,7 +270,7 @@ class AnalysisService:
 def _make_result_context(settings: AppSettings) -> ResultContext:
     # Classes, prédicteur et découpage lus une seule fois, au démarrage, dans configs/.
     labels = load_class_labels()
-    predictor = make_predictor(settings.inference_backend, class_counts(labels))
+    predictor = make_predictor(settings, labels)
     return ResultContext(
         predictor=predictor,
         labels=labels,

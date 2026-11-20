@@ -178,11 +178,6 @@ def unavailable_result() -> dict[str, Any]:
     }
 
 
-def class_counts(labels: ClassLabels) -> dict[Task, int]:
-    """Nombre de classes de chaque tâche de classification, lu dans configs/labels.yaml."""
-    return {Task.EMOTION: len(labels.emotions), Task.SOUND_EVENT: len(labels.esc50_classes)}
-
-
 def _segment_result(
     window: Segment, probabilities: ProbabilityArray, classes: list[ClassLabel]
 ) -> dict[str, Any]:

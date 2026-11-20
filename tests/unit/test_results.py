@@ -4,19 +4,20 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+from pydantic import ValidationError
 from sqlalchemy import create_engine, text
 
+from echolens.config import AppSettings
 from echolens.core.audio import load_preprocess_config
 from echolens.core.data.class_labels import load_class_labels
 from echolens.core.inference import load_inference_config
 from echolens.core.models.registry import Profile, Task
-from echolens.services.predictor import DemoPredictor, make_predictor
+from echolens.services.predictor import DemoPredictor, class_counts
 from echolens.services.results import (
     NO_SPEECH_MESSAGE,
     UNAVAILABLE_MESSAGE,
     ResultContext,
     build_results,
-    class_counts,
 )
 from echolens.services.storage import create_session_factory
 
@@ -85,8 +86,8 @@ def test_demo_predictor_says_demo_and_not_calibrated() -> None:
 
 
 def test_unknown_backend_is_refused() -> None:
-    with pytest.raises(ValueError, match="Prédicteur inconnu"):
-        make_predictor("whisper", {Task.EMOTION: 6})
+    with pytest.raises(ValidationError):
+        AppSettings(inference_backend="whisper")
 
 
 def test_tone_gives_sound_events_but_no_speech(context: ResultContext) -> None:
