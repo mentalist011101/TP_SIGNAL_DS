@@ -11,7 +11,6 @@ températures : T n'a alors jamais vu les extraits sur lesquels on la juge (ECE 
 
 from __future__ import annotations
 
-import hashlib
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -137,10 +136,3 @@ def validation_calibration(
     return CalibrationOutcome(
         temperature=temperature, ece_before=ece_before, ece_after=ece_after, round_temperatures=[]
     )
-
-
-def file_sha256(path: Path) -> str:
-    """Empreinte SHA-256 d'un fichier (ici configs/features.yaml) : 64 caractères hexadécimaux."""
-    content = path.read_bytes()
-    digest = hashlib.sha256(content)
-    return digest.hexdigest()

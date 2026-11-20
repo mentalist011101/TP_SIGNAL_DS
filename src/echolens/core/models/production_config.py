@@ -8,6 +8,7 @@ figée pour la famille B, empreinte de configs/features.yaml pour le CRNN (R5).
 
 from __future__ import annotations
 
+import hashlib
 from pathlib import Path
 from typing import Literal
 
@@ -97,3 +98,14 @@ def load_production_config(path: Path) -> ProductionModelConfig:
     """Relit et valide un config.json."""
     text = path.read_text(encoding="utf-8")
     return ProductionModelConfig.model_validate_json(text)
+
+
+def file_sha256(path: Path) -> str:
+    """Empreinte SHA-256 d'un fichier (ici configs/features.yaml) : 64 caractères hexadécimaux.
+
+    Si un seul paramètre du log-Mel change, l'empreinte change : l'application refuse alors
+    un CRNN entraîné avec d'autres features (R5).
+    """
+    content = path.read_bytes()
+    digest = hashlib.sha256(content)
+    return digest.hexdigest()

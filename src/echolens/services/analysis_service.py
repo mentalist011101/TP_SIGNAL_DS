@@ -234,7 +234,7 @@ class AnalysisService:
         signal = load_audio(self.converted_audio_path(analysis_id))
         # Étape 2 : un résultat par tâche demandée, global calculé à partir des segments.
         record = self.get_analysis(analysis_id)
-        return build_results(signal, record.tasks, self.result_context)
+        return build_results(signal, record.tasks, record.profile, self.result_context)
 
     def _original_audio_path(self, analysis_id: str) -> Path:
         # L'extension est conservée dans le nom original.<ext> : on retrouve le fichier dans

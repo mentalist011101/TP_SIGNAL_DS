@@ -9,7 +9,7 @@ from sqlalchemy import create_engine, text
 from echolens.core.audio import load_preprocess_config
 from echolens.core.data.class_labels import load_class_labels
 from echolens.core.inference import load_inference_config
-from echolens.core.models.registry import Task
+from echolens.core.models.registry import Profile, Task
 from echolens.services.predictor import DemoPredictor, make_predictor
 from echolens.services.results import (
     NO_SPEECH_MESSAGE,
@@ -66,8 +66,8 @@ def voiced_speech(seconds: float) -> np.ndarray:
 def test_demo_predictor_is_deterministic_and_sums_to_one() -> None:
     predictor = DemoPredictor({Task.SOUND_EVENT: 50})
     windows = [tone(5.0, seed=1), tone(5.0, seed=2)]
-    first = predictor.predict(Task.SOUND_EVENT, windows)
-    second = predictor.predict(Task.SOUND_EVENT, windows)
+    first = predictor.predict(Task.SOUND_EVENT, Profile.QUALITY, windows)
+    second = predictor.predict(Task.SOUND_EVENT, Profile.QUALITY, windows)
     for left, right in zip(first, second, strict=True):
         np.testing.assert_array_equal(left, right)
         assert left.shape == (50,)
@@ -78,10 +78,10 @@ def test_demo_predictor_is_deterministic_and_sums_to_one() -> None:
 
 def test_demo_predictor_says_demo_and_not_calibrated() -> None:
     predictor = DemoPredictor({Task.EMOTION: 6})
-    info = predictor.model_info(Task.EMOTION)
+    info = predictor.model_info(Task.EMOTION, Profile.QUALITY)
     assert (info.model_id, info.model_version, info.calibrated) == ("demo", "0", False)
-    assert predictor.supports(Task.EMOTION)
-    assert not predictor.supports(Task.TRANSCRIPTION)
+    assert predictor.supports(Task.EMOTION, Profile.REALTIME)
+    assert not predictor.supports(Task.TRANSCRIPTION, Profile.QUALITY)
 
 
 def test_unknown_backend_is_refused() -> None:
@@ -90,7 +90,7 @@ def test_unknown_backend_is_refused() -> None:
 
 
 def test_tone_gives_sound_events_but_no_speech(context: ResultContext) -> None:
-    results = build_results(tone(12.0), ["sound_event", "emotion"], context)
+    results = build_results(tone(12.0), ["sound_event", "emotion"], "quality", context)
     events = results["sound_event"]
     assert events["status"] == "done"
     assert len(events["probabilities"]) == 50
@@ -108,7 +108,7 @@ def test_tone_gives_sound_events_but_no_speech(context: ResultContext) -> None:
 def test_emotion_global_is_the_duration_weighted_mean_of_segments(
     context: ResultContext,
 ) -> None:
-    emotion = build_results(voiced_speech(12.0), ["emotion"], context)["emotion"]
+    emotion = build_results(voiced_speech(12.0), ["emotion"], "quality", context)["emotion"]
     assert emotion["status"] == "done"
     segments = emotion["segments"]
     assert len(segments) >= 2
@@ -129,7 +129,7 @@ def test_emotion_global_is_the_duration_weighted_mean_of_segments(
 
 
 def test_tasks_not_plugged_in_are_unavailable(context: ResultContext) -> None:
-    results = build_results(tone(3.0), ["transcription", "speaker"], context)
+    results = build_results(tone(3.0), ["transcription", "speaker"], "realtime", context)
     for task in ["transcription", "speaker"]:
         assert results[task]["status"] == "unavailable"
         assert results[task]["message"] == UNAVAILABLE_MESSAGE

@@ -32,7 +32,7 @@ from echolens.core.inference import (
     segment_samples,
     sound_event_windows,
 )
-from echolens.core.models.registry import Task
+from echolens.core.models.registry import Profile, Task
 from echolens.services.predictor import ModelInfo, Predictor
 
 STATUS_DONE = "done"
@@ -54,27 +54,36 @@ class ResultContext:
     vad_config: VadConfig
 
 
-def build_results(signal: FloatArray, tasks: list[str], context: ResultContext) -> dict[str, Any]:
-    """Un objet par tâche demandée, prêt à être stocké en JSON et renvoyé par l'API."""
+def build_results(
+    signal: FloatArray, tasks: list[str], profile: str, context: ResultContext
+) -> dict[str, Any]:
+    """Un objet par tâche demandée, prêt à être stocké en JSON et renvoyé par l'API.
+
+    Le profil (EF-07) choisit le modèle de chaque tâche : qualité ou temps réel.
+    """
     results: dict[str, Any] = {}
     for task_name in tasks:
         task = Task(task_name)
-        results[task.value] = task_result(signal, task, context)
+        results[task.value] = task_result(signal, task, Profile(profile), context)
     return results
 
 
-def task_result(signal: FloatArray, task: Task, context: ResultContext) -> dict[str, Any]:
+def task_result(
+    signal: FloatArray, task: Task, profile: Profile, context: ResultContext
+) -> dict[str, Any]:
     """Résultat d'une tâche : calculé, « aucune parole » ou « disponible prochainement »."""
-    if not context.predictor.supports(task):
+    if not context.predictor.supports(task, profile):
         return unavailable_result()
     if task == Task.SOUND_EVENT:
-        return sound_event_result(signal, context)
+        return sound_event_result(signal, profile, context)
     if task == Task.EMOTION:
-        return emotion_result(signal, context)
+        return emotion_result(signal, profile, context)
     return unavailable_result()
 
 
-def sound_event_result(signal: FloatArray, context: ResultContext) -> dict[str, Any]:
+def sound_event_result(
+    signal: FloatArray, profile: Profile, context: ResultContext
+) -> dict[str, Any]:
     """Événements sonores : fenêtres de 5 s à 50 % de recouvrement, global = moyenne (D5)."""
     config = context.inference_config
     # Étape 1 : fenêtres qui couvrent tout l'audio ; un audio court est complété par du silence.
@@ -85,16 +94,16 @@ def sound_event_result(signal: FloatArray, context: ResultContext) -> dict[str, 
         samples = cut_window(signal, window, config.sound_event.window_s)
         window_signals.append(samples)
     # Étape 2 : probabilités par fenêtre, puis moyenne simple (fenêtres de même durée).
-    probabilities = context.predictor.predict(Task.SOUND_EVENT, window_signals)
+    probabilities = context.predictor.predict(Task.SOUND_EVENT, profile, window_signals)
     overall = mean_probabilities(probabilities)
-    info = context.predictor.model_info(Task.SOUND_EVENT)
+    info = context.predictor.model_info(Task.SOUND_EVENT, profile)
     classes = context.labels.esc50_classes
     return done_result(windows, probabilities, overall, classes, info)
 
 
-def emotion_result(signal: FloatArray, context: ResultContext) -> dict[str, Any]:
+def emotion_result(signal: FloatArray, profile: Profile, context: ResultContext) -> dict[str, Any]:
     """Émotions : segments de parole de la VAD, 5 s au plus, global pondéré par la durée (D5)."""
-    info = context.predictor.model_info(Task.EMOTION)
+    info = context.predictor.model_info(Task.EMOTION, profile)
     # Étape 1 : zones de parole, coupées en morceaux de 5 s au plus.
     speech_segments = detect_speech(signal, context.vad_config)
     windows = emotion_windows(speech_segments, context.inference_config)
@@ -106,7 +115,7 @@ def emotion_result(signal: FloatArray, context: ResultContext) -> dict[str, Any]
         samples = segment_samples(signal, window)
         window_signals.append(samples)
     # Étape 3 : probabilités par morceau, puis moyenne pondérée par la durée.
-    probabilities = context.predictor.predict(Task.EMOTION, window_signals)
+    probabilities = context.predictor.predict(Task.EMOTION, profile, window_signals)
     durations_s = [window.duration_s for window in windows]
     overall = duration_weighted_mean(probabilities, durations_s)
     classes = context.labels.emotions

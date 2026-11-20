@@ -15,7 +15,7 @@ from typing import Protocol
 import numpy as np
 
 from echolens.core.inference import FloatArray, ProbabilityArray
-from echolens.core.models.registry import Task
+from echolens.core.models.registry import Profile, Task
 
 DEMO_MODEL_ID = "demo"
 DEMO_MODEL_VERSION = "0"
@@ -36,15 +36,17 @@ class ModelInfo:
 class Predictor(Protocol):
     """Ce que doit savoir faire tout prédicteur, faux ou vrai."""
 
-    def supports(self, task: Task) -> bool:
-        """Vrai si le prédicteur sait traiter cette tâche."""
+    def supports(self, task: Task, profile: Profile) -> bool:
+        """Vrai si le prédicteur a un modèle pour cette tâche dans ce profil (EF-07)."""
         ...
 
-    def model_info(self, task: Task) -> ModelInfo:
-        """Identité du modèle utilisé pour cette tâche."""
+    def model_info(self, task: Task, profile: Profile) -> ModelInfo:
+        """Identité du modèle utilisé pour cette tâche dans ce profil."""
         ...
 
-    def predict(self, task: Task, windows: list[FloatArray]) -> list[ProbabilityArray]:
+    def predict(
+        self, task: Task, profile: Profile, windows: list[FloatArray]
+    ) -> list[ProbabilityArray]:
         """Une distribution de probabilités (somme 1) par fenêtre de signal mono 16 kHz."""
         ...
 
@@ -61,16 +63,18 @@ class DemoPredictor:
         # Nombre de classes de chaque tâche gérée (6 émotions, 50 classes d'ESC-50).
         self.class_counts = class_counts
 
-    def supports(self, task: Task) -> bool:
-        """Le faux prédicteur gère les tâches de classification (émotion, événement)."""
+    def supports(self, task: Task, profile: Profile) -> bool:
+        """Le faux prédicteur gère les tâches de classification, dans les deux profils."""
         return task in self.class_counts
 
-    def model_info(self, task: Task) -> ModelInfo:
+    def model_info(self, task: Task, profile: Profile) -> ModelInfo:
         """Toujours « demo », version « 0 », probabilités non calibrées."""
         return ModelInfo(model_id=DEMO_MODEL_ID, model_version=DEMO_MODEL_VERSION, calibrated=False)
 
-    def predict(self, task: Task, windows: list[FloatArray]) -> list[ProbabilityArray]:
-        """Une distribution déterministe par fenêtre."""
+    def predict(
+        self, task: Task, profile: Profile, windows: list[FloatArray]
+    ) -> list[ProbabilityArray]:
+        """Une distribution déterministe par fenêtre (le profil ne change rien)."""
         class_count = self.class_counts[task]
         probabilities: list[ProbabilityArray] = []
         for window in windows:
