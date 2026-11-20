@@ -1,12 +1,15 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { describeApiError, useAnalysisHistory, type Analysis } from '../api/client.ts'
+import Achievements from '../components/history/Achievements.tsx'
 import HistoryFilters from '../components/history/HistoryFilters.tsx'
-import HistoryTable from '../components/history/HistoryTable.tsx'
+import HistoryList from '../components/history/HistoryList.tsx'
+import HistoryOverview from '../components/history/HistoryOverview.tsx'
 import { filterAnalyses, type HistoryFilterValues } from '../components/history/historyFilters.ts'
+import { computeHistoryStats } from '../components/history/historyStats.ts'
 
 // Filtres à l'ouverture de la page : tout afficher.
-const DEFAULT_FILTERS: HistoryFilterValues = { status: 'all', date: 'all' }
+const DEFAULT_FILTERS: HistoryFilterValues = { status: 'all', date: 'all', query: '' }
 
 const MESSAGE_CLASSES =
   'rounded-card border border-dashed border-rule-strong bg-card p-6 text-center text-ink-soft'
@@ -26,32 +29,41 @@ function EmptyHistory({ hasAnalyses }: { hasAnalyses: boolean }) {
   )
 }
 
-interface HistoryListProps {
+interface HistoryContentProps {
   analyses: Analysis[]
   filters: HistoryFilterValues
+  onFiltersChange: (filters: HistoryFilterValues) => void
   loadedAt: number
 }
 
-// Applique les filtres, puis affiche le tableau ou le message de liste vide. Les périodes
-// (aujourd'hui, 7 jours…) sont comptées depuis le chargement de la liste, pas depuis chaque
-// affichage : le résultat reste le même tant que la liste ne change pas.
-function HistoryList({ analyses, filters, loadedAt }: HistoryListProps) {
+// Chiffres clés et badges, puis filtres et liste. Les périodes (aujourd'hui, 7 jours…) et la
+// série de jours sont comptées depuis le chargement de la liste, pas depuis chaque affichage :
+// le résultat reste le même tant que la liste ne change pas.
+function HistoryContent({ analyses, filters, onFiltersChange, loadedAt }: HistoryContentProps) {
   const now = new Date(loadedAt)
+  const stats = computeHistoryStats(analyses, now)
   const visible = filterAnalyses(analyses, filters, now)
-  if (visible.length === 0) {
-    return <EmptyHistory hasAnalyses={analyses.length > 0} />
-  }
   return (
-    <div className="space-y-2">
-      <p className="text-sm text-ink-soft">
-        {visible.length} analyse(s) sur {analyses.length}
-      </p>
-      <HistoryTable analyses={visible} />
-    </div>
+    <>
+      <HistoryOverview stats={stats} />
+      <Achievements stats={stats} />
+      <section className="space-y-3">
+        <div className="flex items-baseline justify-between gap-3">
+          <h2 className="font-display text-lg font-bold">Analyses</h2>
+          <p className="font-mono text-sm text-ink-soft">
+            {visible.length} / {analyses.length}
+          </p>
+        </div>
+        <HistoryFilters filters={filters} onFiltersChange={onFiltersChange} />
+        {visible.length === 0 && <EmptyHistory hasAnalyses={analyses.length > 0} />}
+        {visible.length > 0 && <HistoryList analyses={visible} />}
+      </section>
+    </>
   )
 }
 
-// Page Historique (C22, EF-08) : analyses passées, filtrables, à rouvrir ou à supprimer.
+// Page Historique (C22, EF-08) : chiffres clés, badges, puis les analyses passées, filtrables,
+// à rouvrir ou à supprimer.
 export default function HistoryPage() {
   const [filters, setFilters] = useState<HistoryFilterValues>(DEFAULT_FILTERS)
   const history = useAnalysisHistory()
@@ -62,19 +74,23 @@ export default function HistoryPage() {
   }
   if (history.data !== undefined) {
     content = (
-      <HistoryList analyses={history.data} filters={filters} loadedAt={history.dataUpdatedAt} />
+      <HistoryContent
+        analyses={history.data}
+        filters={filters}
+        onFiltersChange={setFilters}
+        loadedAt={history.dataUpdatedAt}
+      />
     )
   }
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-8">
       <div className="space-y-2">
         <h1 className="font-display text-3xl font-extrabold tracking-tight">Historique</h1>
         <p className="text-ink-soft">
-          Les 100 analyses les plus récentes. Rouvrez-en une pour revoir son résultat.
+          Vos 100 analyses les plus récentes, et ce qu’elles vous ont permis de débloquer.
         </p>
       </div>
-      <HistoryFilters filters={filters} onFiltersChange={setFilters} />
       {content}
     </section>
   )

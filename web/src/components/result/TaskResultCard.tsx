@@ -2,7 +2,7 @@ import { useState } from 'react'
 import type { AnalysisTask, ClassProbability, TaskResult } from '../../api/client.ts'
 import { TASK_LABELS } from '../../labels.ts'
 import DemoNotice from './DemoNotice.tsx'
-import { formatProbability } from './formatProbability.ts'
+import { formatProbability, mainProbability } from './taskResult.ts'
 import ProbabilityBars from './ProbabilityBars.tsx'
 
 // Identifiant du faux prédicteur dans le contrat de l'API (C13).
@@ -14,16 +14,6 @@ const SOUND_EVENT_TOP_COUNT = 5
 const CARD_CLASSES = 'space-y-4 rounded-card border border-rule bg-card p-5 shadow-card'
 
 const TOGGLE_CLASSES = 'text-sm font-semibold text-accent-ink hover:underline'
-
-// Probabilité du résultat principal, lue dans la liste renvoyée par l'API (rien n'est recalculé).
-function mainProbability(result: TaskResult): number | null {
-  for (const item of result.probabilities) {
-    if (item.label === result.label) {
-      return item.probability
-    }
-  }
-  return null
-}
 
 // Résultat principal en grand : libellé français et probabilité.
 function MainResult({ result }: { result: TaskResult }) {

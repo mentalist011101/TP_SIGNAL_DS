@@ -10,6 +10,8 @@ export type DateFilter = 'all' | 'today' | 'week' | 'month'
 export interface HistoryFilterValues {
   status: StatusFilter
   date: DateFilter
+  // Texte cherché dans le nom du fichier ; vide = pas de recherche.
+  query: string
 }
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000
@@ -52,7 +54,17 @@ function matchesDate(analysis: Analysis, filter: DateFilter, now: Date): boolean
   return createdAt >= start
 }
 
-// Garde les analyses qui passent les deux filtres, dans l'ordre reçu (les plus récentes d'abord).
+// Vrai si le nom du fichier contient le texte cherché, sans tenir compte des majuscules.
+function matchesQuery(analysis: Analysis, query: string): boolean {
+  const searched = query.trim().toLowerCase()
+  if (searched === '') {
+    return true
+  }
+  const filename = analysis.original_filename.toLowerCase()
+  return filename.includes(searched)
+}
+
+// Garde les analyses qui passent les trois filtres, dans l'ordre reçu (les plus récentes d'abord).
 export function filterAnalyses(
   analyses: Analysis[],
   filters: HistoryFilterValues,
@@ -62,7 +74,8 @@ export function filterAnalyses(
   for (const analysis of analyses) {
     const statusOk = matchesStatus(analysis, filters.status)
     const dateOk = matchesDate(analysis, filters.date, now)
-    if (statusOk && dateOk) {
+    const queryOk = matchesQuery(analysis, filters.query)
+    if (statusOk && dateOk && queryOk) {
       kept.push(analysis)
     }
   }

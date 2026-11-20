@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react'
 import type { ClassProbability } from '../../api/client.ts'
-import { formatProbability } from './formatProbability.ts'
+import { formatProbability } from './taskResult.ts'
 
 // Une ligne : libellé, barre, pourcentage. La largeur des deux colonnes de texte est fixe pour que
 // toutes les barres commencent et finissent au même endroit.
