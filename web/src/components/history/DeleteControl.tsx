@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useDeleteAnalysis } from '../../api/client.ts'
+import { describeApiError, useDeleteAnalysis } from '../../api/client.ts'
 
 // Bouton secondaire de la charte. Pas de couleur danger : elle est réservée aux erreurs.
 const BUTTON_CLASSES =
@@ -61,7 +61,7 @@ export default function DeleteControl({ analysisId, filename }: DeleteControlPro
   }
   let errorMessage: string | null = null
   if (deletion.error !== null) {
-    errorMessage = deletion.error.message
+    errorMessage = describeApiError(deletion.error)
   }
   return (
     <ConfirmDelete

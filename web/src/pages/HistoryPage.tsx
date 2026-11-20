@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ApiError, useAnalysisHistory, type Analysis } from '../api/client.ts'
+import { describeApiError, useAnalysisHistory, type Analysis } from '../api/client.ts'
 import HistoryFilters from '../components/history/HistoryFilters.tsx'
 import HistoryTable from '../components/history/HistoryTable.tsx'
 import { filterAnalyses, type HistoryFilterValues } from '../components/history/historyFilters.ts'
@@ -10,14 +10,6 @@ const DEFAULT_FILTERS: HistoryFilterValues = { status: 'all', date: 'all' }
 
 const MESSAGE_CLASSES =
   'rounded-card border border-dashed border-rule-strong bg-card p-6 text-center text-ink-soft'
-
-// Message d'erreur du chargement : celui de l'API, ou serveur injoignable.
-function describeLoadError(error: Error): string {
-  if (error instanceof ApiError) {
-    return error.message
-  }
-  return 'Serveur injoignable : vérifiez que l’application est lancée, puis réessayez.'
-}
 
 // Liste vide : aucune analyse du tout, ou aucune qui passe les filtres.
 function EmptyHistory({ hasAnalyses }: { hasAnalyses: boolean }) {
@@ -66,7 +58,7 @@ export default function HistoryPage() {
 
   let content = <p className="text-sm text-ink-soft">Chargement de l’historique…</p>
   if (history.error !== null) {
-    content = <p className="text-sm text-danger">{describeLoadError(history.error)}</p>
+    content = <p className="text-sm text-danger">{describeApiError(history.error)}</p>
   }
   if (history.data !== undefined) {
     content = (

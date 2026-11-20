@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import {
-  ApiError,
+  describeApiError,
   useAnalysis,
   useCreateAnalysis,
   type Analysis,
@@ -31,15 +31,12 @@ const EMPTY_PREVIEW_CLASSES =
 // colonne empilée sur téléphone. minmax(0, …) empêche le canvas d'élargir sa colonne.
 const LAYOUT_CLASSES = 'grid items-start gap-6 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]'
 
-// Message à afficher pour une erreur : celui de l'API, ou serveur injoignable (erreur réseau).
+// Message à afficher pour une erreur, ou null s'il n'y en a pas.
 function describeError(error: Error | null): string | null {
   if (error === null) {
     return null
   }
-  if (error instanceof ApiError) {
-    return error.message
-  }
-  return 'Serveur injoignable : vérifiez que l’application est lancée, puis réessayez.'
+  return describeApiError(error)
 }
 
 // Explique pourquoi le bouton Analyser est désactivé ; null quand tout est prêt.

@@ -34,6 +34,15 @@ async function readErrorMessage(response: Response, path: string): Promise<strin
   return fallbackMessage
 }
 
+// Message à afficher pour une erreur d'appel : celui de l'API (en français), ou « serveur
+// injoignable » quand fetch n'a obtenu aucune réponse (son propre message est en anglais).
+export function describeApiError(error: Error): string {
+  if (error instanceof ApiError) {
+    return error.message
+  }
+  return 'Serveur injoignable : vérifiez que l’application est lancée, puis réessayez.'
+}
+
 // Appel JSON générique : lève une ApiError lisible si la réponse n'est pas 2xx.
 export async function apiGet<T>(path: string): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`)
