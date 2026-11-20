@@ -1,5 +1,6 @@
-import { API_BASE, isAnalysisRunning, type Analysis } from '../../api/client.ts'
-import { PROFILE_LABELS, STATUS_LABELS } from '../../labels.ts'
+import { API_BASE, type Analysis } from '../../api/client.ts'
+import { PROFILE_LABELS } from '../../labels.ts'
+import StatusBadge from '../StatusBadge.tsx'
 
 // Bouton secondaire de la charte (même style que Supprimer dans l'historique).
 const DOWNLOAD_CLASSES =
@@ -18,18 +19,6 @@ function formatDuration(durationSeconds: number | null): string {
   }
   const formatted = durationSeconds.toLocaleString('fr-FR', { maximumFractionDigits: 1 })
   return `${formatted} s`
-}
-
-// Statut en texte ; en rouge seulement pour un échec (danger = erreurs).
-function StatusText({ analysis }: { analysis: Analysis }) {
-  const label = STATUS_LABELS[analysis.status]
-  if (analysis.status === 'failed') {
-    return <span className="font-semibold text-danger">{label}</span>
-  }
-  if (isAnalysisRunning(analysis)) {
-    return <span className="font-semibold">{label}… (actualisation chaque seconde)</span>
-  }
-  return <span className="font-semibold">{label}</span>
 }
 
 // Le lien pointe sur GET /api/v1/analyses/{id} : le fichier téléchargé est la réponse de
@@ -53,11 +42,12 @@ export default function ResultHeader({ analysis }: { analysis: Analysis }) {
       <div className="min-w-0 space-y-1">
         <p className="label-mono text-ink-faint">Résultat de l’analyse</p>
         <h1 className="font-mono text-2xl font-medium break-all">{analysis.original_filename}</h1>
-        <p className="text-sm text-ink-soft">
-          <span className="font-mono">{formatDate(analysis.created_at)}</span> ·{' '}
-          <span className="font-mono">{formatDuration(analysis.duration_s)}</span> · profil{' '}
-          {profileLabel} · <StatusText analysis={analysis} />
-        </p>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-ink-soft">
+          <StatusBadge status={analysis.status} />
+          <span className="font-mono">{formatDate(analysis.created_at)}</span>
+          <span className="font-mono">{formatDuration(analysis.duration_s)}</span>
+          <span>profil {profileLabel}</span>
+        </div>
       </div>
       {analysis.status === 'done' && <DownloadJsonLink analysisId={analysis.id} />}
     </div>

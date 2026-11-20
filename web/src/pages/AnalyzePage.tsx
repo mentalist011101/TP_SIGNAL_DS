@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import {
   describeApiError,
+  isAnalysisRunning,
   useAnalysis,
   useCreateAnalysis,
   type Analysis,
@@ -9,7 +10,7 @@ import {
   type AnalysisRequest,
   type AnalysisTask,
 } from '../api/client.ts'
-import AnalysisStatus from '../components/analyze/AnalysisStatus.tsx'
+import AnalysisProgress from '../components/analyze/AnalysisProgress.tsx'
 import AudioPanel from '../components/analyze/AudioPanel.tsx'
 import TaskSelector from '../components/analyze/TaskSelector.tsx'
 
@@ -52,7 +53,20 @@ interface AnalysisRun {
   reset: () => void
   analysis: Analysis | undefined
   isSubmitting: boolean
+  // Vrai de l'envoi jusqu'à la fin du traitement : on ne relance pas pendant ce temps.
+  isBusy: boolean
   errorMessage: string | null
+}
+
+// Vrai pendant l'envoi, puis tant que le serveur n'a pas fini (en attente ou en cours).
+function isRunBusy(isSubmitting: boolean, analysis: Analysis | undefined): boolean {
+  if (isSubmitting) {
+    return true
+  }
+  if (analysis === undefined) {
+    return false
+  }
+  return isAnalysisRunning(analysis)
 }
 
 // Envoi (POST) puis suivi (GET chaque seconde) d'une analyse.
@@ -69,19 +83,25 @@ function useAnalysisRun(): AnalysisRun {
     reset: createAnalysis.reset,
     analysis: latestAnalysis,
     isSubmitting: createAnalysis.isPending,
+    isBusy: isRunBusy(createAnalysis.isPending, latestAnalysis),
     errorMessage: describeError(error),
   }
 }
 
 interface AnalyzeButtonProps {
   hint: string | null
-  isSubmitting: boolean
+  isBusy: boolean
   onClick: () => void
 }
 
-// Bouton Analyser, désactivé avec une explication tant qu'il manque le fichier ou une tâche.
-function AnalyzeButton({ hint, isSubmitting, onClick }: AnalyzeButtonProps) {
-  const isDisabled = hint !== null || isSubmitting
+// Bouton Analyser : désactivé avec une explication tant qu'il manque le fichier ou une tâche,
+// et pendant qu'une analyse tourne.
+function AnalyzeButton({ hint, isBusy, onClick }: AnalyzeButtonProps) {
+  const isDisabled = hint !== null || isBusy
+  let label = 'Analyser'
+  if (isBusy) {
+    label = 'Analyse en cours…'
+  }
   return (
     <div className="space-y-2">
       <button
@@ -90,7 +110,7 @@ function AnalyzeButton({ hint, isSubmitting, onClick }: AnalyzeButtonProps) {
         disabled={isDisabled}
         onClick={onClick}
       >
-        Analyser
+        {label}
       </button>
       {hint !== null && <p className="text-sm text-ink-soft">{hint}</p>}
     </div>
@@ -118,12 +138,8 @@ function SettingsPanel(props: SettingsPanelProps) {
         onProfileChange={props.onProfileChange}
       />
       <div className="space-y-3 border-t border-rule pt-5">
-        <AnalyzeButton
-          hint={props.hint}
-          isSubmitting={props.run.isSubmitting}
-          onClick={props.onAnalyze}
-        />
-        <AnalysisStatus
+        <AnalyzeButton hint={props.hint} isBusy={props.run.isBusy} onClick={props.onAnalyze} />
+        <AnalysisProgress
           analysis={props.run.analysis}
           isSubmitting={props.run.isSubmitting}
           errorMessage={props.run.errorMessage}

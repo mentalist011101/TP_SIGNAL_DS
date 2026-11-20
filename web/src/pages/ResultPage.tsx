@@ -6,6 +6,7 @@ import {
   useAnalysis,
   type Analysis,
 } from '../api/client.ts'
+import AnalysisProgress from '../components/analyze/AnalysisProgress.tsx'
 import ResultAudio from '../components/result/ResultAudio.tsx'
 import ResultHeader from '../components/result/ResultHeader.tsx'
 import { AnalysisNotFound, FailedAnalysis } from '../components/result/ResultMessages.tsx'
@@ -35,9 +36,12 @@ function ResultBody({ analysis }: { analysis: Analysis }) {
   return (
     <>
       {isAnalysisRunning(analysis) && (
-        <p className="text-sm text-ink-soft">
-          Vous pouvez quitter cette page : l’analyse continue et restera dans l’historique.
-        </p>
+        <div className="space-y-3 rounded-card border border-rule bg-card p-5 shadow-card">
+          <AnalysisProgress analysis={analysis} isSubmitting={false} errorMessage={null} />
+          <p className="text-sm text-ink-soft">
+            Vous pouvez quitter cette page : l’analyse continue et restera dans l’historique.
+          </p>
+        </div>
       )}
       <ResultAudio analysis={analysis} />
       <TaskResultList analysis={analysis} />
