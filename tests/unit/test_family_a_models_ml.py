@@ -180,3 +180,39 @@ def test_esc50_round_never_trains_on_the_test_fold(tmp_path: Path) -> None:
     checkpoint = torch.load(tmp_path / "crnn_fold5_seed43.pt", weights_only=True)
     assert checkpoint["epochs"] == result.tuning.chosen.best_epoch
     np.testing.assert_allclose(checkpoint["band_mean"].numpy(), result.final_statistics.mean)
+
+
+def test_production_weights_round_trip_through_safetensors(tmp_path: Path) -> None:
+    from echolens.core.models.production_config import (
+        Calibration,
+        ProductionModelConfig,
+        TrainingRecord,
+    )
+    from echolens.core.models.storage import load_weights, save_production_model
+
+    network_config = tiny_config().network
+    network = SpectrogramCrnn(SMALL_CLASSES, network_config)
+    network.eval()
+    production = ProductionModelConfig(
+        model_id="test-crnn",
+        task="sound_event",
+        architecture="crnn",
+        labels=["a", "b", "c"],
+        standardization_mean=[0.0] * SMALL_BANDS,
+        standardization_std=[1.0] * SMALL_BANDS,
+        calibration=Calibration(temperature=1.0, method="test", ece_before=0.0, ece_after=0.0),
+        training=TrainingRecord(
+            learning_rate=1e-3, dropout=0.3, epochs=1, seed=42, data="synthèse", commit="test"
+        ),
+        window_s=0.64,
+        network=network_config,
+        license="cc-by-nc-4.0",
+    )
+    weights_path = save_production_model(network, production, tmp_path)
+    assert weights_path.name == "model.safetensors"
+    reloaded = load_weights(SpectrogramCrnn(SMALL_CLASSES, network_config), weights_path)
+    inputs = torch.randn(2, SMALL_BANDS, SMALL_FRAMES, generator=torch.Generator().manual_seed(0))
+    with torch.no_grad():
+        expected = network(inputs).logits
+        actual = reloaded(inputs).logits
+    torch.testing.assert_close(actual, expected, rtol=0, atol=0)
