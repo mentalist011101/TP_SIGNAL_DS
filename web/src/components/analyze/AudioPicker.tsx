@@ -127,7 +127,7 @@ export default function AudioPicker({ onAudioSelected }: AudioPickerProps) {
 
   return (
     <div className="space-y-2">
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-wrap justify-center gap-3">
         <input
           ref={inputRef}
           type="file"

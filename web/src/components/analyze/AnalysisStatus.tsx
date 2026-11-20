@@ -1,7 +1,7 @@
 import type { Analysis } from '../../api/client.ts'
 import { STATUS_LABELS } from '../../labels.ts'
 
-// Zone en retrait (paper-alt) : le panneau est posé dans la carte de l'étape 3, pas une carte de
+// Zone en retrait (paper-alt) : le panneau est posé dans la colonne des réglages, pas une carte de
 // plus.
 const PANEL_CLASSES = 'space-y-1 rounded-card bg-paper-alt p-3 text-sm'
 

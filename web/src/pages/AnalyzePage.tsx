@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import {
   describeApiError,
@@ -10,27 +10,22 @@ import {
   type AnalysisTask,
 } from '../api/client.ts'
 import AnalysisStatus from '../components/analyze/AnalysisStatus.tsx'
-import AudioPicker from '../components/analyze/AudioPicker.tsx'
-import SpectrogramView from '../components/analyze/SpectrogramView.tsx'
+import AudioPanel from '../components/analyze/AudioPanel.tsx'
 import TaskSelector from '../components/analyze/TaskSelector.tsx'
-import WaveformCanvas from '../components/analyze/WaveformCanvas.tsx'
 
 // Tâches cochées à l'ouverture de la page.
 const DEFAULT_TASKS: AnalysisTask[] = ['emotion', 'sound_event']
 
 const ANALYZE_BUTTON_CLASSES =
-  'rounded-btn bg-accent px-5 py-2 text-sm font-semibold text-on-accent transition-colors duration-200 ease-out-soft hover:bg-accent-deep disabled:cursor-not-allowed disabled:opacity-50'
+  'w-full rounded-btn bg-accent px-5 py-2.5 font-semibold text-on-accent transition-colors duration-200 ease-out-soft hover:bg-accent-deep disabled:cursor-not-allowed disabled:opacity-50'
 
-// Carte posée sur le papier : un réglage (colonne de gauche) ou l'aperçu (colonne de droite).
-const CARD_CLASSES = 'space-y-3 rounded-card border border-rule bg-card p-5 shadow-card'
+// Colonne des réglages : reste visible quand on fait défiler un long aperçu (grand écran).
+const SETTINGS_CLASSES =
+  'space-y-5 rounded-card border border-rule bg-card p-5 shadow-card lg:sticky lg:top-6'
 
-// Zone d'attente de l'aperçu, en pointillés tant qu'aucun audio n'est choisi.
-const EMPTY_PREVIEW_CLASSES =
-  'flex min-h-80 items-center justify-center rounded-card border border-dashed border-rule-strong bg-card p-6 text-center text-ink-soft'
-
-// Deux colonnes sur grand écran (réglages étroits à gauche, aperçu large à droite), une seule
-// colonne empilée sur téléphone. minmax(0, …) empêche le canvas d'élargir sa colonne.
-const LAYOUT_CLASSES = 'grid items-start gap-6 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]'
+// L'audio en grand à gauche, les réglages dans une colonne étroite à droite ; une seule colonne
+// sur téléphone. minmax(0, …) empêche le canvas d'élargir sa colonne.
+const LAYOUT_CLASSES = 'grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_21rem]'
 
 // Message à afficher pour une erreur, ou null s'il n'y en a pas.
 function describeError(error: Error | null): string | null {
@@ -49,28 +44,6 @@ function analyzeHint(hasFile: boolean, hasTasks: boolean): string | null {
     return 'Cochez au moins une tâche pour lancer l’analyse.'
   }
   return null
-}
-
-// Clé qui change à chaque nouveau fichier (un enregistrement a toujours une date différente).
-function fileKey(file: File): string {
-  return `${file.name}-${file.lastModified}`
-}
-
-// Lecteur audio : l'URL locale (blob:) est créée pour le fichier, puis libérée quand il change.
-function AudioPlayer({ file }: { file: File }) {
-  const audioRef = useRef<HTMLAudioElement>(null)
-  useEffect(() => {
-    const audio = audioRef.current
-    if (audio === null) {
-      return
-    }
-    const objectUrl = URL.createObjectURL(file)
-    audio.src = objectUrl
-    return () => {
-      URL.revokeObjectURL(objectUrl)
-    }
-  }, [file])
-  return <audio ref={audioRef} controls className="w-full" />
 }
 
 // Ce que la page sait de l'analyse lancée.
@@ -100,27 +73,6 @@ function useAnalysisRun(): AnalysisRun {
   }
 }
 
-interface AudioPreviewProps {
-  file: File
-  analysis: Analysis | undefined
-}
-
-// Lecteur, forme d'onde et spectrogramme de l'audio choisi. La forme d'onde et l'image du
-// spectrogramme ont la même largeur (w-full) et couvrent la même durée : elles sont alignées.
-// La page lui donne une clé par fichier : un nouvel audio repart d'un aperçu vierge.
-function AudioPreview({ file, analysis }: AudioPreviewProps) {
-  return (
-    <div className={CARD_CLASSES}>
-      <h2 className="font-display text-lg font-bold">Écoute</h2>
-      <AudioPlayer file={file} />
-      <h2 className="font-display text-lg font-bold">Forme d’onde</h2>
-      <WaveformCanvas file={file} />
-      <h2 className="font-display text-lg font-bold">Spectrogramme</h2>
-      <SpectrogramView analysis={analysis} />
-    </div>
-  )
-}
-
 interface AnalyzeButtonProps {
   hint: string | null
   isSubmitting: boolean
@@ -145,118 +97,44 @@ function AnalyzeButton({ hint, isSubmitting, onClick }: AnalyzeButtonProps) {
   )
 }
 
-interface AnalysisPanelProps {
-  run: AnalysisRun
-  hint: string | null
-  onAnalyze: () => void
-}
-
-// Bouton Analyser suivi du statut de l'analyse lancée.
-function AnalysisPanel({ run, hint, onAnalyze }: AnalysisPanelProps) {
-  return (
-    <>
-      <AnalyzeButton hint={hint} isSubmitting={run.isSubmitting} onClick={onAnalyze} />
-      <AnalysisStatus
-        analysis={run.analysis}
-        isSubmitting={run.isSubmitting}
-        errorMessage={run.errorMessage}
-      />
-    </>
-  )
-}
-
-// Titre et consigne de la page.
-function PageIntro() {
-  return (
-    <div className="space-y-2">
-      <h1 className="font-display text-3xl font-extrabold tracking-tight">Analyser un audio</h1>
-      <p className="text-ink-soft">
-        Suivez les trois étapes ; l’aperçu montre l’audio choisi en forme d’onde. Une fois l’analyse
-        terminée, son résultat s’ouvre tout seul.
-      </p>
-    </div>
-  )
-}
-
-interface StepCardProps {
-  step: number
-  title: string
-  children: ReactNode
-}
-
-// Carte d'une étape de réglage : numéro discret, titre, puis son contenu.
-function StepCard({ step, title, children }: StepCardProps) {
-  return (
-    <div className={CARD_CLASSES}>
-      <p className="label-mono text-ink-faint">Étape {step}</p>
-      <h2 className="font-display text-lg font-bold">{title}</h2>
-      {children}
-    </div>
-  )
-}
-
-// Rappel du fichier choisi, sous les boutons d'import et de micro.
-function ChosenFile({ file }: { file: File | null }) {
-  if (file === null) {
-    return <p className="text-sm text-ink-soft">Aucun audio choisi pour l’instant.</p>
-  }
-  return (
-    <p className="text-sm text-ink-soft">
-      Choisi : <span className="font-mono break-all text-ink">{file.name}</span>
-    </p>
-  )
-}
-
-// Colonne de droite : l'aperçu de l'audio, ou une zone d'attente tant qu'il n'y en a pas.
-function PreviewColumn({ file, analysis }: { file: File | null; analysis: Analysis | undefined }) {
-  if (file === null) {
-    return (
-      <div className={EMPTY_PREVIEW_CLASSES}>
-        La forme d’onde et le spectrogramme apparaîtront ici dès que vous aurez choisi un audio.
-      </div>
-    )
-  }
-  // Une clé par fichier : un nouvel audio repart d'un aperçu vierge.
-  return <AudioPreview key={fileKey(file)} file={file} analysis={analysis} />
-}
-
-interface SettingsColumnProps {
-  audioFile: File | null
+interface SettingsPanelProps {
   tasks: AnalysisTask[]
   profile: AnalysisProfile
   run: AnalysisRun
   hint: string | null
-  onAudioSelected: (file: File) => void
   onTasksChange: (tasks: AnalysisTask[]) => void
   onProfileChange: (profile: AnalysisProfile) => void
   onAnalyze: () => void
 }
 
-// Colonne de gauche : les trois étapes de réglage, dans l'ordre où on les fait.
-function SettingsColumn(props: SettingsColumnProps) {
+// Colonne des réglages : tâches, profil, puis le bouton Analyser et le suivi de l'envoi.
+function SettingsPanel(props: SettingsPanelProps) {
   return (
-    <div className="space-y-4">
-      <StepCard step={1} title="Choisir l’audio">
-        <AudioPicker onAudioSelected={props.onAudioSelected} />
-        <ChosenFile file={props.audioFile} />
-      </StepCard>
-      <StepCard step={2} title="Que souhaitez-vous analyser ?">
-        <TaskSelector
-          tasks={props.tasks}
-          profile={props.profile}
-          onTasksChange={props.onTasksChange}
-          onProfileChange={props.onProfileChange}
+    <aside className={SETTINGS_CLASSES} aria-label="Réglages de l’analyse">
+      <TaskSelector
+        tasks={props.tasks}
+        profile={props.profile}
+        onTasksChange={props.onTasksChange}
+        onProfileChange={props.onProfileChange}
+      />
+      <div className="space-y-3 border-t border-rule pt-5">
+        <AnalyzeButton
+          hint={props.hint}
+          isSubmitting={props.run.isSubmitting}
+          onClick={props.onAnalyze}
         />
-      </StepCard>
-      <StepCard step={3} title="Lancer l’analyse">
-        <AnalysisPanel run={props.run} hint={props.hint} onAnalyze={props.onAnalyze} />
-      </StepCard>
-    </div>
+        <AnalysisStatus
+          analysis={props.run.analysis}
+          isSubmitting={props.run.isSubmitting}
+          errorMessage={props.run.errorMessage}
+        />
+      </div>
+    </aside>
   )
 }
 
-// Page Analyser (C20) : les trois étapes de réglage à gauche, l'aperçu de l'audio à droite
-// (empilés sur téléphone).
+// Page Analyser (C20) : l'audio en grand à gauche, les réglages à droite (empilés sur
+// téléphone). Quand l'analyse est terminée, sa page Résultat s'ouvre.
 export default function AnalyzePage() {
   const [audioFile, setAudioFile] = useState<File | null>(null)
   const [tasks, setTasks] = useState<AnalysisTask[]>(DEFAULT_TASKS)
@@ -285,20 +163,23 @@ export default function AnalyzePage() {
 
   return (
     <section className="space-y-6">
-      <PageIntro />
+      <div className="space-y-2">
+        <h1 className="font-display text-3xl font-extrabold tracking-tight">Analyser un audio</h1>
+        <p className="text-ink-soft">
+          Choisissez un audio, les tâches et le profil : le résultat s’ouvre dès qu’il est prêt.
+        </p>
+      </div>
       <div className={LAYOUT_CLASSES}>
-        <SettingsColumn
-          audioFile={audioFile}
+        <AudioPanel file={audioFile} onAudioSelected={handleAudioSelected} />
+        <SettingsPanel
           tasks={tasks}
           profile={profile}
           run={run}
           hint={hint}
-          onAudioSelected={handleAudioSelected}
           onTasksChange={setTasks}
           onProfileChange={setProfile}
           onAnalyze={handleAnalyze}
         />
-        <PreviewColumn file={audioFile} analysis={run.analysis} />
       </div>
     </section>
   )
