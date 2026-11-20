@@ -1,0 +1,17 @@
+# Brique 6 : découpage de l'audio pour l'inférence (D5), puis résultat global calculé à partir
+# des segments. Lu par echolens.core.inference.InferenceConfig. La détection de parole
+# elle-même (webrtcvad) garde ses réglages dans configs/preprocess.yaml (vad).
+
+# Événements sonores : fenêtres fixes avec recouvrement (D5). 5 s, c'est la durée des extraits
+# d'ESC-50 : le modèle voit des fenêtres de la taille de celles qu'il a apprises. Un audio plus
+# court est complété par du silence jusqu'à 5 s. Résultat global = moyenne simple des
+# probabilités des fenêtres (elles ont toutes la même durée).
+sound_event:
+  window_s: 5.0
+  hop_s: 2.5          # 50 % de recouvrement : un son coupé par une fenêtre est entier dans la suivante
+
+# Émotions : segments de parole de la VAD (D5). Un segment plus long que max_window_s est coupé
+# en morceaux égaux de max_window_s au plus. Résultat global = moyenne des probabilités
+# pondérée par la durée de chaque morceau. Aucune parole : statut no_speech, rien d'inventé.
+emotion:
+  max_window_s: 5.0
