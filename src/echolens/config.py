@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import yaml
 from pydantic import BaseModel, Field
@@ -36,6 +36,8 @@ class AppSettings(BaseModel):
     web_dist_dir: Path = REPO_ROOT / "web" / "dist"
     registry_path: Path = CONFIG_DIR / "registry.yaml"
     features_path: Path = CONFIG_DIR / "features.yaml"
+    # Prédicteur des analyses (C13) : « demo » (faux prédicteur déterministe) pour l'instant.
+    inference_backend: Literal["demo"] = "demo"
 
     def resolved_database_url(self) -> str:
         """Renvoie l'URL SQLAlchemy ; par défaut une base SQLite dans data_dir."""

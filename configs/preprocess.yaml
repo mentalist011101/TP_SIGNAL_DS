@@ -1,4 +1,4 @@
-# Brique 1 — débruitage (D4), détection de parole (D5) et fenêtres (D8).
+# Brique 1 — débruitage (D4), détection de parole (D5) et fenêtres du flux (D8).
 # Ce fichier est la source unique de ces paramètres : entraînement (Kaggle) et inférence (Flask).
 denoise:
   enabled: false                  # D4 : désactivé tant que l'ablation du sprint 2
@@ -20,6 +20,5 @@ vad:
   min_segment_ms: 100             # D5 : segments d'au moins 100 ms
   padding_ms: 100                 # marge pour ne pas couper les débuts et fins de mots
 windows:
-  events: {window_s: 5.0, hop_s: 2.5}   # durée des extraits d'ESC-50, 50 % de
-                                        # recouvrement
+  # Les fenêtres des événements sonores sont dans configs/inference.yaml (C13).
   stream: {window_s: 2.0, hop_s: 0.5}   # D8, flux micro
