@@ -34,9 +34,9 @@ training:
   batch_size: 32
   # Valeur par défaut de torch, écrite pour ne rien laisser d'implicite.
   weight_decay: 0.01
-  # Réglage sur le fold k + 1, courbe complète (décision du 19 nov. 2026) : 150 époques sans
-  # arrêt anticipé, F1 macro de validation après chaque époque, la meilleure époque et le
-  # meilleur taux d'apprentissage sont choisis sur cette courbe. Avec une patience de 15,
+  # Réglage sur le fold k + 1, courbe complète (décision du 19 nov. 2026) : pour chaque taux
+  # d'apprentissage, 150 époques sans arrêt anticipé, avec le F1 macro de validation après
+  # chaque époque. On retient le couple (taux, époque) au meilleur F1. Avec une patience de 15,
   # l'arrêt tombait pendant le palier bruité à taux élevé (diagnostic C9 : CNN 0,659 à
   # l'époque 43 contre 0,767 à l'époque 145). Un entier n réactiverait l'arrêt après
   # n époques sans amélioration.
