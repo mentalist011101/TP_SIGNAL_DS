@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import type { AnalysisTask, ClassProbability, TaskResult } from '../../api/client.ts'
 import { TASK_LABELS } from '../../labels.ts'
-import DemoNotice from './DemoNotice.tsx'
 import { formatProbability, mainProbability } from './taskResult.ts'
 import ProbabilityBars from './ProbabilityBars.tsx'
 
@@ -11,7 +10,7 @@ const DEMO_MODEL_ID = 'demo'
 // Événements sonores : on montre les 5 classes les plus probables sur 50, le reste sur demande.
 const SOUND_EVENT_TOP_COUNT = 5
 
-const CARD_CLASSES = 'space-y-4 rounded-card border border-rule bg-card p-5 shadow-card'
+const CARD_CLASSES = 'space-y-4 rounded-card border border-rule bg-card p-5'
 
 const TOGGLE_CLASSES = 'text-sm font-semibold text-accent-ink hover:underline'
 
@@ -78,12 +77,10 @@ function ModelLine({ result }: { result: TaskResult }) {
   )
 }
 
-// Contenu d'une tâche terminée. Le bandeau de démonstration passe avant les chiffres.
+// Contenu d'une tâche terminée : résultat principal, barres, puis le modèle utilisé.
 function DoneResult({ task, result }: { task: AnalysisTask; result: TaskResult }) {
-  const isDemo = result.model_id === DEMO_MODEL_ID
   return (
     <>
-      {isDemo && <DemoNotice />}
       <MainResult result={result} />
       <TaskBars task={task} result={result} />
       <ModelLine result={result} />
@@ -109,12 +106,21 @@ interface TaskResultCardProps {
   result: TaskResult | null
 }
 
-// Carte d'une tâche demandée : son nom, puis son résultat.
+// Carte d'une tâche demandée : son nom, puis son résultat. L'étiquette « Démo » dit quelles
+// cartes viennent du faux prédicteur, en plus du bandeau posé au-dessus des cartes.
 export default function TaskResultCard({ task, result }: TaskResultCardProps) {
   const title = TASK_LABELS[task]
+  const isDemo = result !== null && result.model_id === DEMO_MODEL_ID
   return (
     <article className={CARD_CLASSES}>
-      <h2 className="font-display text-lg font-bold">{title}</h2>
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="font-display text-lg font-bold">{title}</h2>
+        {isDemo && (
+          <span className="label-mono rounded-btn border border-rule-strong px-2 py-0.5 text-ink-soft">
+            Démo
+          </span>
+        )}
+      </div>
       <TaskResultBody task={task} result={result} />
     </article>
   )

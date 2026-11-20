@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 
-const MESSAGE_CARD_CLASSES = 'space-y-4 rounded-card border border-rule bg-card p-5 shadow-card'
+const MESSAGE_CARD_CLASSES = 'space-y-4 rounded-card border border-rule bg-card p-5'
 
 // Bouton secondaire de la charte, sous forme de lien.
 const LINK_BUTTON_CLASSES =

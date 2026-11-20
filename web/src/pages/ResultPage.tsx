@@ -11,8 +11,10 @@ import ResultAudio from '../components/result/ResultAudio.tsx'
 import ResultHeader from '../components/result/ResultHeader.tsx'
 import { AnalysisNotFound, FailedAnalysis } from '../components/result/ResultMessages.tsx'
 import TaskResultList from '../components/result/TaskResultList.tsx'
+import { ArrowLeftIcon } from '../components/icons.tsx'
 
-const LINK_CLASSES = 'text-sm font-semibold text-accent-ink hover:underline'
+const BACK_LINK_CLASSES =
+  'inline-flex items-center gap-1.5 text-sm font-semibold text-accent-ink hover:underline'
 
 // Code HTTP de l'API pour une analyse inconnue.
 const NOT_FOUND_STATUS = 404
@@ -36,7 +38,7 @@ function ResultBody({ analysis }: { analysis: Analysis }) {
   return (
     <>
       {isAnalysisRunning(analysis) && (
-        <div className="space-y-3 rounded-card border border-rule bg-card p-5 shadow-card">
+        <div className="space-y-3 rounded-card border border-rule bg-card p-5">
           <AnalysisProgress analysis={analysis} isSubmitting={false} errorMessage={null} />
           <p className="text-sm text-ink-soft">
             Vous pouvez quitter cette page : l’analyse continue et restera dans l’historique.
@@ -77,14 +79,11 @@ export default function ResultPage() {
 
   return (
     <section className="space-y-6">
-      <nav className="flex flex-wrap gap-4">
-        <Link to="/" className={LINK_CLASSES}>
-          ← Nouvelle analyse
-        </Link>
-        <Link to="/historique" className={LINK_CLASSES}>
-          Historique
-        </Link>
-      </nav>
+      {/* « Nouvelle analyse » est déjà dans le menu : ici, seulement le retour. */}
+      <Link to="/historique" className={BACK_LINK_CLASSES}>
+        <ArrowLeftIcon />
+        Historique
+      </Link>
       {content}
     </section>
   )

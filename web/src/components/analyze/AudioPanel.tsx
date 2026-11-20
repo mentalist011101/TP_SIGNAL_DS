@@ -2,7 +2,7 @@ import { useEffect, useRef, type DragEvent } from 'react'
 import AudioPicker from './AudioPicker.tsx'
 import WaveformCanvas from './WaveformCanvas.tsx'
 
-const CARD_CLASSES = 'rounded-card border border-rule bg-card p-5 shadow-card'
+const CARD_CLASSES = 'rounded-card border border-rule bg-card p-5'
 
 const DROP_ZONE_CLASSES =
   'flex min-h-80 flex-col items-center justify-center gap-5 rounded-card border border-dashed border-rule-strong bg-paper-alt/50 p-8 text-center'

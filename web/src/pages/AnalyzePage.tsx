@@ -21,8 +21,7 @@ const ANALYZE_BUTTON_CLASSES =
   'w-full rounded-btn bg-accent px-5 py-2.5 font-semibold text-on-accent transition-colors duration-200 ease-out-soft hover:bg-accent-deep disabled:cursor-not-allowed disabled:opacity-50'
 
 // Colonne des réglages : reste visible quand on fait défiler un long aperçu (grand écran).
-const SETTINGS_CLASSES =
-  'space-y-5 rounded-card border border-rule bg-card p-5 shadow-card lg:sticky lg:top-6'
+const SETTINGS_CLASSES = 'space-y-5 rounded-card border border-rule bg-card p-5 lg:sticky lg:top-10'
 
 // L'audio en grand à gauche, les réglages dans une colonne étroite à droite ; une seule colonne
 // sur téléphone. minmax(0, …) empêche le canvas d'élargir sa colonne.

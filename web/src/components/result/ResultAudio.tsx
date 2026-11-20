@@ -5,7 +5,7 @@ import SpectrogramView from '../analyze/SpectrogramView.tsx'
 // Les deux viennent de l'API : le front ne calcule rien sur le signal (R5).
 export default function ResultAudio({ analysis }: { analysis: Analysis }) {
   return (
-    <section className="space-y-3 rounded-card border border-rule bg-card p-5 shadow-card">
+    <section className="space-y-3 rounded-card border border-rule bg-card p-5">
       <h2 className="font-display text-lg font-bold">Écoute</h2>
       {analysis.audio_url !== null && (
         <audio src={analysis.audio_url} controls preload="metadata" className="w-full" />

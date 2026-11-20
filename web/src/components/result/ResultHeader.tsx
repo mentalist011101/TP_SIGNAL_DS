@@ -1,10 +1,11 @@
 import { API_BASE, type Analysis } from '../../api/client.ts'
 import { PROFILE_LABELS } from '../../labels.ts'
+import { DownloadIcon } from '../icons.tsx'
 import StatusBadge from '../StatusBadge.tsx'
 
 // Bouton secondaire de la charte (même style que Supprimer dans l'historique).
 const DOWNLOAD_CLASSES =
-  'inline-block rounded-btn border border-rule-strong bg-card px-3 py-1.5 text-sm font-semibold text-ink shadow-hard-sm transition-colors duration-200 ease-out-soft hover:bg-paper-alt'
+  'inline-flex items-center gap-2 rounded-btn border border-rule-strong bg-card px-3 py-1.5 text-sm font-semibold text-ink shadow-hard-sm transition-colors duration-200 ease-out-soft hover:bg-paper-alt'
 
 // « 20 nov. 2026, 11:15 » : date et heure locales du navigateur (l'API envoie de l'UTC).
 function formatDate(isoDate: string): string {
@@ -28,6 +29,7 @@ function DownloadJsonLink({ analysisId }: { analysisId: string }) {
   const filename = `echolens-analyse-${analysisId}.json`
   return (
     <a href={url} download={filename} className={DOWNLOAD_CLASSES}>
+      <DownloadIcon />
       Télécharger le résultat (JSON)
     </a>
   )

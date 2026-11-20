@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react'
 import type { Analysis } from '../../api/client.ts'
 
 type StepState = 'done' | 'active' | 'todo'
@@ -8,14 +9,17 @@ interface Step {
 }
 
 // Les étapes que l'utilisateur voit défiler, dans l'ordre du traitement par le serveur (S2).
+// Les titres sont courts : ils tiennent sous les ronds, côte à côte.
 const STEPS: Step[] = [
-  { title: 'Envoi du fichier', detail: 'Le fichier part vers le serveur.' },
-  { title: 'File d’attente', detail: 'L’analyse attend qu’un traitement se libère.' },
-  { title: 'Analyse', detail: 'Conversion, spectrogramme, puis les modèles.' },
+  { title: 'Envoi', detail: 'Le fichier part vers le serveur…' },
+  { title: 'Attente', detail: 'L’analyse attend qu’un traitement se libère…' },
+  { title: 'Analyse', detail: 'Conversion, spectrogramme, puis les modèles…' },
   { title: 'Résultat', detail: 'Le résultat est prêt.' },
 ]
 
-const ERROR_PANEL_CLASSES = 'rounded-card bg-paper-alt p-3 text-sm text-danger'
+const LAST_STEP_INDEX = STEPS.length - 1
+
+const ERROR_PANEL_CLASSES = 'rounded-card border border-danger px-3 py-2 text-sm text-danger'
 
 interface AnalysisProgressProps {
   analysis: Analysis | undefined
@@ -48,57 +52,54 @@ function stepState(index: number, currentIndex: number): StepState {
   return 'todo'
 }
 
-// Rond de l'étape : coche si faite, point qui pulse si en cours, numéro si à venir.
-function StepMarker({ state, number }: { state: StepState; number: number }) {
+// Longueur du trait plein entre les ronds : la part du chemin déjà parcourue.
+function filledLineStyle(currentIndex: number): CSSProperties {
+  const percent = (currentIndex / LAST_STEP_INDEX) * 100
+  return { width: `${percent}%` }
+}
+
+// Rond de l'étape : plein si faite, avec un halo qui pulse si en cours, vide si à venir.
+function StepDot({ state }: { state: StepState }) {
   if (state === 'done') {
-    return (
-      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-ink text-paper">
-        <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none" aria-hidden="true">
-          <path d="M3 8.5l3 3 7-7" stroke="currentColor" strokeWidth="2" />
-        </svg>
-      </span>
-    )
+    return <span className="block h-3 w-3 rounded-full bg-ink" />
   }
   if (state === 'active') {
     return (
-      <span className="relative flex h-6 w-6 items-center justify-center rounded-full border-2 border-ink">
-        <span className="absolute h-2.5 w-2.5 rounded-full bg-ink motion-safe:animate-ping" />
-        <span className="h-2.5 w-2.5 rounded-full bg-ink" />
+      <span className="relative block h-3 w-3">
+        <span className="absolute inset-0 rounded-full bg-ink motion-safe:animate-ping" />
+        <span className="absolute inset-0 rounded-full bg-ink" />
       </span>
     )
   }
-  return (
-    <span className="flex h-6 w-6 items-center justify-center rounded-full border border-rule-strong font-mono text-xs text-ink-faint">
-      {number}
-    </span>
-  )
+  return <span className="block h-3 w-3 rounded-full border border-rule-strong bg-card" />
 }
 
-// Une ligne de la liste : rond, titre, et le détail pour l'étape en cours seulement.
-function StepRow({ step, state, number }: { step: Step; state: StepState; number: number }) {
-  let titleClasses = 'text-sm text-ink-soft'
-  if (state === 'active') {
-    titleClasses = 'text-sm font-semibold text-ink'
-  }
-  if (state === 'todo') {
-    titleClasses = 'text-sm text-ink-faint'
-  }
+// Les quatre ronds sur un trait : le trait se remplit à mesure que l'analyse avance.
+function StepTrack({ currentIndex }: { currentIndex: number }) {
   return (
-    <li className="flex items-start gap-3">
-      <StepMarker state={state} number={number} />
-      <div className="pt-0.5">
-        <p className={titleClasses}>{step.title}</p>
-        {state === 'active' && <p className="text-xs text-ink-soft">{step.detail}</p>}
+    <div className="relative">
+      {/* Le trait va du centre du premier rond au centre du dernier (1/8 de chaque côté). */}
+      <div className="absolute top-1.5 right-[12.5%] left-[12.5%] h-px bg-rule-strong">
+        <div
+          className="h-full bg-ink transition-all duration-500 ease-out-soft"
+          style={filledLineStyle(currentIndex)}
+        />
       </div>
-    </li>
-  )
-}
-
-// Barre sans pourcentage : le serveur ne dit pas où il en est, seulement qu'il travaille.
-function IndeterminateBar() {
-  return (
-    <div className="h-1 overflow-hidden rounded-btn bg-paper-alt" aria-hidden="true">
-      <div className="h-full w-2/5 rounded-btn bg-ink motion-safe:animate-indeterminate" />
+      <ol className="relative grid grid-cols-4">
+        {STEPS.map((step, index) => {
+          const state = stepState(index, currentIndex)
+          let labelClasses = 'text-ink-faint'
+          if (state !== 'todo') {
+            labelClasses = 'font-semibold text-ink'
+          }
+          return (
+            <li key={step.title} className="flex flex-col items-center gap-1.5">
+              <StepDot state={state} />
+              <span className={`text-xs ${labelClasses}`}>{step.title}</span>
+            </li>
+          )
+        })}
+      </ol>
     </div>
   )
 }
@@ -118,19 +119,11 @@ export default function AnalysisProgress(props: AnalysisProgressProps) {
     return null
   }
   const currentIndex = currentStepIndex(props.isSubmitting, analysis)
+  const currentStep = STEPS[currentIndex]
   return (
-    <div className="space-y-4" role="status" aria-live="polite">
-      <IndeterminateBar />
-      <ol className="space-y-3">
-        {STEPS.map((step, index) => (
-          <StepRow
-            key={step.title}
-            step={step}
-            state={stepState(index, currentIndex)}
-            number={index + 1}
-          />
-        ))}
-      </ol>
+    <div className="space-y-2" role="status" aria-live="polite">
+      <StepTrack currentIndex={currentIndex} />
+      <p className="text-center text-xs text-ink-soft">{currentStep.detail}</p>
     </div>
   )
 }

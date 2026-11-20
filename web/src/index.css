@@ -56,18 +56,6 @@
 
   /* Courbe des transitions (survols). */
   --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
-
-  /* Barre de progression sans pourcentage connu : un segment qui traverse la piste en boucle
-     (envoi et analyse en cours). */
-  --animate-indeterminate: indeterminate 1.4s ease-in-out infinite;
-  @keyframes indeterminate {
-    0% {
-      transform: translateX(-100%);
-    }
-    100% {
-      transform: translateX(250%);
-    }
-  }
 }
 
 /* Le thème sombre suit la préférence du système (le portfolio, lui, utilise une classe .dark). */
