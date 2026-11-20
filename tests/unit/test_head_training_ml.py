@@ -12,7 +12,7 @@ from echolens.training.head_training import (  # noqa: E402
     predict_probabilities,
     run_esc50_round,
     train_for_epochs,
-    train_with_early_stopping,
+    train_with_validation,
 )
 from echolens.training.heads import (  # noqa: E402
     HeadsConfig,
@@ -34,7 +34,7 @@ def test_head_learns_separable_classes() -> None:
     config = _small_config()
     train = _separable_set(90, seed=0)
     validation = _separable_set(30, seed=1)
-    result = train_with_early_stopping(train, validation, SETTING, config, CLASS_COUNT, seed=42)
+    result = train_with_validation(train, validation, SETTING, config, CLASS_COUNT, seed=42)
     probabilities = predict_probabilities(result.model, validation.features)
     assert result.best_f1 == pytest.approx(1.0)
     assert macro_f1(validation.targets, predicted_classes(probabilities)) == pytest.approx(1.0)
@@ -56,7 +56,7 @@ def test_patience_none_runs_the_whole_curve(
     monkeypatch.setattr(head_training, "_macro_f1_of", fake_macro_f1)
     config = _small_config().model_copy(update={"max_epochs": 12, "patience": patience})
     train = _separable_set(30, seed=0)
-    result = train_with_early_stopping(train, train, SETTING, config, CLASS_COUNT, seed=42)
+    result = train_with_validation(train, train, SETTING, config, CLASS_COUNT, seed=42)
     # Sans patience : les 12 époques ; avec 3 : arrêt à l'époque 1 + 3 = 4.
     assert len(calls) == expected_epochs
     assert result.best_epoch == 1

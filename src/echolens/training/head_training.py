@@ -5,8 +5,9 @@ standardisation, la sélection des données et l'assemblage des résultats sont 
 echolens.training.heads, testés en CI sans torch.
 
 Entraînement (Brique 4) : AdamW, schedule cosinus, entropie croisée sans poids de classes,
-lots de batch_size, early stopping sur le F1 macro de validation. Les tableaux reçus ici sont
-déjà standardisés avec les statistiques du train (R4).
+lots de batch_size, courbe complète (max_epochs époques, sans arrêt anticipé), meilleure époque
+choisie sur le F1 macro de validation. Les tableaux reçus ici sont déjà standardisés avec les
+statistiques du train (R4).
 """
 
 from __future__ import annotations
@@ -114,7 +115,7 @@ class Esc50RoundRun:
     heads: list[TrainedHead]
 
 
-def train_with_early_stopping(
+def train_with_validation(
     train: LabeledSet,
     validation: LabeledSet,
     setting: HeadSetting,
@@ -122,10 +123,10 @@ def train_with_early_stopping(
     class_count: int,
     seed: int,
 ) -> EarlyStoppingResult:
-    """Entraîne au plus max_epochs époques ; garde l'époque au meilleur F1 macro de validation.
+    """Entraîne sur la courbe complète et garde l'époque au meilleur F1 macro de validation.
 
-    Arrêt après patience époques sans amélioration stricte du F1 macro de validation ; jamais
-    d'arrêt si patience vaut None (courbe complète).
+    Avec patience à None (configuration actuelle), les max_epochs époques sont toutes faites ;
+    avec un entier, arrêt après patience époques sans amélioration stricte.
     """
     model = _new_head(train, setting, config, class_count, seed)
     optimizer, schedule = _optimizer_and_schedule(model, setting, config)
@@ -159,7 +160,7 @@ def train_for_epochs(
     seed: int,
     epochs: int,
 ) -> LayerWeightedHead:
-    """Entraîne exactement epochs époques, sans validation ni early stopping (P3, final)."""
+    """Entraîne exactement epochs époques, sans validation (P3, entraînement final)."""
     model = _new_head(train, setting, config, class_count, seed)
     optimizer, schedule = _optimizer_and_schedule(model, setting, config)
     generator = torch.Generator().manual_seed(seed)
@@ -196,11 +197,14 @@ def seed_predictions(model: LayerWeightedHead, features: FloatArray, seed: int) 
 def tune_head(
     train: LabeledSet, validation: LabeledSet, config: HeadsConfig, class_count: int
 ) -> tuple[list[TuningOutcome], list[EarlyStoppingResult]]:
-    """Essaie chaque réglage de la grille avec la graine tuning_seed, early stopping compris."""
+    """Essaie chaque réglage de la grille avec la graine tuning_seed, sur la courbe complète.
+
+    Pour chaque réglage, la meilleure époque est choisie sur le F1 macro de validation.
+    """
     outcomes: list[TuningOutcome] = []
     results: list[EarlyStoppingResult] = []
     for setting in grid_settings(config):
-        result = train_with_early_stopping(
+        result = train_with_validation(
             train, validation, setting, config, class_count, config.tuning_seed
         )
         outcome = TuningOutcome(setting, result.best_epoch, result.best_f1)
@@ -218,8 +222,9 @@ def run_emotions(
 ) -> EmotionModelRun:
     """Émotions (P1, Brique 4) : réglage sur la validation, puis une tête par graine.
 
-    Chaque tête s'entraîne sur le train avec early stopping sur la validation ; le test n'est
-    prédit qu'une fois, par la tête remise à sa meilleure époque.
+    Chaque tête s'entraîne sur le train pendant la courbe complète, et sa meilleure époque est
+    choisie sur la validation ; le test n'est prédit qu'une fois, par la tête remise à cette
+    époque.
     """
     # Étape 1 : statistiques du train seul, appliquées aux trois parties (R4).
     stats = standardization_stats(train_raw.features)
@@ -233,9 +238,7 @@ def run_emotions(
     heads: list[TrainedHead] = []
     validation_predictions: list[SeedPredictions] = []
     for seed in config.seeds:
-        result = train_with_early_stopping(
-            train, validation, chosen.setting, config, class_count, seed
-        )
+        result = train_with_validation(train, validation, chosen.setting, config, class_count, seed)
         validation_predictions.append(seed_predictions(result.model, validation.features, seed))
         predictions = seed_predictions(result.model, test.features, seed)
         heads.append(TrainedHead(model=result.model, stats=stats, predictions=predictions))
@@ -247,8 +250,9 @@ def run_esc50_round(
 ) -> Esc50RoundRun:
     """Un tour d'ESC-50 (P3) : réglage sur 3 folds et le fold k + 1, puis final sur 4 folds.
 
-    L'entraînement final dure le nombre d'époques retenu au réglage, sans early stopping, puis
-    on évalue une seule fois sur le fold k.
+    Le réglage parcourt la courbe complète et choisit la meilleure époque sur le fold k + 1.
+    L'entraînement final dure ce nombre d'époques, sans validation, puis on évalue une seule
+    fois sur le fold k.
     """
     fold_count = len(np.unique(folds))
     round_folds = esc50_round(test_fold, fold_count)
