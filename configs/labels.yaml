@@ -46,3 +46,113 @@ label_mapping:
     P: fear
     D: disgust
     S: null         # surprise : absente de CREMA-D
+
+# Classes d'ESC-50 (EF-06), dans l'ordre des cibles d'ESC-50 (target 0 à 49) : la position
+# dans cette liste est la sortie du modèle. id : nom de la classe dans le manifeste et dans
+# meta/esc50.csv (anglais) ; label_fr : libellé affiché dans l'interface.
+esc50_classes:
+  # Animaux (cibles 0 à 9)
+  - id: dog
+    label_fr: Chien
+  - id: rooster
+    label_fr: Coq
+  - id: pig
+    label_fr: Cochon
+  - id: cow
+    label_fr: Vache
+  - id: frog
+    label_fr: Grenouille
+  - id: cat
+    label_fr: Chat
+  - id: hen
+    label_fr: Poule
+  - id: insects
+    label_fr: Insectes
+  - id: sheep
+    label_fr: Mouton
+  - id: crow
+    label_fr: Corbeau
+  # Nature et eau (cibles 10 à 19)
+  - id: rain
+    label_fr: Pluie
+  - id: sea_waves
+    label_fr: Vagues
+  - id: crackling_fire
+    label_fr: Feu qui crépite
+  - id: crickets
+    label_fr: Grillons
+  - id: chirping_birds
+    label_fr: "Chants d'oiseaux"
+  - id: water_drops
+    label_fr: "Gouttes d'eau"
+  - id: wind
+    label_fr: Vent
+  - id: pouring_water
+    label_fr: Eau versée
+  - id: toilet_flush
+    label_fr: "Chasse d'eau"
+  - id: thunderstorm
+    label_fr: Orage
+  # Humain, non verbal (cibles 20 à 29)
+  - id: crying_baby
+    label_fr: Pleurs de bébé
+  - id: sneezing
+    label_fr: Éternuement
+  - id: clapping
+    label_fr: Applaudissements
+  - id: breathing
+    label_fr: Respiration
+  - id: coughing
+    label_fr: Toux
+  - id: footsteps
+    label_fr: Bruits de pas
+  - id: laughing
+    label_fr: Rires
+  - id: brushing_teeth
+    label_fr: Brossage de dents
+  - id: snoring
+    label_fr: Ronflement
+  - id: drinking_sipping
+    label_fr: Gorgées
+  # Intérieur et domestique (cibles 30 à 39)
+  - id: door_wood_knock
+    label_fr: Coups à la porte
+  - id: mouse_click
+    label_fr: Clic de souris
+  - id: keyboard_typing
+    label_fr: Frappe au clavier
+  - id: door_wood_creaks
+    label_fr: Grincement de porte
+  - id: can_opening
+    label_fr: Ouverture de canette
+  - id: washing_machine
+    label_fr: Machine à laver
+  - id: vacuum_cleaner
+    label_fr: Aspirateur
+  - id: clock_alarm
+    label_fr: Réveil
+  - id: clock_tick
+    label_fr: "Tic-tac d'horloge"
+  - id: glass_breaking
+    label_fr: Verre brisé
+  # Extérieur et urbain (cibles 40 à 49)
+  - id: helicopter
+    label_fr: Hélicoptère
+  - id: chainsaw
+    label_fr: Tronçonneuse
+  - id: siren
+    label_fr: Sirène
+  - id: car_horn
+    label_fr: Klaxon
+  - id: engine
+    label_fr: Moteur
+  - id: train
+    label_fr: Train
+  - id: church_bells
+    label_fr: "Cloches d'église"
+  - id: airplane
+    label_fr: Avion
+  - id: fireworks
+    label_fr: "Feux d'artifice"
+  - id: hand_saw
+    label_fr: Scie à main
