@@ -9,11 +9,13 @@ figée pour la famille B, empreinte de configs/features.yaml pour le CRNN (R5).
 from __future__ import annotations
 
 import hashlib
+import json
 from pathlib import Path
 from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from echolens.config import load_yaml
 from echolens.core.models.network_config import NetworkConfig
 
 CONFIG_FILE = "config.json"
@@ -79,8 +81,8 @@ class ProductionModelConfig(BaseModel):
     head: HeadShape | None = None
     encoder: EncoderReference | None = None
     network: NetworkConfig | None = None
-    # Empreinte SHA-256 de configs/features.yaml à l'entraînement (CRNN) : le log-Mel de
-    # l'application doit être calculé avec exactement les mêmes paramètres (R5).
+    # Empreinte des valeurs de configs/features.yaml à l'entraînement (CRNN, config_fingerprint) :
+    # le log-Mel de l'application doit être calculé avec exactement les mêmes paramètres (R5).
     features_sha256: str | None = None
     license: str
 
@@ -100,12 +102,15 @@ def load_production_config(path: Path) -> ProductionModelConfig:
     return ProductionModelConfig.model_validate_json(text)
 
 
-def file_sha256(path: Path) -> str:
-    """Empreinte SHA-256 d'un fichier (ici configs/features.yaml) : 64 caractères hexadécimaux.
+def config_fingerprint(path: Path) -> str:
+    """Empreinte SHA-256 des valeurs d'un fichier YAML (ici configs/features.yaml).
 
-    Si un seul paramètre du log-Mel change, l'empreinte change : l'application refuse alors
-    un CRNN entraîné avec d'autres features (R5).
+    On hache les valeurs lues, triées, et non les octets du fichier : un commentaire ou des
+    fins de ligne Windows (CRLF) contre Linux (LF) ne changent rien, mais si un seul paramètre
+    du log-Mel change, l'empreinte change et l'application refuse un CRNN entraîné avec
+    d'autres features (R5).
     """
-    content = path.read_bytes()
-    digest = hashlib.sha256(content)
+    values = load_yaml(path)
+    canonical = json.dumps(values, sort_keys=True, ensure_ascii=True)
+    digest = hashlib.sha256(canonical.encode("utf-8"))
     return digest.hexdigest()

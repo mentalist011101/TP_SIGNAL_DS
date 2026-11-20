@@ -11,7 +11,7 @@ from echolens.core.models.production_config import (
     Calibration,
     ProductionModelConfig,
     TrainingRecord,
-    file_sha256,
+    config_fingerprint,
     load_production_config,
     save_production_config,
 )
@@ -68,13 +68,17 @@ def test_validation_calibration_measures_ece_on_the_test(config: EvaluationConfi
     assert outcome.round_temperatures == []
 
 
-def test_features_fingerprint_is_a_sha256(tmp_path: Path) -> None:
+def test_features_fingerprint_ignores_comments_and_line_endings(tmp_path: Path) -> None:
     path = tmp_path / "features.yaml"
-    path.write_text("n_mels: 64\n", encoding="utf-8")
-    fingerprint = file_sha256(path)
+    path.write_bytes(b"n_mels: 64\nhop_length: 160\n")
+    fingerprint = config_fingerprint(path)
     assert len(fingerprint) == 64
-    path.write_text("n_mels: 128\n", encoding="utf-8")
-    assert file_sha256(path) != fingerprint
+    # Fins de ligne Windows, commentaire et ordre différent : mêmes valeurs, même empreinte.
+    path.write_bytes(b"# commentaire\r\nhop_length: 160\r\nn_mels: 64\r\n")
+    assert config_fingerprint(path) == fingerprint
+    # Un paramètre change : l'empreinte change.
+    path.write_bytes(b"n_mels: 128\nhop_length: 160\n")
+    assert config_fingerprint(path) != fingerprint
 
 
 def test_production_config_is_saved_and_reloaded(tmp_path: Path) -> None:
