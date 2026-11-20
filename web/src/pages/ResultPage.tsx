@@ -1,38 +1,87 @@
 import { Link, useParams } from 'react-router-dom'
-import { ApiError, useAnalysis } from '../api/client.ts'
-import AnalysisStatus from '../components/analyze/AnalysisStatus.tsx'
-import SpectrogramView from '../components/analyze/SpectrogramView.tsx'
+import {
+  ApiError,
+  describeApiError,
+  isAnalysisRunning,
+  useAnalysis,
+  type Analysis,
+} from '../api/client.ts'
+import ResultAudio from '../components/result/ResultAudio.tsx'
+import ResultHeader from '../components/result/ResultHeader.tsx'
+import { AnalysisNotFound, FailedAnalysis } from '../components/result/ResultMessages.tsx'
+import TaskResultList from '../components/result/TaskResultList.tsx'
 
 const LINK_CLASSES = 'text-sm font-semibold text-accent-ink hover:underline'
 
-// Message d'erreur : celui de l'API (analyse introuvable…), ou serveur injoignable.
-function describeError(error: Error | null): string | null {
+// Code HTTP de l'API pour une analyse inconnue.
+const NOT_FOUND_STATUS = 404
+
+// Avant la première réponse : chargement, analyse introuvable, ou serveur injoignable.
+function MissingAnalysis({ error }: { error: Error | null }) {
   if (error === null) {
-    return null
+    return <p className="text-sm text-ink-soft">Chargement de l’analyse…</p>
   }
-  if (error instanceof ApiError) {
-    return error.message
+  if (error instanceof ApiError && error.status === NOT_FOUND_STATUS) {
+    return <AnalysisNotFound />
   }
-  return 'Serveur injoignable : vérifiez que l’application est lancée, puis réessayez.'
+  return <p className="text-sm text-danger">{describeApiError(error)}</p>
 }
 
-// Page Résultat, version minimale (C22) : ouverte depuis l'historique, elle montre le statut et
-// le spectrogramme d'une analyse. La tâche C21 y ajoutera les probabilités, la transcription et
-// l'export JSON.
+// Corps de la page : la raison d'un échec, ou l'audio puis une carte par tâche demandée.
+function ResultBody({ analysis }: { analysis: Analysis }) {
+  if (analysis.status === 'failed') {
+    return <FailedAnalysis reason={analysis.error_message} />
+  }
+  return (
+    <>
+      {isAnalysisRunning(analysis) && (
+        <p className="text-sm text-ink-soft">
+          Vous pouvez quitter cette page : l’analyse continue et restera dans l’historique.
+        </p>
+      )}
+      <ResultAudio analysis={analysis} />
+      <TaskResultList analysis={analysis} />
+    </>
+  )
+}
+
+// Page Résultat (C21, EF-05 à EF-08), adresse /analyses/{id} : ouverte par la page Analyser
+// à la fin d'une analyse, ou depuis l'historique. useAnalysis interroge l'API chaque seconde
+// tant que l'analyse est en attente ou en cours, puis s'arrête.
 export default function ResultPage() {
   const params = useParams()
   const analysisId = params.analysisId ?? null
   const query = useAnalysis(analysisId)
-  const errorMessage = describeError(query.error)
+  const analysis = query.data
+
+  let content = <MissingAnalysis error={query.error} />
+  if (analysis !== undefined) {
+    content = (
+      <>
+        <ResultHeader analysis={analysis} />
+        {/* Une interrogation a échoué alors qu'on avait déjà l'analyse (F11) : on garde
+            l'affichage, et la suivante réessaiera toute seule. */}
+        {query.error !== null && (
+          <p className="text-sm text-danger">
+            Connexion au serveur perdue. Nouvelle tentative en cours…
+          </p>
+        )}
+        <ResultBody analysis={analysis} />
+      </>
+    )
+  }
 
   return (
     <section className="space-y-6">
-      <Link to="/historique" className={LINK_CLASSES}>
-        ← Retour à l’historique
-      </Link>
-      <h1 className="font-display text-3xl font-extrabold tracking-tight">Résultat de l’analyse</h1>
-      <AnalysisStatus analysis={query.data} isSubmitting={false} errorMessage={errorMessage} />
-      <SpectrogramView analysis={query.data} />
+      <nav className="flex flex-wrap gap-4">
+        <Link to="/" className={LINK_CLASSES}>
+          ← Nouvelle analyse
+        </Link>
+        <Link to="/historique" className={LINK_CLASSES}>
+          Historique
+        </Link>
+      </nav>
+      {content}
     </section>
   )
 }

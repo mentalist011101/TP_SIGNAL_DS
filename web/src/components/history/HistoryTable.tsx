@@ -1,21 +1,7 @@
 import { Link } from 'react-router-dom'
-import type { Analysis, AnalysisStatusValue, AnalysisTask } from '../../api/client.ts'
+import type { Analysis, AnalysisTask } from '../../api/client.ts'
+import { STATUS_LABELS, TASK_LABELS } from '../../labels.ts'
 import DeleteControl from './DeleteControl.tsx'
-
-// Libellés français des statuts et des tâches renvoyés par l'API.
-const STATUS_LABELS: Record<AnalysisStatusValue, string> = {
-  pending: 'En attente',
-  processing: 'En cours',
-  done: 'Terminée',
-  failed: 'Échec',
-}
-
-const TASK_LABELS: Record<AnalysisTask, string> = {
-  emotion: 'Émotion',
-  sound_event: 'Événement sonore',
-  transcription: 'Transcription',
-  speaker: 'Locuteur',
-}
 
 const HEADER_CELL_CLASSES = 'px-3 py-2 text-left font-medium text-ink-soft'
 const CELL_CLASSES = 'px-3 py-3 align-top'

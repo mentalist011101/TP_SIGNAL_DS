@@ -112,6 +112,49 @@ export interface SpectrogramInfo {
   colormap_stops: string[]
 }
 
+// Résultats d'une analyse terminée (C13, schémas de src/echolens/api/result_schemas.py).
+// done : résultat calculé ; no_speech : émotion demandée mais aucune parole détectée ;
+// unavailable : tâche pas encore branchée. Dans les deux derniers cas, « message » dit pourquoi.
+export type TaskResultStatus = 'done' | 'no_speech' | 'unavailable'
+
+// Probabilité d'une classe, entre 0 et 1 ; label_fr est le libellé à afficher.
+export interface ClassProbability {
+  label: string
+  label_fr: string
+  probability: number
+}
+
+// Résultat d'un morceau de l'audio, pour la future frise temporelle (EF-12).
+export interface SegmentResult {
+  start_s: number
+  end_s: number
+  label: string
+  label_fr: string
+  probabilities: ClassProbability[]
+}
+
+// Résultat d'une tâche. Les probabilités arrivent triées de la plus probable à la moins
+// probable, de somme 1 : le front les affiche sans les recalculer (R5).
+export interface TaskResult {
+  status: TaskResultStatus
+  message: string | null
+  label: string | null
+  label_fr: string | null
+  probabilities: ClassProbability[]
+  model_id: string | null
+  model_version: string | null
+  calibrated: boolean | null
+  segments: SegmentResult[]
+}
+
+// Un résultat par tâche demandée ; une tâche non demandée est absente.
+export interface AnalysisResults {
+  emotion?: TaskResult
+  sound_event?: TaskResult
+  transcription?: TaskResult
+  speaker?: TaskResult
+}
+
 export interface Analysis {
   id: string
   created_at: string
@@ -124,6 +167,8 @@ export interface Analysis {
   audio_url: string | null
   spectrogram_url: string | null
   spectrogram: SpectrogramInfo | null
+  // null tant que l'analyse n'est pas terminée (et en cas d'échec).
+  results: AnalysisResults | null
 }
 
 export interface AnalysisRequest {

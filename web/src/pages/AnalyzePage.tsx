@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { Navigate } from 'react-router-dom'
 import {
   describeApiError,
   useAnalysis,
@@ -170,8 +171,8 @@ function PageIntro() {
     <div className="space-y-2">
       <h1 className="font-display text-3xl font-extrabold tracking-tight">Analyser un audio</h1>
       <p className="text-ink-soft">
-        Suivez les trois étapes ; l’aperçu montre l’audio choisi en forme d’onde, puis en
-        spectrogramme une fois l’analyse terminée.
+        Suivez les trois étapes ; l’aperçu montre l’audio choisi en forme d’onde. Une fois l’analyse
+        terminée, son résultat s’ouvre tout seul.
       </p>
     </div>
   )
@@ -273,6 +274,13 @@ export default function AnalyzePage() {
     if (audioFile !== null) {
       run.start({ file: audioFile, tasks, profile })
     }
+  }
+
+  // Analyse terminée : on passe à sa page Résultat (C21). En cas d'échec, on reste ici avec la
+  // raison, sans perdre l'audio ni les choix.
+  const latestAnalysis = run.analysis
+  if (latestAnalysis !== undefined && latestAnalysis.status === 'done') {
+    return <Navigate to={`/analyses/${latestAnalysis.id}`} />
   }
 
   return (

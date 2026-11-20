@@ -1,12 +1,5 @@
-import type { Analysis, AnalysisStatusValue } from '../../api/client.ts'
-
-// Libellés français des statuts renvoyés par l'API.
-const STATUS_LABELS: Record<AnalysisStatusValue, string> = {
-  pending: 'En attente',
-  processing: 'En cours',
-  done: 'Terminée',
-  failed: 'Échec',
-}
+import type { Analysis } from '../../api/client.ts'
+import { STATUS_LABELS } from '../../labels.ts'
 
 // Zone en retrait (paper-alt) : le panneau est posé dans la carte de l'étape 3, pas une carte de
 // plus.
@@ -33,7 +26,8 @@ function DurationValue({ durationSeconds }: { durationSeconds: number | null }) 
   )
 }
 
-// Détail d'une analyse : fichier, statut, durée, puis résultat ou raison de l'échec.
+// Détail d'une analyse : fichier, statut, durée, puis la raison d'un échec. Une analyse
+// terminée n'est jamais affichée ici : la page Analyser ouvre alors la page Résultat.
 function AnalysisDetails({ analysis }: { analysis: Analysis }) {
   const statusLabel = STATUS_LABELS[analysis.status]
   return (
@@ -47,9 +41,6 @@ function AnalysisDetails({ analysis }: { analysis: Analysis }) {
       </p>
       {analysis.status === 'failed' && (
         <p className="text-danger">Raison : {analysis.error_message}</p>
-      )}
-      {analysis.status === 'done' && (
-        <p className="text-ink-faint">Résultats disponibles quand les modèles seront branchés.</p>
       )}
     </div>
   )
