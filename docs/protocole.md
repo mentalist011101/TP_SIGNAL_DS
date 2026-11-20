@@ -102,19 +102,22 @@ les folds officiels pour rester comparable à la littérature ; ces 4 sources so
 
 1. le fold k sert de test ;
 2. réglage : on entraîne sur 3 folds et on utilise le fold k + 1 (1 après 5) uniquement pour
-   choisir le nombre d'époques et les hyperparamètres ;
+   choisir le nombre d'époques et les hyperparamètres : courbe complète, meilleure époque
+   choisie sur la validation (le schedule va jusqu'au bout, sans arrêt anticipé) ;
 3. entraînement final : avec ces réglages fixés, on réentraîne sur les 4 folds hors test, puis
    on évalue une seule fois sur le fold k. On apprend ainsi sur 4 folds, comme les articles.
 
-Un modèle sans early stopping (la référence MFCC + SVM) choisit ses hyperparamètres sur le
-fold k + 1, puis s'entraîne directement sur 4 folds. On rapporte la moyenne et l'écart-type du
+Un modèle sans époques (la référence MFCC + SVM) choisit ses hyperparamètres sur le fold k + 1,
+puis s'entraîne directement sur 4 folds. On rapporte la moyenne et l'écart-type du
 F1 macro et de l'accuracy sur les 5 tours ; l'écart-type est celui de population (ddof = 0),
 le même pour tous les modèles.
 
 ## 5. Règles communes à tous les modèles
 
-1. **Validation** : early stopping, choix des hyperparamètres et calibrage par température (E2).
-   Le **test** n'est utilisé qu'une fois, pour les résultats finaux.
+1. **Validation** : courbe complète, meilleure époque choisie sur la validation (aucun arrêt
+   anticipé : le cosinus va jusqu'au bout, décision du 19 nov. 2026), choix des
+   hyperparamètres et calibrage par température (E2). Le **test** n'est utilisé qu'une fois,
+   pour les résultats finaux.
 2. **Standardisation (R4)** : moyenne et écart-type par bande calculés sur l'entraînement seul.
 3. **Augmentation (P6)** : après le découpage, sur l'entraînement seul. Une version augmentée
    d'un fichier de test ne doit jamais se retrouver en entraînement.

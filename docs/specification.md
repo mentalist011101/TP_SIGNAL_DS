@@ -144,8 +144,9 @@ Le détail des règles fait foi dans `docs/protocole.md`.
 
 Points à respecter : moyennes par couche calculées une seule fois (la moyenne commute avec la
 somme pondérée) ; pour Whisper, ignorer les trames de remplissage jusqu'à 30 s ; entraînement
-AdamW, schedule cosinus, early stopping sur le F1 macro de validation, 3 graines pour les
-résultats principaux ; deux profils, « qualité » (fichiers) et « temps réel » (flux).
+AdamW, schedule cosinus, courbe complète, meilleure époque choisie sur la validation (F1 macro,
+sans arrêt anticipé : le cosinus va jusqu'au bout), 3 graines pour les résultats principaux ;
+deux profils, « qualité » (fichiers) et « temps réel » (flux).
 
 | ID | Hypothèse à trancher |
 | --- | --- |
@@ -233,3 +234,4 @@ et `/docs`.
 | 9 nov. 2026 | Brique 3, d'après les règles de protocole de Lynn (Ly2, Ly5) : P1 précisé (tirage par genre, découpage versionné), P3 (réglage sur le fold k+1 puis réentraînement sur 4 folds), P12 (règle de normalisation fixée, nombres en lettres), P13 (enregistrements de l'équipe) ; R2 appliqué dans le code (PR #1) |
 | 11 nov. 2026 | Protocole publié dans docs/protocole.md (Ly2 et Ly5 de Lynn, décisions du 9 au 11 novembre) ; P6 : valeur des masques ; P1 : règle exacte du tirage alignée sur le protocole |
 | 12 nov. 2026 | Brique 1 (C2, PR #19) : D4 désactivé par défaut, force 0,8 provisoire, protocole d'ablation du sprint 2 ; D5 : webrtcvad à la place de Silero VAD, paramètres de nettoyage des segments fixés ; paramètres dans configs/preprocess.yaml |
+| 19 nov. 2026 | Brique 4 et protocole (§ 4, § 5) : plus d'arrêt anticipé pour tous les modèles ; courbe complète, meilleure époque et taux d'apprentissage choisis sur la validation, puis réentraînement inchangé. Diagnostic C9 (`c9_early_stopping_diagnostic.ipynb`, réglage rejoué sur 150 époques) : CNN 0,659 à l'époque 43 contre 0,767 à l'époque 145 ; CRNN 0,740 à l'époque 44 contre 0,806 à l'époque 147 |

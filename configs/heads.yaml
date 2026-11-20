@@ -1,0 +1,55 @@
+# Têtes de classification de la famille B, sur les moyennes par couche de C10 (Brique 4, C11).
+# Lu par echolens.training.heads.HeadsConfig. Aucun de ces nombres n'est écrit dans le code.
+
+# Tête : standardisation (R4), somme pondérée des couches w = softmax(a), puis MLP
+# Linear(dimension, hidden_size) → ReLU → Dropout → Linear(hidden_size, classes).
+hidden_size: 256
+
+# Entraînement : AdamW, schedule cosinus, entropie croisée sans poids de classes.
+batch_size: 64
+# Le schedule cosinus descend de lr à 0 sur max_epochs époques, au réglage comme à
+# l'entraînement final : avec un nombre d'époques fixé, le taux suit la même courbe.
+max_epochs: 100
+# Pas d'arrêt anticipé (décision du 19 nov. 2026) : le cosinus va jusqu'au bout et la
+# validation choisit la meilleure époque sur la courbe complète. Un entier n arrêterait le
+# réglage après n époques sans meilleur F1 macro de validation.
+patience: null
+# Pénalité des poids d'AdamW, écrite explicitement (valeur par défaut de torch).
+weight_decay: 0.01
+
+# Grille de réglage, choisie sur la validation avec la graine tuning_seed.
+# En cas d'égalité, le premier réglage de la grille est gardé.
+learning_rates: [1.0e-3, 3.0e-4]
+dropouts: [0.1, 0.3]
+tuning_seed: 42
+
+# Graines des résultats principaux (moyenne et écart-type, ddof = 0).
+seeds: [42, 43, 44]
+# McNemar et bootstrap utilisent les prédictions de cette graine seulement (fixé à l'avance).
+statistics_seed: 42
+
+# Modèles comparés : identifiant, encodeur de C10, et version de Whisper avec remplissage.
+models:
+  - id: wav2vec2-base
+    encoder: wav2vec2-base
+    padded: false
+  - id: mhubert-147
+    encoder: mhubert-147
+    padded: false
+  - id: whisper-base
+    encoder: whisper-base
+    padded: false
+  - id: whisper-base-padded
+    encoder: whisper-base
+    padded: true
+
+# Paires de modèles comparées par McNemar, sur les mêmes extraits de test (P8).
+mcnemar_pairs:
+  - [wav2vec2-base, mhubert-147]
+  - [wav2vec2-base, whisper-base]
+  - [mhubert-147, whisper-base]
+  - [whisper-base, whisper-base-padded]
+
+# Jeux d'émotions réunis pour l'entraînement (P1) et classes d'ESC-50 (P3).
+emotion_datasets: [cremad, ravdess]
+esc50_class_count: 50

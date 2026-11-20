@@ -1,17 +1,24 @@
+from pathlib import Path
+
 import numpy as np
 import pytest
 
 from echolens.config import CONFIG_DIR
 from echolens.training.evaluation import (
+    ClipPrediction,
     EvaluationConfig,
     accuracy,
+    align_predictions,
     bootstrap_ci,
     equal_error_rate,
     expected_calibration_error,
+    load_predictions,
     macro_f1,
     mcnemar_test,
     mean_and_std,
     normalized_confusion,
+    per_class_f1,
+    save_predictions,
     scores_by_group,
     to_categories,
 )
@@ -237,3 +244,55 @@ def test_evaluation_yaml_loads_and_matches_defaults() -> None:
     assert config.ece_bins == 10
     assert config.seed == 42
     assert config.mcnemar_exact_below == 25
+
+
+def test_per_class_f1_lists_every_class_even_when_absent() -> None:
+    # Classe 0 : parfaite. Classe 1 : 1 juste sur 2 prédits, 1 sur 1 vrai → F1 = 2/3.
+    # Classe 2 : absente de y_true et jamais prédite → 0.
+    y_true = np.array([0, 0, 1])
+    y_pred = np.array([0, 0, 1])
+    y_pred_with_error = np.array([0, 1, 1])
+    np.testing.assert_allclose(per_class_f1(y_true, y_pred, 3), [1.0, 1.0, 0.0])
+    scores = per_class_f1(y_true, y_pred_with_error, 3)
+    assert scores[0] == pytest.approx(2 / 3)
+    assert scores[1] == pytest.approx(2 / 3)
+
+
+def test_predictions_are_saved_and_reloaded(tmp_path: Path) -> None:
+    predictions = [
+        ClipPrediction(path="audio/1-1-A-0.wav", fold=1, target=0, prediction=3),
+        ClipPrediction(path="audio/2-2-A-9.wav", fold=2, target=9, prediction=9),
+    ]
+    path = tmp_path / "sous_dossier" / "predictions.csv"
+    save_predictions(predictions, path)
+    assert load_predictions(path) == predictions
+    first_line = path.read_text(encoding="utf-8").splitlines()[0]
+    assert first_line == "path,fold,target,prediction"
+
+
+def test_align_predictions_matches_clips_by_path() -> None:
+    first = [
+        ClipPrediction("audio/b.wav", 1, 1, 1),
+        ClipPrediction("audio/a.wav", 1, 0, 2),
+    ]
+    second = [
+        ClipPrediction("audio/a.wav", 1, 0, 0),
+        ClipPrediction("audio/b.wav", 1, 1, 0),
+    ]
+    aligned = align_predictions(first, second)
+    assert aligned.paths == ["audio/a.wav", "audio/b.wav"]
+    np.testing.assert_array_equal(aligned.y_true, [0, 1])
+    np.testing.assert_array_equal(aligned.pred_a, [2, 1])
+    np.testing.assert_array_equal(aligned.pred_b, [0, 0])
+
+
+def test_align_predictions_refuses_different_clips() -> None:
+    first = [ClipPrediction("audio/a.wav", 1, 0, 0)]
+    other_clip = [ClipPrediction("audio/z.wav", 1, 0, 0)]
+    other_target = [ClipPrediction("audio/a.wav", 1, 5, 0)]
+    with pytest.raises(ValueError, match="absent"):
+        align_predictions(first, other_clip)
+    with pytest.raises(ValueError, match="absent"):
+        align_predictions(first, other_target)
+    with pytest.raises(ValueError, match="nombre"):
+        align_predictions(first, first + other_clip)

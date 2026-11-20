@@ -1,0 +1,54 @@
+# Brique 4, famille A (C9) : CNN et CRNN sur le log-Mel (R2) d'ESC-50, puis des émotions (C12).
+# Lu par echolens.training.family_a.FamilyAConfig. Tous les nombres de l'entraînement sont ici.
+# L'entrée est le log-Mel de echolens.core.features avec configs/features.yaml (64 bandes,
+# 501 trames pour 5 s), calculé une seule fois pour tous les extraits (R5, R6).
+
+# Réseaux (Brique 4) : 4 blocs Conv2d 3×3 → BatchNorm → ReLU → MaxPool 2×2.
+network:
+  # Nombre de filtres de chaque bloc : doublé à chaque bloc pendant que l'image rétrécit.
+  channels: [32, 64, 128, 256]
+  kernel_size: 3   # filtre 3×3 : 3 bandes Mel × 3 trames (30 ms)
+  padding: 1       # 1 case de zéros autour : la convolution garde la taille de l'image
+  pool_size: 2     # MaxPool 2×2 : divise par 2 le nombre de bandes et de trames
+  dropout: 0.3     # part des 256 valeurs mises à zéro au hasard avant la couche finale
+  # CRNN seulement : taille de l'état du GRU dans chaque sens (2 × 128 = 256 en sortie).
+  gru_hidden_size: 128
+
+# Augmentations (P6), sur l'entraînement seulement, recalculées à chaque époque.
+augmentation:
+  # Gain : ajout d'une constante tirée uniformément dans [−6 ; +6] dB, AVANT la
+  # standardisation (en dB absolus, multiplier le volume revient à ajouter une constante).
+  gain_db: 6.0
+  # SpecAugment, APRÈS la standardisation, masques à 0 (= moyenne du train, P6).
+  frequency_mask_count: 2
+  frequency_mask_max_bands: 8    # largeur tirée entre 0 et 8 bandes Mel
+  time_mask_count: 2
+  time_mask_max_frames: 40       # largeur tirée entre 0 et 40 trames (0,4 s)
+  # Mixup : λ ~ Beta(0,2 ; 0,2), le plus souvent proche de 0 ou de 1 (mélange léger).
+  mixup_alpha: 0.2
+  # Le décalage temporel est une rotation circulaire d'un nombre de trames tiré entre 0 et
+  # (nombre de trames − 1) : il n'a pas de paramètre. Pas de bruit ajouté ici (mesuré en C19).
+
+# Entraînement (P3, Brique 4) : AdamW, schedule cosinus, entropie croisée.
+training:
+  batch_size: 32
+  # Valeur par défaut de torch, écrite pour ne rien laisser d'implicite.
+  weight_decay: 0.01
+  # Réglage sur le fold k + 1, courbe complète (décision du 19 nov. 2026) : pour chaque taux
+  # d'apprentissage, 150 époques sans arrêt anticipé, avec le F1 macro de validation après
+  # chaque époque. On retient le couple (taux, époque) au meilleur F1. Avec une patience de 15,
+  # l'arrêt tombait pendant le palier bruité à taux élevé (diagnostic C9 : CNN 0,659 à
+  # l'époque 43 contre 0,767 à l'époque 145). Un entier n réactiverait l'arrêt après
+  # n époques sans amélioration.
+  # Le cosinus descend sur 150 époques au réglage comme à l'entraînement final, qui s'arrête
+  # au nombre d'époques retenu : le taux d'apprentissage suit donc exactement la même courbe
+  # dans les deux cas.
+  max_epochs: 150
+  patience: null
+  # Taux d'apprentissage essayés au réglage ; en cas d'égalité, le premier est gardé.
+  learning_rates: [1.0e-3, 3.0e-4]
+  tuning_seed: 42
+  # Entraînement final sur les 4 folds hors test, une fois par graine (3 graines, Brique 4).
+  final_seeds: [42, 43, 44]
+  # Taille des lots pour la prédiction (sans effet sur le résultat, seulement sur la mémoire).
+  prediction_batch_size: 128

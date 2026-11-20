@@ -5,6 +5,7 @@ Les étiquettes sont des entiers de 0 à n_classes − 1.
 
 from __future__ import annotations
 
+import csv
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -20,6 +21,7 @@ from echolens.config import load_yaml
 IntArray = npt.NDArray[np.int_]
 FloatMatrix = npt.NDArray[np.float64]
 FloatArray = npt.NDArray[np.float64]
+PREDICTION_COLUMNS = ["path", "fold", "target", "prediction"]
 
 
 class EvaluationConfig(BaseModel):
@@ -63,6 +65,13 @@ def normalized_confusion(y_true: IntArray, y_pred: IntArray, n_classes: int) -> 
     safe_totals = np.maximum(row_totals, 1)
     normalized = counts / safe_totals
     return np.asarray(normalized, dtype=np.float64)
+
+
+def per_class_f1(y_true: IntArray, y_pred: IntArray, n_classes: int) -> FloatArray:
+    """F1 de chaque classe, de 0 à n_classes − 1, même pour une classe absente (P4)."""
+    all_classes = np.arange(n_classes)
+    scores = f1_score(y_true, y_pred, labels=all_classes, average=None, zero_division=0.0)
+    return np.asarray(scores, dtype=np.float64)
 
 
 def to_categories(labels: IntArray, group_size: int = 10) -> IntArray:
@@ -127,6 +136,84 @@ def bootstrap_ci(
     tail = (1.0 - config.confidence) / 2.0
     low, high = np.quantile(scores, [tail, 1.0 - tail])
     return float(low), float(high)
+
+
+@dataclass(frozen=True)
+class ClipPrediction:
+    """Prédiction d'un modèle pour un extrait de test, identifié par son chemin de manifeste."""
+
+    path: str
+    fold: int
+    target: int
+    prediction: int
+
+
+@dataclass(frozen=True)
+class AlignedPredictions:
+    """Prédictions de deux modèles sur exactement les mêmes extraits, dans le même ordre."""
+
+    paths: list[str]
+    y_true: IntArray
+    pred_a: IntArray
+    pred_b: IntArray
+
+
+def save_predictions(predictions: list[ClipPrediction], path: Path) -> None:
+    """Écrit les prédictions de test en CSV (path, fold, target, prediction) pour McNemar (P8)."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.writer(handle, lineterminator="\n")
+        writer.writerow(PREDICTION_COLUMNS)
+        for item in predictions:
+            writer.writerow([item.path, item.fold, item.target, item.prediction])
+
+
+def load_predictions(path: Path) -> list[ClipPrediction]:
+    """Relit un fichier écrit par save_predictions."""
+    predictions: list[ClipPrediction] = []
+    with path.open(encoding="utf-8", newline="") as handle:
+        for record in csv.DictReader(handle):
+            item = ClipPrediction(
+                path=record["path"],
+                fold=int(record["fold"]),
+                target=int(record["target"]),
+                prediction=int(record["prediction"]),
+            )
+            predictions.append(item)
+    return predictions
+
+
+def align_predictions(
+    first: list[ClipPrediction], second: list[ClipPrediction]
+) -> AlignedPredictions:
+    """Met côte à côte les prédictions de deux modèles, extrait par extrait (P8).
+
+    McNemar compare les deux modèles sur les MÊMES extraits : on refuse deux fichiers qui ne
+    couvrent pas exactement les mêmes chemins, ou qui ne donnent pas la même vraie classe.
+    """
+    second_by_path = {item.path: item for item in second}
+    if len(second_by_path) != len(first) or len(second) != len(first):
+        raise ValueError("Les deux fichiers de prédictions n'ont pas le même nombre d'extraits")
+    paths: list[str] = []
+    y_true: list[int] = []
+    pred_a: list[int] = []
+    pred_b: list[int] = []
+    for item in sorted(first, key=_prediction_path):
+        other = second_by_path.get(item.path)
+        if other is None or other.target != item.target:
+            raise ValueError(
+                f"Extrait absent ou de classe différente dans l'autre fichier : {item.path}"
+            )
+        paths.append(item.path)
+        y_true.append(item.target)
+        pred_a.append(item.prediction)
+        pred_b.append(other.prediction)
+    return AlignedPredictions(
+        paths=paths,
+        y_true=np.array(y_true, dtype=np.int_),
+        pred_a=np.array(pred_a, dtype=np.int_),
+        pred_b=np.array(pred_b, dtype=np.int_),
+    )
 
 
 @dataclass(frozen=True)
@@ -255,3 +342,7 @@ def equal_error_rate(labels: IntArray, scores: FloatArray) -> EerResult:
     best = int(np.argmin(np.abs(fnr - fpr)))
     eer = float((fpr[best] + fnr[best]) / 2.0)
     return EerResult(eer, float(thresholds[best]))
+
+
+def _prediction_path(item: ClipPrediction) -> str:
+    return item.path

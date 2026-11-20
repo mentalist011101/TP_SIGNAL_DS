@@ -138,7 +138,8 @@ class Esc50Round(BaseModel):
     test_fold: int
     # Fold suivant : sert seulement à choisir le nombre d'époques et les hyperparamètres.
     validation_fold: int
-    # Les 3 folds restants : entraînement pendant le réglage (avec early stopping).
+    # Les 3 folds restants : entraînement du réglage, sur la courbe complète (meilleure époque
+    # choisie sur le fold de validation, sans arrêt anticipé).
     tuning_train_folds: list[int]
     # Les 4 folds hors test : entraînement final, réglages fixés, comme dans les articles.
     final_train_folds: list[int]
@@ -151,7 +152,8 @@ def esc50_round(test_fold: int, fold_count: int) -> Esc50Round:
     le fold suivant (1 après 5). Étape 2, l'entraînement final : on réentraîne sur les 4 folds
     hors test avec ces réglages fixés, puis on évalue sur le fold test_fold. On apprend ainsi
     sur 4 folds, comme tous les articles sur ESC-50, et nos scores restent comparables.
-    Un modèle sans early stopping (MFCC + SVM) passe directement à l'étape 2.
+    Un modèle sans époques (MFCC + SVM) choisit ses hyperparamètres sur le fold suivant, puis
+    passe directement à l'étape 2.
     """
     if test_fold < 1 or test_fold > fold_count:
         raise ValueError(f"Fold de test {test_fold} hors de 1 à {fold_count}")
