@@ -41,6 +41,15 @@ make run          # lance Flask sur http://localhost:5000
 Pour développer le front avec rechargement à chaud : `make run` dans un terminal, `make web-dev`
 dans un autre, puis ouvrir http://localhost:5173.
 
+La base locale (`var/echolens.db`, l'historique des analyses) est créée au premier démarrage,
+sans migrations. Quand une version ajoute une colonne (par exemple `results` en C13), le serveur
+refuse de démarrer avec un message clair : supprimez `var/echolens.db`, elle sera recréée vide
+au démarrage suivant (l'historique local est perdu).
+
+Les analyses utilisent pour l'instant un faux prédicteur (`inference_backend: demo` dans
+`configs/app.yaml`) : les probabilités sont déterministes mais n'ont aucune valeur, et chaque
+résultat porte `model_id = "demo"`.
+
 Avec Docker (aucun prérequis hormis Docker) :
 
 ```bash
