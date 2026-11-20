@@ -101,7 +101,15 @@ class ModelPredictor:
         self, task: Task, profile: Profile, windows: list[FloatArray]
     ) -> list[ProbabilityArray]:
         """Probabilités calibrées de chaque fenêtre, avec le modèle de ce profil."""
-        loaded = self._load(self._entry(task, profile))
+        entry = self._entry(task, profile)
+        return self.predict_with(entry, windows)
+
+    def predict_with(self, entry: ModelEntry, windows: list[FloatArray]) -> list[ProbabilityArray]:
+        """Probabilités calibrées de chaque fenêtre avec un modèle précis du registre.
+
+        Sert aussi à mesurer la latence de chaque modèle, quel que soit son profil (E6).
+        """
+        loaded = self.load(entry)
         temperature = loaded.config.calibration.temperature
         probabilities: list[ProbabilityArray] = []
         for window in windows:
@@ -114,7 +122,7 @@ class ModelPredictor:
         """Charge tous les modèles de classification du registre (préchauffage, S1)."""
         for entry in self.registry.models:
             if entry.task in (Task.EMOTION, Task.SOUND_EVENT):
-                self._load(entry)
+                self.load(entry)
 
     def _entry(self, task: Task, profile: Profile) -> ModelEntry:
         entry = self.registry.model_for(task, profile)
@@ -153,7 +161,8 @@ class ModelPredictor:
         scores: torch.Tensor = output.logits[0]
         return scores
 
-    def _load(self, entry: ModelEntry) -> LoadedModel:
+    def load(self, entry: ModelEntry) -> LoadedModel:
+        """Le modèle prêt à prédire, chargé une seule fois puis gardé en mémoire (S1)."""
         with self._lock:
             if entry.id not in self._models:
                 self._models[entry.id] = self._load_model(entry)
