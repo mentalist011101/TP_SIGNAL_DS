@@ -7,6 +7,11 @@ import pytest
 
 torch = pytest.importorskip("torch")
 
+from echolens.core.models.family_a import (  # noqa: E402
+    AttentionPooling,
+    SpectrogramCnn,
+    SpectrogramCrnn,
+)
 from echolens.training.evaluation import macro_f1  # noqa: E402
 from echolens.training.family_a import (  # noqa: E402
     FamilyAConfig,
@@ -15,10 +20,7 @@ from echolens.training.family_a import (  # noqa: E402
 )
 from echolens.training.family_a_esc50 import run_esc50_round  # noqa: E402
 from echolens.training.family_a_models import (  # noqa: E402
-    AttentionPooling,
     LabeledSpectrograms,
-    SpectrogramCnn,
-    SpectrogramCrnn,
     predict,
     predicted_classes,
     train_fixed_epochs,

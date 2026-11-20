@@ -15,10 +15,10 @@ import numpy as np
 import torch
 
 from echolens.core.data.splits import Esc50Round, esc50_round
+from echolens.core.models.family_a import Architecture
 from echolens.training.evaluation import accuracy, macro_f1
 from echolens.training.family_a import FamilyAConfig, LogMelSet, band_statistics, fold_indices
 from echolens.training.family_a_models import (
-    Architecture,
     LabeledSpectrograms,
     TrainedNetwork,
     predict,

@@ -4,15 +4,14 @@ import numpy as np
 import pytest
 from pydantic import ValidationError
 
+from echolens.core.models.whisper_frames import layer_means, whisper_useful_frames
 from echolens.training.embeddings import (
     EmbeddingMetadata,
     EncoderConfig,
-    layer_means,
     load_embeddings,
     load_embeddings_config,
     mean_cosine_of_random_pairs,
     save_embeddings,
-    whisper_useful_frames,
 )
 
 # Réglages de Whisper base (configs/embeddings.yaml) : 320 échantillons par trame de sortie,
