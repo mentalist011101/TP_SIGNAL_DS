@@ -74,7 +74,7 @@ class LayerWeightedHead(nn.Module):
 
 
 @dataclass(frozen=True)
-class EarlyStoppingResult:
+class ValidatedHeadResult:
     """Tête remise à sa meilleure époque, cette époque et son F1 macro de validation."""
 
     model: LayerWeightedHead
@@ -122,7 +122,7 @@ def train_with_validation(
     config: HeadsConfig,
     class_count: int,
     seed: int,
-) -> EarlyStoppingResult:
+) -> ValidatedHeadResult:
     """Entraîne sur la courbe complète et garde l'époque au meilleur F1 macro de validation.
 
     Avec patience à None (configuration actuelle), les max_epochs époques sont toutes faites ;
@@ -149,7 +149,7 @@ def train_with_validation(
         if epoch - best_epoch >= config.patience:
             break
     model.load_state_dict(best_state)
-    return EarlyStoppingResult(model=model, best_epoch=best_epoch, best_f1=best_f1)
+    return ValidatedHeadResult(model=model, best_epoch=best_epoch, best_f1=best_f1)
 
 
 def train_for_epochs(
@@ -196,13 +196,13 @@ def seed_predictions(model: LayerWeightedHead, features: FloatArray, seed: int) 
 
 def tune_head(
     train: LabeledSet, validation: LabeledSet, config: HeadsConfig, class_count: int
-) -> tuple[list[TuningOutcome], list[EarlyStoppingResult]]:
+) -> tuple[list[TuningOutcome], list[ValidatedHeadResult]]:
     """Essaie chaque réglage de la grille avec la graine tuning_seed, sur la courbe complète.
 
     Pour chaque réglage, la meilleure époque est choisie sur le F1 macro de validation.
     """
     outcomes: list[TuningOutcome] = []
-    results: list[EarlyStoppingResult] = []
+    results: list[ValidatedHeadResult] = []
     for setting in grid_settings(config):
         result = train_with_validation(
             train, validation, setting, config, class_count, config.tuning_seed
