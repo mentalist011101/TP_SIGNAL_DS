@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 // Préfixe commun de l'API versionnée exposée par Flask.
 export const API_BASE = '/api/v1'
@@ -52,6 +52,15 @@ export async function apiPostForm<T>(path: string, form: FormData): Promise<T> {
     throw new ApiError(response.status, message)
   }
   return (await response.json()) as T
+}
+
+// Suppression : l'API répond 204 (sans corps) ; on ne lit donc pas de JSON en retour.
+export async function apiDelete(path: string): Promise<void> {
+  const response = await fetch(`${API_BASE}${path}`, { method: 'DELETE' })
+  if (!response.ok) {
+    const message = await readErrorMessage(response, path)
+    throw new ApiError(response.status, message)
+  }
 }
 
 export interface HealthResponse {
@@ -166,6 +175,58 @@ export function useAnalysis(analysisId: string | null) {
     refetchInterval: (query) => {
       const analysis = query.state.data
       return nextPollDelay(analysis)
+    },
+  })
+}
+
+// Nombre d'analyses chargées par l'historique : le maximum accepté par l'API (MAX_PAGE_SIZE).
+const HISTORY_LIMIT = 100
+
+// Clé du cache de l'historique, partagée par la lecture et la suppression.
+const HISTORY_QUERY_KEY = ['analyses']
+
+// Vrai si au moins une analyse de la liste tourne encore (pending ou processing).
+function hasRunningAnalysis(analyses: Analysis[]): boolean {
+  for (const analysis of analyses) {
+    if (isAnalysisRunning(analysis)) {
+      return true
+    }
+  }
+  return false
+}
+
+// Historique : les analyses les plus récentes d'abord (EF-08). Rafraîchi chaque seconde tant
+// qu'une analyse de la liste tourne encore, pour que son statut se mette à jour tout seul.
+export function useAnalysisHistory() {
+  return useQuery({
+    queryKey: HISTORY_QUERY_KEY,
+    queryFn: () => {
+      const path = `/analyses?limit=${HISTORY_LIMIT}`
+      return apiGet<Analysis[]>(path)
+    },
+    refetchInterval: (query) => {
+      const analyses = query.state.data
+      if (analyses === undefined) {
+        return false
+      }
+      if (hasRunningAnalysis(analyses)) {
+        return POLL_INTERVAL_MS
+      }
+      return false
+    },
+  })
+}
+
+// Suppression d'une analyse, puis rechargement de l'historique pour la faire disparaître.
+export function useDeleteAnalysis() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (analysisId: string) => {
+      const path = `/analyses/${analysisId}`
+      return apiDelete(path)
+    },
+    onSuccess: () => {
+      return queryClient.invalidateQueries({ queryKey: HISTORY_QUERY_KEY })
     },
   })
 }
