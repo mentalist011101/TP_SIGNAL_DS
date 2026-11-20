@@ -103,6 +103,44 @@ export interface SpectrogramInfo {
   colormap_stops: string[]
 }
 
+// Contrat des résultats (C13) : un objet par tâche demandée, toujours avec les mêmes champs.
+// done : résultat calculé ; no_speech : pas de parole, donc pas d'émotion inventée ;
+// unavailable : tâche pas encore branchée (l'analyse réussit quand même).
+export type TaskResultStatus = 'done' | 'no_speech' | 'unavailable'
+
+// Probabilité d'une classe, avec son libellé français à afficher.
+export interface ClassProbability {
+  label: string
+  label_fr: string
+  probability: number
+}
+
+// Résultat d'un morceau de l'audio (frise temporelle, EF-12).
+export interface SegmentResult {
+  start_s: number
+  end_s: number
+  label: string
+  label_fr: string
+  probabilities: ClassProbability[]
+}
+
+// Résultat d'une tâche : la classe la plus probable sur tout l'audio, toutes les probabilités
+// (de la plus probable à la moins probable) et le modèle qui les a produites.
+export interface TaskResult {
+  status: TaskResultStatus
+  message: string | null
+  label: string | null
+  label_fr: string | null
+  probabilities: ClassProbability[]
+  model_id: string | null
+  model_version: string | null
+  calibrated: boolean | null
+  segments: SegmentResult[]
+}
+
+// Seules les tâches demandées sont présentes, d'où Partial.
+export type AnalysisResults = Partial<Record<AnalysisTask, TaskResult>>
+
 export interface Analysis {
   id: string
   created_at: string
@@ -115,6 +153,8 @@ export interface Analysis {
   audio_url: string | null
   spectrogram_url: string | null
   spectrogram: SpectrogramInfo | null
+  // null tant que l'analyse n'est pas terminée (status ≠ done).
+  results: AnalysisResults | null
 }
 
 export interface AnalysisRequest {
