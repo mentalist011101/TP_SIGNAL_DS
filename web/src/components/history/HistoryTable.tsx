@@ -37,9 +37,12 @@ function HistoryRow({ analysis }: { analysis: Analysis }) {
       <td className={`${CELL_CLASSES} font-mono whitespace-nowrap`}>
         {formatDate(analysis.created_at)}
       </td>
-      {/* Largeur minimale : un nom comme p04_tel_A_07_lecture.m4a tient sur une ligne. */}
+      {/* Largeur minimale : un nom comme p04_tel_A_07_lecture.m4a tient sur une ligne. Le nom
+          ouvre le résultat, car sur téléphone la colonne Actions est hors de l'écran. */}
       <td className={`${CELL_CLASSES} min-w-56 font-mono break-all`}>
-        {analysis.original_filename}
+        <Link to={`/analyses/${analysis.id}`} className={LINK_CLASSES}>
+          {analysis.original_filename}
+        </Link>
       </td>
       <td className={CELL_CLASSES}>{formatTasks(analysis.tasks)}</td>
       <td className={`${CELL_CLASSES} ${statusClasses}`}>{statusLabel}</td>
