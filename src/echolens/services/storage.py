@@ -1,15 +1,18 @@
 """Persistance des analyses (décision S3) : SQLite via SQLAlchemy 2, une seule table pour l'instant.
 
 Les tables des segments et des prédictions viendront avec le MCD MERISE ; elles ne sont pas
-anticipées ici. Les tables sont créées au démarrage, sans migrations.
+anticipées ici : les résultats sont stockés en JSON dans la table analyses (C13). Les tables
+sont créées au démarrage, sans migrations : une base créée par une version plus ancienne doit
+être supprimée, elle est recréée au démarrage suivant.
 """
 
 from __future__ import annotations
 
 from datetime import UTC, datetime
 from enum import StrEnum
+from typing import Any
 
-from sqlalchemy import JSON, DateTime, String, create_engine
+from sqlalchemy import JSON, DateTime, Engine, String, create_engine, inspect
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 
 
@@ -45,6 +48,9 @@ class AnalysisRecord(Base):
     # Liste des tâches demandées, stockée en texte JSON par SQLite (ex. ["emotion", "speaker"]).
     tasks: Mapped[list[str]] = mapped_column(JSON)
     profile: Mapped[str] = mapped_column(String(16))
+    # Résultats, un objet par tâche demandée (JSON, contrat de l'API) ; null tant que
+    # l'analyse n'est pas terminée.
+    results: Mapped[dict[str, Any] | None] = mapped_column(JSON, default=None)
 
 
 def create_session_factory(database_url: str) -> sessionmaker[Session]:
@@ -55,4 +61,23 @@ def create_session_factory(database_url: str) -> sessionmaker[Session]:
     """
     engine = create_engine(database_url)
     Base.metadata.create_all(engine)
+    check_columns_are_current(engine)
     return sessionmaker(bind=engine, expire_on_commit=False)
+
+
+def check_columns_are_current(engine: Engine) -> None:
+    """Refuse une base créée par une version plus ancienne, avec un message clair.
+
+    create_all crée les tables absentes, mais n'ajoute pas de colonne à une table existante :
+    sans ce contrôle, la première requête échouerait sur « no such column ».
+    """
+    inspector = inspect(engine)
+    existing = {column["name"] for column in inspector.get_columns(AnalysisRecord.__tablename__)}
+    expected = set(AnalysisRecord.__table__.columns.keys())
+    missing = sorted(expected - existing)
+    if missing:
+        raise RuntimeError(
+            f"La base de données ({engine.url}) a été créée par une version plus ancienne "
+            f"d'EchoLens : colonnes manquantes {', '.join(missing)}. Supprimez le fichier de la "
+            "base (var/echolens.db par défaut) : il sera recréé au prochain démarrage."
+        )
