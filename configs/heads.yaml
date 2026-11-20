@@ -10,8 +10,10 @@ batch_size: 64
 # Le schedule cosinus descend de lr à 0 sur max_epochs époques, au réglage comme à
 # l'entraînement final : avec un nombre d'époques fixé, le taux suit la même courbe.
 max_epochs: 100
-# Early stopping : arrêt après `patience` époques sans meilleur F1 macro de validation.
-patience: 10
+# Pas d'arrêt anticipé (décision du 19 nov. 2026) : le cosinus va jusqu'au bout et la
+# validation choisit la meilleure époque sur la courbe complète. Un entier n arrêterait le
+# réglage après n époques sans meilleur F1 macro de validation.
+patience: null
 # Pénalité des poids d'AdamW, écrite explicitement (valeur par défaut de torch).
 weight_decay: 0.01
 

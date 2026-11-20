@@ -93,6 +93,17 @@ def test_real_config_gives_four_settings() -> None:
     assert config.statistics_seed in config.seeds
 
 
+def test_config_has_no_early_stopping_but_accepts_a_patience() -> None:
+    config = load_heads_config()
+    assert config.patience is None
+    content = config.model_dump()
+    content["patience"] = 10
+    assert HeadsConfig.model_validate(content).patience == 10
+    content["patience"] = 0
+    with pytest.raises(ValidationError):
+        HeadsConfig.model_validate(content)
+
+
 def test_config_refuses_statistics_seed_outside_seeds() -> None:
     content = load_heads_config().model_dump()
     content["statistics_seed"] = 7

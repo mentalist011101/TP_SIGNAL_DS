@@ -62,7 +62,8 @@ class HeadsConfig(BaseModel):
     hidden_size: int = Field(gt=0)
     batch_size: int = Field(gt=0)
     max_epochs: int = Field(gt=0)
-    patience: int = Field(gt=0)
+    # None : pas d'arrêt anticipé, le réglage parcourt les max_epochs époques.
+    patience: int | None = Field(gt=0)
     weight_decay: float = Field(ge=0)
     learning_rates: list[float] = Field(min_length=1)
     dropouts: list[float] = Field(min_length=1)
