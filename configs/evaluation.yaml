@@ -1,6 +1,13 @@
 # Paramètres du module d'évaluation comparée (P8, E2, E5).
 n_bootstrap: 1000     # nombre de rééchantillonnages pour les intervalles de confiance
 confidence: 0.95      # niveau de l'intervalle (95 %)
-ece_bins: 10          # nombre d'intervalles de l'ECE (utilisé plus tard)
+ece_bins: 10          # nombre d'intervalles de l'ECE (E2)
+# Calibration par température (E2, ENF-06) : T est cherchée sur log T entre ces bornes, par
+# scipy.optimize.minimize_scalar (méthode « bounded »), jusqu'à cette précision sur log T.
+temperature_min: 0.05
+temperature_max: 20.0
+temperature_log_tolerance: 1.0e-5
+# Plancher des probabilités avant le logarithme : log(0) n'existe pas.
+probability_floor: 1.0e-12
 seed: 42              # graine : mêmes intervalles à chaque exécution
 mcnemar_exact_below: 25   # en dessous de ce nombre de désaccords, test exact (binomial)
