@@ -52,3 +52,19 @@ training:
   final_seeds: [42, 43, 44]
   # Taille des lots pour la prédiction (sans effet sur le résultat, seulement sur la mémoire).
   prediction_batch_size: 128
+
+# Émotions (C12) : les mêmes réseaux (avec 6 sorties) et les mêmes augmentations sur CREMA-D
+# et RAVDESS, avec le découpage par acteur de C4 (P1). Les réglages absents ici (lots, AdamW,
+# augmentations, réseau) sont ceux des sections ci-dessus.
+emotions:
+  # Fenêtre fixe de 3 s (301 trames de 10 ms) : la plupart des extraits de CREMA-D durent de
+  # 2 à 3 s, ceux de RAVDESS de 3 à 4 s. Train : fenêtre tirée au hasard dans un extrait plus
+  # long (à chaque lot) ; validation et test : fenêtre centrale ; extrait plus court : complété
+  # à la fin par du silence (plancher du log-Mel, R2), comme les extraits d'ESC-50.
+  window_s: 3.0
+  # Courbe complète de 100 époques, cosinus sur 100 époques, sans arrêt anticipé. Chaque graine
+  # garde sa meilleure époque de validation : un seul découpage (P1), pas de réentraînement.
+  max_epochs: 100
+  learning_rates: [1.0e-3, 3.0e-4]   # choisi sur la validation avec la graine de réglage
+  tuning_seed: 42
+  seeds: [42, 43, 44]

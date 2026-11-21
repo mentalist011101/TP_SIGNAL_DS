@@ -19,6 +19,7 @@ from torch import nn
 from torch.nn import functional
 
 from echolens.core.features import FloatArray
+from echolens.core.frame_windows import center_windows, random_windows
 from echolens.core.models.family_a import Architecture, build_network
 from echolens.training.evaluation import IntArray, macro_f1
 from echolens.training.family_a import (
@@ -33,10 +34,19 @@ from echolens.training.family_a import (
 
 @dataclass(frozen=True)
 class LabeledSpectrograms:
-    """Log-Mel en dB absolus (non standardisés) et classe de chaque extrait."""
+    """Log-Mel en dB absolus (non standardisés) et classe de chaque extrait.
+
+    Sans lengths, log_mels ont déjà la longueur que voit le réseau (ESC-50, C9). Avec lengths
+    (émotions, C12), log_mels sont les extraits entiers, complétés jusqu'au plus long par du
+    silence : à l'entraînement, chaque lot prend une fenêtre de window_frames tirée au hasard,
+    et les statistiques de standardisation se calculent sur les fenêtres centrales.
+    """
 
     log_mels: FloatArray  # (extraits, bandes, trames)
     labels: IntArray
+    lengths: IntArray | None = None  # nombre de vraies trames de chaque extrait
+    window_frames: int | None = None  # longueur de la fenêtre vue par le réseau
+    silence_db: float | None = None  # valeur du silence ajouté (plancher du log-Mel, R2)
 
 
 @dataclass(frozen=True)
@@ -162,7 +172,7 @@ def train_one_epoch(
     losses = []
     for start in range(0, len(order), batch_size):
         batch_indices = order[start : start + batch_size]
-        batch_log_mels = train.log_mels[batch_indices]
+        batch_log_mels = _training_windows(train, batch_indices, state.generator)
         batch_labels = train.labels[batch_indices]
         # Augmentations recalculées à chaque époque, sur le train seulement (P6).
         batch = augment_batch(
@@ -240,8 +250,9 @@ def _start_training(
     config: FamilyAConfig,
     device: torch.device,
 ) -> _TrainingState:
-    # Étape 1 : statistiques de standardisation sur CET entraînement seulement (R4).
-    statistics = band_statistics(train.log_mels)
+    # Étape 1 : statistiques de standardisation sur CET entraînement seulement (R4), calculées
+    # sur ce que voit le réseau (les fenêtres centrales quand les extraits sont découpés).
+    statistics = band_statistics(_statistics_windows(train))
     # Étape 2 : même graine → mêmes poids de départ, même ordre des lots, mêmes augmentations.
     seed_everything(seed)
     generator = np.random.default_rng(seed)
@@ -269,3 +280,22 @@ def _training_step(state: _TrainingState, batch: MixedBatch, device: torch.devic
     torch.autograd.backward(loss)
     state.optimizer.step()
     return float(loss.item())
+
+
+def _training_windows(
+    train: LabeledSpectrograms, batch_indices: IntArray, generator: np.random.Generator
+) -> FloatArray:
+    batch_log_mels = train.log_mels[batch_indices]
+    if train.lengths is None or train.window_frames is None or train.silence_db is None:
+        return batch_log_mels
+    # Émotions (C12) : une fenêtre tirée au hasard dans chaque extrait, à chaque lot.
+    batch_lengths = train.lengths[batch_indices]
+    return random_windows(
+        batch_log_mels, batch_lengths, train.window_frames, train.silence_db, generator
+    )
+
+
+def _statistics_windows(train: LabeledSpectrograms) -> FloatArray:
+    if train.lengths is None or train.window_frames is None or train.silence_db is None:
+        return train.log_mels
+    return center_windows(train.log_mels, train.lengths, train.window_frames, train.silence_db)
