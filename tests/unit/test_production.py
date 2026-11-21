@@ -18,6 +18,7 @@ from echolens.core.models.production_config import (
 from echolens.training.evaluation import EvaluationConfig
 from echolens.training.production import (
     RoundPredictions,
+    huggingface_readme,
     load_production_plan,
     median_value,
     out_of_fold_calibration,
@@ -124,3 +125,15 @@ def test_production_plan_lists_the_three_models() -> None:
     assert plan.model("echolens-sound-event-crnn").license == "cc-by-nc-3.0"
     with pytest.raises(KeyError):
         plan.model("inconnu")
+
+
+def test_huggingface_readme_has_license_header_then_the_card() -> None:
+    card = "# Fiche\n\nTexte.\n"
+    readme = huggingface_readme(card, "cc-by-nc-3.0", "openai/whisper-base")
+    lines = readme.splitlines()
+    assert lines[0] == "---"
+    assert "license: cc-by-nc-3.0" in lines
+    assert "base_model: openai/whisper-base" in lines
+    assert readme.endswith(card)
+    crnn_readme = huggingface_readme("# Fiche\n", "cc-by-nc-3.0", None)
+    assert "base_model" not in crnn_readme

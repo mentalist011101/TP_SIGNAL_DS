@@ -136,3 +136,23 @@ def validation_calibration(
     return CalibrationOutcome(
         temperature=temperature, ece_before=ece_before, ece_after=ece_after, round_temperatures=[]
     )
+
+
+def huggingface_readme(card: str, license_id: str, base_model: str | None) -> str:
+    """README.md d'un dépôt Hugging Face : en-tête YAML, puis la fiche du modèle telle quelle.
+
+    L'en-tête dit à Hugging Face la licence (non commerciale, héritée des données), la langue
+    de la fiche, la tâche et, pour les têtes de la famille B, le modèle de base (encodeur gelé).
+    """
+    header = [
+        "---",
+        f"license: {license_id}",
+        "language: [fr]",
+        "pipeline_tag: audio-classification",
+        "tags: [audio, audio-classification, echolens, safetensors]",
+    ]
+    if base_model is not None:
+        header.append(f"base_model: {base_model}")
+    header.append("---")
+    header_text = "\n".join(header)
+    return header_text + "\n\n" + card
