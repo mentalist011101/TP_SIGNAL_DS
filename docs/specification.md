@@ -199,7 +199,7 @@ deux profils, « qualité » (fichiers) et « temps réel » (flux).
 | U2 | Tailwind CSS (+ shadcn/ui) |
 | U3 | TanStack Query, React Router |
 | U4 | Types TypeScript générés depuis l'OpenAPI (`npm run gen:api`) |
-| U5 | wavesurfer.js (plugin regions), Recharts, WebSocket natif |
+| U5 | Barres de probabilités en CSS ; Recharts seulement si un vrai graphique en a besoin (courbes, comparaisons) ; forme d'onde en canvas (wavesurfer.js non utilisé) ; WebSocket natif |
 | U6 | Spectrogramme calculé côté serveur par `core` |
 | U7 | Erreurs soignées, interface en français |
 
@@ -235,3 +235,4 @@ et `/docs`.
 | 11 nov. 2026 | Protocole publié dans docs/protocole.md (Ly2 et Ly5 de Lynn, décisions du 9 au 11 novembre) ; P6 : valeur des masques ; P1 : règle exacte du tirage alignée sur le protocole |
 | 12 nov. 2026 | Brique 1 (C2, PR #19) : D4 désactivé par défaut, force 0,8 provisoire, protocole d'ablation du sprint 2 ; D5 : webrtcvad à la place de Silero VAD, paramètres de nettoyage des segments fixés ; paramètres dans configs/preprocess.yaml |
 | 19 nov. 2026 | Brique 4 et protocole (§ 4, § 5) : plus d'arrêt anticipé pour tous les modèles ; courbe complète, meilleure époque et taux d'apprentissage choisis sur la validation, puis réentraînement inchangé. Diagnostic C9 (`c9_early_stopping_diagnostic.ipynb`, réglage rejoué sur 150 époques) : CNN 0,659 à l'époque 43 contre 0,767 à l'époque 145 ; CRNN 0,740 à l'époque 44 contre 0,806 à l'époque 147 |
+| 21 nov. 2026 | Brique 7, U5 (relecture du point d'étape du front) : barres de probabilités en CSS, sans dépendance ; Recharts seulement si un vrai graphique en a besoin ; wavesurfer.js non utilisé, la forme d'onde est dessinée en canvas |
