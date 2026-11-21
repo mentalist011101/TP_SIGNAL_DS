@@ -2,15 +2,7 @@ import type { ComponentType } from 'react'
 import { Link, NavLink, Outlet } from 'react-router-dom'
 import { useHealth } from '../api/client.ts'
 import Brand from './Brand.tsx'
-import {
-  CompareIcon,
-  HistoryIcon,
-  LiveIcon,
-  ModelsIcon,
-  PlusIcon,
-  SpeakersIcon,
-  WaveIcon,
-} from './icons.tsx'
+import { HistoryIcon, PlusIcon, WaveIcon } from './icons.tsx'
 import ThemeToggle from './ThemeToggle.tsx'
 
 interface NavItem {
@@ -19,18 +11,11 @@ interface NavItem {
   icon: ComponentType<{ className?: string }>
 }
 
-// Pages déjà utilisables.
+// Pages livrées. Les pages encore vides (Direct, Comparer, Locuteurs, Modèles) n'entrent au
+// menu qu'une fois livrées.
 const MAIN_ITEMS: NavItem[] = [
   { to: '/analyser', label: 'Analyser', icon: WaveIcon },
   { to: '/historique', label: 'Historique', icon: HistoryIcon },
-]
-
-// Pages prévues par la spécification, encore vides : on les annonce sans les cacher.
-const SOON_ITEMS: NavItem[] = [
-  { to: '/direct', label: 'Direct', icon: LiveIcon },
-  { to: '/comparer', label: 'Comparer', icon: CompareIcon },
-  { to: '/locuteurs', label: 'Locuteurs', icon: SpeakersIcon },
-  { to: '/modeles', label: 'Modèles', icon: ModelsIcon },
 ]
 
 const NEW_ANALYSIS_CLASSES =
@@ -89,7 +74,6 @@ function Sidebar() {
         </Link>
         <nav className="space-y-6" aria-label="Menu de l’application">
           <NavSection title="Espace" items={MAIN_ITEMS} />
-          <NavSection title="Bientôt" items={SOON_ITEMS} />
         </nav>
         <div className="mt-auto flex items-center justify-between border-t border-rule px-1.5 pt-4">
           <span className="text-xs text-ink-faint">Thème</span>
@@ -102,7 +86,6 @@ function Sidebar() {
 
 // Barre du haut (téléphone) : logo, thème et action principale, puis le menu qui défile.
 function MobileBar() {
-  const allItems = [...MAIN_ITEMS, ...SOON_ITEMS]
   return (
     <header className="sticky top-0 z-10 space-y-3 border-b border-rule bg-paper/85 px-4 py-3 backdrop-blur lg:hidden">
       <div className="flex items-center justify-between gap-3">
@@ -116,7 +99,7 @@ function MobileBar() {
         </div>
       </div>
       <nav className="flex gap-1 overflow-x-auto" aria-label="Menu de l’application">
-        {allItems.map((item) => (
+        {MAIN_ITEMS.map((item) => (
           <NavLink key={item.to} to={item.to} className={mobileItemClasses}>
             {item.label}
           </NavLink>
