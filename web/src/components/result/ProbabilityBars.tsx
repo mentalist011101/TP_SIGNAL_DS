@@ -2,10 +2,11 @@ import type { CSSProperties } from 'react'
 import type { ClassProbability } from '../../api/client.ts'
 import { formatProbability } from './taskResult.ts'
 
-// Une ligne : libellé, barre, pourcentage. La largeur des deux colonnes de texte est fixe pour que
-// toutes les barres commencent et finissent au même endroit.
+// Une ligne : libellé, barre, pourcentage. Les deux colonnes de texte ont une largeur fixe pour
+// que toutes les barres commencent et finissent au même endroit ; celle du pourcentage tient
+// « < 0,1 % » sur une ligne.
 const ROW_CLASSES =
-  'grid grid-cols-[minmax(0,10rem)_minmax(0,1fr)_3.5rem] items-center gap-3 text-sm'
+  'grid grid-cols-[minmax(0,10rem)_minmax(0,1fr)_4.5rem] items-center gap-3 text-sm'
 
 // Longueur de la barre : la probabilité en pourcentage de la largeur disponible.
 function barStyle(probability: number): CSSProperties {
@@ -30,7 +31,7 @@ function ProbabilityRow({ item, isTop }: { item: ClassProbability; isTop: boolea
           style={barStyle(item.probability)}
         />
       </span>
-      <span className="text-right font-mono text-ink-soft">{percentText}</span>
+      <span className="text-right font-mono whitespace-nowrap text-ink-soft">{percentText}</span>
     </li>
   )
 }
