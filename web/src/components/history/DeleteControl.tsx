@@ -3,7 +3,7 @@ import { describeApiError, useDeleteAnalysis } from '../../api/client.ts'
 
 // Bouton secondaire de la charte. Pas de couleur danger : elle est réservée aux erreurs.
 const BUTTON_CLASSES =
-  'rounded-btn border border-rule-strong bg-card px-3 py-1 text-sm text-ink shadow-hard-sm transition-colors duration-200 ease-out-soft hover:bg-paper-alt disabled:opacity-50'
+  'rounded-btn border border-rule-strong bg-card px-3 py-1 text-sm text-ink transition-colors duration-200 ease-out-soft hover:bg-paper-alt disabled:opacity-50'
 
 interface ConfirmDeleteProps {
   filename: string

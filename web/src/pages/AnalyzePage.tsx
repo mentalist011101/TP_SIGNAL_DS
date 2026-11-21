@@ -41,7 +41,7 @@ function analyzeHint(hasFile: boolean, hasTasks: boolean): string | null {
     return 'Importez un fichier ou enregistrez-vous au micro pour commencer.'
   }
   if (!hasTasks) {
-    return 'Cochez au moins une tâche pour lancer l’analyse.'
+    return 'Cochez au moins un outil pour lancer l’analyse.'
   }
   return null
 }
@@ -179,9 +179,10 @@ export default function AnalyzePage() {
   return (
     <section className="space-y-6">
       <div className="space-y-2">
-        <h1 className="font-display text-3xl font-extrabold tracking-tight">Analyser un audio</h1>
+        <p className="font-mono text-xs text-ink-faint">Espace / Nouvelle analyse</p>
+        <h1 className="text-5xl leading-tight">Nouvelle analyse</h1>
         <p className="text-ink-soft">
-          Choisissez un audio, les tâches et le profil : le résultat s’ouvre dès qu’il est prêt.
+          Choisissez un audio, les outils et le profil : le résultat s’ouvre dès qu’il est prêt.
         </p>
       </div>
       <div className={LAYOUT_CLASSES}>

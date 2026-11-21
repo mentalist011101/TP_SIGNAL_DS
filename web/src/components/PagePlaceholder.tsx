@@ -13,7 +13,7 @@ export default function PagePlaceholder({
 }: PagePlaceholderProps) {
   return (
     <section className="space-y-6">
-      <h1 className="font-display text-3xl font-extrabold tracking-tight">{title}</h1>
+      <h1 className="text-5xl leading-tight">{title}</h1>
       <div className="max-w-2xl space-y-4 rounded-card border border-dashed border-rule-strong bg-card p-6">
         <p className="label-mono text-ink-soft">Bientôt</p>
         <p className="text-ink-soft">{description}</p>

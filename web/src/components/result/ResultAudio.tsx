@@ -6,11 +6,11 @@ import SpectrogramView from '../analyze/SpectrogramView.tsx'
 export default function ResultAudio({ analysis }: { analysis: Analysis }) {
   return (
     <section className="space-y-3 rounded-card border border-rule bg-card p-5">
-      <h2 className="font-display text-lg font-bold">Écoute</h2>
+      <h2 className="text-base font-semibold">Écoute</h2>
       {analysis.audio_url !== null && (
         <audio src={analysis.audio_url} controls preload="metadata" className="w-full" />
       )}
-      <h2 className="font-display text-lg font-bold">Spectrogramme</h2>
+      <h2 className="text-base font-semibold">Spectrogramme</h2>
       <SpectrogramView analysis={analysis} />
     </section>
   )

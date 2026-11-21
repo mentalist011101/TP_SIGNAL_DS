@@ -9,6 +9,7 @@ import {
 import AnalysisProgress from '../components/analyze/AnalysisProgress.tsx'
 import ResultAudio from '../components/result/ResultAudio.tsx'
 import ResultHeader from '../components/result/ResultHeader.tsx'
+import ResultHighlights from '../components/result/ResultHighlights.tsx'
 import { AnalysisNotFound, FailedAnalysis } from '../components/result/ResultMessages.tsx'
 import TaskResultList from '../components/result/TaskResultList.tsx'
 import { ArrowLeftIcon } from '../components/icons.tsx'
@@ -45,6 +46,7 @@ function ResultBody({ analysis }: { analysis: Analysis }) {
           </p>
         </div>
       )}
+      <ResultHighlights analysis={analysis} />
       <ResultAudio analysis={analysis} />
       <TaskResultList analysis={analysis} />
     </>

@@ -4,6 +4,10 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import App from './App.tsx'
 import './index.css'
+import { applyTheme, readSavedTheme } from './theme.ts'
+
+// Thème appliqué avant le premier affichage, pour éviter un éclair de l'autre thème.
+applyTheme(readSavedTheme())
 
 // Client de requêtes partagé : cache et états de chargement des appels à l'API.
 const queryClient = new QueryClient({

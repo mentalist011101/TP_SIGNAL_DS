@@ -1,93 +1,87 @@
 @import 'tailwindcss';
 
-/* Charte EchoLens : jetons nommés par RÔLE, jamais par couleur (voir docs/design.md).
-   Reprise de la charte du portfolio de Luciano, avec un accent vert propre à EchoLens. */
+/* Charte EchoLens v2 : jetons nommés par RÔLE, jamais par couleur (voir docs/design.md).
+   Thème sombre par défaut (anthracite chaud) ; thème clair « papier » sur demande, quand la
+   page porte data-theme="light" sur <html>. */
 @theme {
-  /* Fond de la page (papier). */
-  --color-paper: #f7f3ea;
-  /* Fond secondaire : zones en retrait, survols discrets. */
-  --color-paper-alt: #efe9dc;
-  /* Fond des cartes posées sur le papier. */
-  --color-card: #fffdf8;
+  /* Fond de la page. */
+  --color-paper: #131211;
+  /* Zones en retrait, survols discrets, pistes des barres. */
+  --color-paper-alt: #24221f;
+  /* Fond des surfaces posées sur la page (cartes, barre latérale). */
+  --color-card: #1a1917;
   /* Texte principal. */
-  --color-ink: #16181d;
+  --color-ink: #f2efe8;
   /* Texte secondaire : consignes, libellés. */
-  --color-ink-soft: #5c6069;
-  /* Texte tertiaire : mentions discrètes, valeurs vides. */
-  --color-ink-faint: #8a8d95;
+  --color-ink-soft: #b5afa5;
+  /* Mentions discrètes (5,4:1 sur le fond : lisible malgré tout). */
+  --color-ink-faint: #8f897f;
   /* Filets et bordures légères. */
-  --color-rule: rgba(22, 24, 29, 0.14);
+  --color-rule: rgba(242, 239, 232, 0.09);
   /* Bordures marquées : boutons secondaires, champs. */
-  --color-rule-strong: rgba(22, 24, 29, 0.32);
-  /* Fond sombre fixe des tracés (forme d'onde). */
-  --color-night: #151c2e;
+  --color-rule-strong: rgba(242, 239, 232, 0.18);
+  /* Fond des tracés (forme d'onde). */
+  --color-night: #0b0a09;
   /* Texte posé sur night ou sur les données : clair dans les deux thèmes. */
   --color-on-night: #f1efe8;
-  /* Accent : tout ce qui se clique (bouton principal, lien, focus). */
-  --color-accent: #4a7a3a;
+  /* Accent : tout ce qui se clique (bouton principal, cases, segment choisi). Monochrome :
+     crème sur fond sombre, encre sur fond clair. */
+  --color-accent: #f2efe8;
   /* Accent au survol. */
-  --color-accent-deep: #355a29;
-  /* Accent clair, pour le texte ou le tracé sur fond sombre (forme d'onde). */
+  --color-accent-deep: #d9d3c7;
+  /* Tracé sur fond sombre (forme d'onde) : le vert mousse, dans les deux thèmes. */
   --color-accent-soft: #9cc58a;
-  /* Texte posé sur l'accent (bouton principal) : blanc, 5,08:1 sur l'accent (WCAG AA). */
-  --color-on-accent: #ffffff;
-  /* Accent employé comme TEXTE (liens) ou contour de focus : accent en clair, accent-soft en
-     sombre, car l'accent ne fait que 3,6:1 sur le papier sombre. */
-  --color-accent-ink: #4a7a3a;
+  /* Texte posé sur l'accent (bouton principal). */
+  --color-on-accent: #131211;
+  /* Accent employé comme TEXTE (liens) ou contour de focus. */
+  --color-accent-ink: #f2efe8;
+  /* Marque : le vert mousse, réservé au logo, aux statuts et au « en direct ». */
+  --color-brand: #9cc58a;
   /* Erreurs uniquement. */
-  --color-danger: #b4400f;
+  --color-danger: #e8763a;
 
-  /* Titres. */
-  --font-display: 'Archivo', system-ui, sans-serif;
-  /* Texte courant. */
+  /* Grands titres : serif élégant, une seule graisse. */
+  --font-display: 'Instrument Serif', Georgia, serif;
+  /* Texte courant et petits titres. */
   --font-sans: 'Inter', system-ui, sans-serif;
-  /* Valeurs techniques : Hz, dB, durées, noms de fichiers. */
+  /* Valeurs techniques : Hz, dB, durées, noms de fichiers, étiquettes. */
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
 
-  /* Coins des cartes. */
-  --radius-card: 3px;
-  /* Coins des boutons et pastilles. */
-  --radius-btn: 6px;
-
-  /* Ombre douce des cartes. */
-  --shadow-card: 0 1px 1px rgba(22, 24, 29, 0.05), 0 10px 24px -14px rgba(22, 24, 29, 0.35);
-  /* Ombre dure des boutons secondaires. */
-  --shadow-hard-sm: 1px 1px 0 rgba(22, 24, 29, 0.24);
+  /* Coins des surfaces. */
+  --radius-card: 16px;
+  /* Coins des boutons, pastilles et champs : en pilule. */
+  --radius-btn: 999px;
 
   /* Courbe des transitions (survols). */
   --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-/* Le thème sombre suit la préférence du système (le portfolio, lui, utilise une classe .dark). */
-@custom-variant dark (@media (prefers-color-scheme: dark));
-
 :root {
-  /* Points du grain de papier. */
-  --pattern-grain-1: rgba(22, 24, 29, 0.05);
-  --pattern-grain-2: rgba(22, 24, 29, 0.035);
-  color-scheme: light;
+  /* Points de la grille de fond. */
+  --pattern-dot: rgba(242, 239, 232, 0.07);
+  color-scheme: dark;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-paper: #12151c;
-    --color-paper-alt: #171b24;
-    --color-card: #1b202b;
-    --color-ink: #f1efe8;
-    --color-ink-soft: #b6bac4;
-    --color-ink-faint: #7e8492;
-    --color-night: #090b10;
-    --color-rule: rgba(255, 255, 255, 0.12);
-    --color-rule-strong: rgba(255, 255, 255, 0.26);
-    /* La rouille est éclaircie pour rester lisible sur fond sombre. */
-    --color-danger: #e8763a;
-    /* Jamais l'accent comme texte en sombre : accent-soft (9,36:1 sur le papier sombre). */
-    --color-accent-ink: #9cc58a;
-    --shadow-card: 0 1px 1px rgba(0, 0, 0, 0.4), 0 10px 24px -14px rgba(0, 0, 0, 0.65);
-    --pattern-grain-1: rgba(255, 255, 255, 0.045);
-    --pattern-grain-2: rgba(255, 255, 255, 0.03);
-    color-scheme: dark;
-  }
+/* Thème clair « papier » : le papier de la charte v1, avec des gris assez foncés pour le texte
+   discret (4,6:1 au moins sur le fond). */
+:root[data-theme='light'] {
+  --color-paper: #f7f3ea;
+  --color-paper-alt: #ebe4d4;
+  --color-card: #fffdf8;
+  --color-ink: #16181d;
+  --color-ink-soft: #55595f;
+  --color-ink-faint: #6b6e74;
+  --color-rule: rgba(22, 24, 29, 0.1);
+  --color-rule-strong: rgba(22, 24, 29, 0.22);
+  --color-night: #151c2e;
+  --color-accent: #16181d;
+  --color-accent-deep: #2b2e35;
+  --color-on-accent: #f7f3ea;
+  --color-accent-ink: #16181d;
+  --color-brand: #4a7a3a;
+  --color-danger: #b4400f;
+  --pattern-dot: rgba(22, 24, 29, 0.06);
+  color-scheme: light;
 }
 
 @layer base {
@@ -97,11 +91,11 @@
     font-family: var(--font-sans);
   }
 
-  h1,
-  h2,
-  h3 {
+  /* Seuls les grands titres prennent le serif ; les petits titres restent en Inter. */
+  h1 {
     font-family: var(--font-display);
-    letter-spacing: -0.02em;
+    font-weight: 400;
+    letter-spacing: -0.015em;
   }
 
   :focus-visible {
@@ -110,25 +104,18 @@
   }
 }
 
-/* Grain du papier, repris du portfolio. Uniquement sur le fond de page : jamais derrière des
-   données (cartes, forme d'onde, spectrogramme). */
-@utility paper-grain {
-  background-image:
-    radial-gradient(var(--pattern-grain-1) 1px, transparent 1px),
-    radial-gradient(var(--pattern-grain-2) 1px, transparent 1px);
-  background-size:
-    22px 22px,
-    37px 37px;
-  background-position:
-    0 0,
-    11px 13px;
+/* Grille de points, sur le fond de page seulement : jamais derrière des données (cartes,
+   forme d'onde, spectrogramme). */
+@utility dot-grid {
+  background-image: radial-gradient(var(--pattern-dot) 1px, transparent 1px);
+  background-size: 22px 22px;
 }
 
-/* Petites capitales mono du portfolio : sous-titres, pied de page. */
+/* Petites capitales mono : étiquettes de rubrique, sous-titres. */
 @utility label-mono {
   font-family: var(--font-mono);
   font-size: 0.6875rem;
   font-weight: 500;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
 }

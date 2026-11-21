@@ -1,4 +1,5 @@
 import { useEffect, useRef, type DragEvent } from 'react'
+import WaveRibbon from '../WaveRibbon.tsx'
 import AudioPicker from './AudioPicker.tsx'
 import WaveformCanvas from './WaveformCanvas.tsx'
 
@@ -7,33 +8,11 @@ const CARD_CLASSES = 'rounded-card border border-rule bg-card p-5'
 const DROP_ZONE_CLASSES =
   'flex min-h-80 flex-col items-center justify-center gap-5 rounded-card border border-dashed border-rule-strong bg-paper-alt/50 p-8 text-center'
 
-// Hauteurs des barres de l'icône (en unités du dessin de 45 × 32).
-const ICON_BAR_HEIGHTS = [8, 18, 28, 14, 24, 10, 20, 6]
-
 type AudioHandler = (file: File) => void
 
 // Clé qui change à chaque nouveau fichier (un enregistrement a toujours une date différente).
 function fileKey(file: File): string {
   return `${file.name}-${file.lastModified}`
-}
-
-// Petite forme d'onde décorative, dans la couleur du texte discret.
-function WaveIcon() {
-  const bars = ICON_BAR_HEIGHTS.map((height, index) => {
-    const x = index * 6
-    const y = (32 - height) / 2
-    return <rect key={x} x={x} y={y} width="3" height={height} rx="1.5" />
-  })
-  return (
-    <svg
-      viewBox="0 0 45 32"
-      className="h-10 w-14 text-ink-faint"
-      fill="currentColor"
-      aria-hidden="true"
-    >
-      {bars}
-    </svg>
-  )
 }
 
 // Zone d'accueil : on y dépose un fichier, ou on passe par les deux boutons. Les limites sont
@@ -55,9 +34,12 @@ function EmptyAudio({ onAudioSelected }: { onAudioSelected: AudioHandler }) {
 
   return (
     <div className={DROP_ZONE_CLASSES} onDragOver={handleDragOver} onDrop={handleDrop}>
-      <WaveIcon />
+      {/* Ruban d'ondes animé, en petit : la zone attend un son. */}
+      <div className="w-full max-w-md">
+        <WaveRibbon className="h-20" />
+      </div>
       <div className="space-y-1">
-        <p className="font-display text-xl font-bold">Déposez un fichier audio ici</p>
+        <p className="font-display text-3xl">Déposez un fichier audio ici</p>
         <p className="text-sm text-ink-soft">ou choisissez une source :</p>
       </div>
       <AudioPicker onAudioSelected={onAudioSelected} />

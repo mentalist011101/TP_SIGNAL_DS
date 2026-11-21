@@ -4,7 +4,7 @@ const MESSAGE_CARD_CLASSES = 'space-y-4 rounded-card border border-rule bg-card 
 
 // Bouton secondaire de la charte, sous forme de lien.
 const LINK_BUTTON_CLASSES =
-  'inline-block rounded-btn border border-rule-strong bg-card px-3 py-1.5 text-sm font-semibold text-ink shadow-hard-sm transition-colors duration-200 ease-out-soft hover:bg-paper-alt'
+  'inline-block rounded-btn border border-rule-strong bg-card px-3 py-1.5 text-sm font-semibold text-ink transition-colors duration-200 ease-out-soft hover:bg-paper-alt'
 
 // Échec pendant le traitement : la raison donnée par le serveur, puis que faire (maquette,
 // catalogue des erreurs S9 à S12). « Relancer » ramène sur Analyser, où l'on choisit l'audio.
@@ -14,7 +14,7 @@ export function FailedAnalysis({ reason }: { reason: string | null }) {
       <p>L’analyse n’a pas pu aboutir :</p>
       <p className="font-semibold text-danger">{reason}</p>
       <div className="flex flex-wrap gap-3">
-        <Link to="/" className={LINK_BUTTON_CLASSES}>
+        <Link to="/analyser" className={LINK_BUTTON_CLASSES}>
           Relancer l’analyse
         </Link>
         <Link to="/historique" className={LINK_BUTTON_CLASSES}>

@@ -8,19 +8,21 @@ import ModelsPage from './pages/ModelsPage.tsx'
 import ResultPage from './pages/ResultPage.tsx'
 import SpeakersPage from './pages/SpeakersPage.tsx'
 
-// Table des routes : une page par fonctionnalité de la spécification (brique 7).
+// Table des routes : l'application dans sa coque (menu à gauche), une page par fonctionnalité
+// de la spécification (brique 7). La racine mène à la page Analyser.
 export default function App() {
   return (
     <Routes>
+      <Route index element={<Navigate to="/analyser" replace />} />
       <Route element={<Layout />}>
-        <Route index element={<AnalyzePage />} />
+        <Route path="analyser" element={<AnalyzePage />} />
         <Route path="direct" element={<LivePage />} />
         <Route path="comparer" element={<ComparePage />} />
         <Route path="historique" element={<HistoryPage />} />
         <Route path="analyses/:analysisId" element={<ResultPage />} />
         <Route path="locuteurs" element={<SpeakersPage />} />
         <Route path="modeles" element={<ModelsPage />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<Navigate to="/analyser" replace />} />
       </Route>
     </Routes>
   )

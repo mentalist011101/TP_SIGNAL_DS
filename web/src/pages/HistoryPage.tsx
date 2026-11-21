@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { describeApiError, useAnalysisHistory, type Analysis } from '../api/client.ts'
-import Achievements from '../components/history/Achievements.tsx'
 import HistoryFilters from '../components/history/HistoryFilters.tsx'
 import HistoryList from '../components/history/HistoryList.tsx'
 import HistoryOverview from '../components/history/HistoryOverview.tsx'
@@ -22,7 +21,7 @@ function EmptyHistory({ hasAnalyses }: { hasAnalyses: boolean }) {
   return (
     <p className={MESSAGE_CLASSES}>
       Aucune analyse pour l’instant.{' '}
-      <Link to="/" className="font-semibold text-accent-ink hover:underline">
+      <Link to="/analyser" className="font-semibold text-accent-ink underline underline-offset-4">
         Analyser un premier audio
       </Link>
     </p>
@@ -36,7 +35,7 @@ interface HistoryContentProps {
   loadedAt: number
 }
 
-// Chiffres clés et badges, puis filtres et liste. Les périodes (aujourd'hui, 7 jours…) et la
+// Chiffres clés, puis filtres et liste. Les périodes (aujourd'hui, 7 jours…) et la
 // série de jours sont comptées depuis le chargement de la liste, pas depuis chaque affichage :
 // le résultat reste le même tant que la liste ne change pas.
 function HistoryContent({ analyses, filters, onFiltersChange, loadedAt }: HistoryContentProps) {
@@ -46,10 +45,9 @@ function HistoryContent({ analyses, filters, onFiltersChange, loadedAt }: Histor
   return (
     <>
       <HistoryOverview stats={stats} />
-      <Achievements stats={stats} />
       <section className="space-y-3">
         <div className="flex items-baseline justify-between gap-3">
-          <h2 className="font-display text-lg font-bold">Analyses</h2>
+          <h2 className="text-base font-semibold">Analyses</h2>
           <p className="font-mono text-sm text-ink-soft">
             {visible.length} / {analyses.length}
           </p>
@@ -62,7 +60,7 @@ function HistoryContent({ analyses, filters, onFiltersChange, loadedAt }: Histor
   )
 }
 
-// Page Historique (C22, EF-08) : chiffres clés, badges, puis les analyses passées, filtrables,
+// Page Historique (C22, EF-08) : chiffres clés, puis les analyses passées, filtrables,
 // à rouvrir ou à supprimer.
 export default function HistoryPage() {
   const [filters, setFilters] = useState<HistoryFilterValues>(DEFAULT_FILTERS)
@@ -86,9 +84,9 @@ export default function HistoryPage() {
   return (
     <section className="space-y-8">
       <div className="space-y-2">
-        <h1 className="font-display text-3xl font-extrabold tracking-tight">Historique</h1>
+        <h1 className="text-5xl leading-tight">Historique</h1>
         <p className="text-ink-soft">
-          Vos 100 analyses les plus récentes, et ce qu’elles vous ont permis de débloquer.
+          Vos 100 analyses les plus récentes : rouvrez un résultat, filtrez ou supprimez.
         </p>
       </div>
       {content}

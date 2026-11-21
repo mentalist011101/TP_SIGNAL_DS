@@ -5,7 +5,7 @@ import StatusBadge from '../StatusBadge.tsx'
 
 // Bouton secondaire de la charte (même style que Supprimer dans l'historique).
 const DOWNLOAD_CLASSES =
-  'inline-flex items-center gap-2 rounded-btn border border-rule-strong bg-card px-3 py-1.5 text-sm font-semibold text-ink shadow-hard-sm transition-colors duration-200 ease-out-soft hover:bg-paper-alt'
+  'inline-flex items-center gap-2 rounded-btn border border-rule-strong bg-card px-3 py-1.5 text-sm font-semibold text-ink transition-colors duration-200 ease-out-soft hover:bg-paper-alt'
 
 // « 20 nov. 2026, 11:15 » : date et heure locales du navigateur (l'API envoie de l'UTC).
 function formatDate(isoDate: string): string {
@@ -43,7 +43,7 @@ export default function ResultHeader({ analysis }: { analysis: Analysis }) {
     <div className="flex flex-wrap items-start justify-between gap-4">
       <div className="min-w-0 space-y-1">
         <p className="label-mono text-ink-faint">Résultat de l’analyse</p>
-        <h1 className="font-mono text-2xl font-medium break-all">{analysis.original_filename}</h1>
+        <h1 className="font-mono text-3xl font-medium break-all">{analysis.original_filename}</h1>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-ink-soft">
           <StatusBadge status={analysis.status} />
           <span className="font-mono">{formatDate(analysis.created_at)}</span>

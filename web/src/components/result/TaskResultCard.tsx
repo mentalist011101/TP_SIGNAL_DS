@@ -21,7 +21,7 @@ function MainResult({ result }: { result: TaskResult }) {
     <div>
       <p className="label-mono text-ink-soft">Résultat principal</p>
       <p className="flex flex-wrap items-baseline gap-x-3">
-        <span className="font-display text-2xl font-bold">{result.label_fr}</span>
+        <span className="font-display text-4xl leading-none">{result.label_fr}</span>
         {probability !== null && (
           <span className="font-mono text-lg text-ink-soft">{formatProbability(probability)}</span>
         )}
@@ -114,7 +114,7 @@ export default function TaskResultCard({ task, result }: TaskResultCardProps) {
   return (
     <article className={CARD_CLASSES}>
       <div className="flex items-center justify-between gap-3">
-        <h2 className="font-display text-lg font-bold">{title}</h2>
+        <h2 className="text-base font-semibold">{title}</h2>
         {isDemo && (
           <span className="label-mono rounded-btn border border-rule-strong px-2 py-0.5 text-ink-soft">
             Démo
