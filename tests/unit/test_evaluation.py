@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pytest
@@ -9,9 +10,11 @@ from echolens.training.evaluation import (
     EvaluationConfig,
     accuracy,
     align_predictions,
+    apply_temperature,
     bootstrap_ci,
     equal_error_rate,
     expected_calibration_error,
+    fit_temperature,
     load_predictions,
     macro_f1,
     mcnemar_test,
@@ -296,3 +299,46 @@ def test_align_predictions_refuses_different_clips() -> None:
         align_predictions(first, other_target)
     with pytest.raises(ValueError, match="nombre"):
         align_predictions(first, first + other_clip)
+
+
+def overconfident_predictions(true_temperature: float, seed: int = 0) -> tuple[Any, Any]:
+    """Probabilités d'un modèle dont les logits valent T × les « vrais » logits.
+
+    Les classes sont tirées selon softmax(vrais logits) : diviser les logits du modèle par
+    true_temperature redonne donc des probabilités parfaitement calibrées.
+    """
+    generator = np.random.default_rng(seed)
+    true_logits = generator.normal(0.0, 2.0, size=(20_000, 10))
+    true_probabilities = np.exp(true_logits) / np.exp(true_logits).sum(axis=1, keepdims=True)
+    labels = np.array([generator.choice(10, p=row) for row in true_probabilities])
+    model_logits = true_logits * true_temperature
+    model_probabilities = np.exp(model_logits) / np.exp(model_logits).sum(axis=1, keepdims=True)
+    return labels, model_probabilities
+
+
+@pytest.mark.parametrize("true_temperature", [2.0, 0.5])
+def test_fit_temperature_finds_a_known_temperature_within_5_percent(
+    true_temperature: float,
+) -> None:
+    config = EvaluationConfig.from_yaml(CONFIG_DIR / "evaluation.yaml")
+    labels, probabilities = overconfident_predictions(true_temperature)
+    temperature = fit_temperature(labels, probabilities, config)
+    assert temperature == pytest.approx(true_temperature, rel=0.05)
+
+
+def test_calibration_lowers_the_ece_and_keeps_the_predicted_class() -> None:
+    config = EvaluationConfig.from_yaml(CONFIG_DIR / "evaluation.yaml")
+    labels, probabilities = overconfident_predictions(2.0, seed=1)
+    temperature = fit_temperature(labels, probabilities, config)
+    calibrated = apply_temperature(probabilities, temperature, config)
+    ece_before = expected_calibration_error(labels, probabilities, config).ece
+    ece_after = expected_calibration_error(labels, calibrated, config).ece
+    assert ece_after < ece_before / 2
+    np.testing.assert_allclose(calibrated.sum(axis=1), 1.0)
+    np.testing.assert_array_equal(calibrated.argmax(axis=1), probabilities.argmax(axis=1))
+
+
+def test_temperature_of_one_changes_nothing() -> None:
+    config = EvaluationConfig.from_yaml(CONFIG_DIR / "evaluation.yaml")
+    probabilities = np.array([[0.7, 0.2, 0.1], [0.1, 0.1, 0.8]])
+    np.testing.assert_allclose(apply_temperature(probabilities, 1.0, config), probabilities)

@@ -1,0 +1,25 @@
+# Modèles de production (C13) : ce que le notebook c13_production_models.ipynb entraîne,
+# calibre et publie. Lu par echolens.training.production.ProductionPlan.
+
+seed: 42                 # graine de l'entraînement final des modèles d'ESC-50
+
+# Licences héritées des données d'entraînement (usage non commercial) :
+# - ESC-50 : CC BY-NC 3.0 ;
+# - émotions : RAVDESS (CC BY-NC-SA 4.0) et CREMA-D (ODbL) ; la clause non commerciale et le
+#   partage à l'identique de RAVDESS s'appliquent au modèle.
+models:
+  - id: echolens-emotion-whisper-base
+    task: emotion
+    architecture: layer_weighted_head
+    license: cc-by-nc-sa-4.0
+    data: "CREMA-D et RAVDESS, découpage par acteur (P1), tête finale de C11 (graine 42)"
+  - id: echolens-sound-event-whisper-base
+    task: sound_event
+    architecture: layer_weighted_head
+    license: cc-by-nc-3.0
+    data: "ESC-50, les 5 folds, réglage = médiane des 5 tours de C11"
+  - id: echolens-sound-event-crnn
+    task: sound_event
+    architecture: crnn
+    license: cc-by-nc-3.0
+    data: "ESC-50, les 5 folds, réglage = médiane des 5 tours de C9"

@@ -46,9 +46,26 @@ sans migrations. Quand une version ajoute une colonne (par exemple `results` en 
 refuse de démarrer avec un message clair : supprimez `var/echolens.db`, elle sera recréée vide
 au démarrage suivant (l'historique local est perdu).
 
-Les analyses utilisent pour l'instant un faux prédicteur (`inference_backend: demo` dans
-`configs/app.yaml`) : les probabilités sont déterministes mais n'ont aucune valeur, et chaque
-résultat porte `model_id = "demo"`.
+### Prédicteur : faux ou vrais modèles
+
+Le prédicteur des analyses se choisit dans `configs/app.yaml` (`inference_backend`) ou par la
+variable d'environnement `ECHOLENS_INFERENCE_BACKEND` :
+
+- `demo` (par défaut) : faux prédicteur, probabilités déterministes sans valeur
+  (`model_id = "demo"`), **sans torch**. C'est le mode pour développer le front et pour la CI.
+- `models` : vrais modèles de `configs/registry.yaml` (extra `[ml]` : `make setup-ml`). Les
+  poids (safetensors) et leur `config.json` sont téléchargés depuis Hugging Face à la révision
+  figée du registre, puis gardés en cache ; ou lus dans un dossier local avec
+  `ECHOLENS_MODELS_DIR=<dossier>` (un sous-dossier par identifiant de modèle).
+
+```bash
+ECHOLENS_INFERENCE_BACKEND=models make run
+```
+
+Les modèles sont chargés une seule fois, à la première analyse qui en a besoin (un seul
+encodeur Whisper pour les deux têtes). Pour la démo, `ECHOLENS_PRELOAD_MODELS=true` (ou
+`preload_models: true`) les charge au démarrage, pour que la première analyse soit aussi
+rapide que les suivantes.
 
 Avec Docker (aucun prérequis hormis Docker) :
 

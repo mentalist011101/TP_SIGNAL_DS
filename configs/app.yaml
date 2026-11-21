@@ -5,8 +5,12 @@ max_audio_seconds: 300    # durée maximale d'un audio importé, 5 min (D6)
 allowed_extensions: [wav, mp3, flac, ogg, webm, m4a]
 analysis_workers: 2       # analyses traitées en parallèle en arrière-plan (S2)
 run_jobs_synchronously: false  # true : traitement immédiat dans la requête (tests uniquement)
-# Prédicteur utilisé par les analyses (C13) : demo = faux prédicteur, probabilités
-# déterministes sans valeur (même audio = même résultat) ; les vrais modèles viendront ensuite.
+# Prédicteur utilisé par les analyses (C13) :
+# - demo : faux prédicteur, probabilités déterministes sans valeur, sans torch (front, CI) ;
+# - models : vrais modèles de configs/registry.yaml (extra [ml]), par exemple avec
+#   ECHOLENS_INFERENCE_BACKEND=models.
 inference_backend: demo
+preload_models: false     # true : modèles chargés au démarrage (démo), pas à la 1re analyse
+# models_dir: var/models  # dossier local de modèles ; absent : Hugging Face (révision figée)
 # data_dir: var           # dossier des audios, résultats et de la base SQLite
 # database_url: ""        # vide = SQLite dans data_dir

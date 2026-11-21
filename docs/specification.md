@@ -51,7 +51,7 @@ polyphoniques, déploiement public, application mobile.
 
 | ID | Domaine | Exigence |
 | --- | --- | --- |
-| ENF-01 | Temps réel | En flux micro, inférence d'une fenêtre plus courte que le décalage H = 0,5 s (RTF < 1) sur la machine CPU de référence |
+| ENF-01 | Temps réel | En flux micro (fenêtre W = 2 s, décalage H = 0,5 s), le calcul d'une fenêtre se termine avant la suivante : calcul < H, au p95, sur la machine CPU de référence. Avec RTF = temps de calcul / durée du son analysé, cela équivaut à RTF < H / W = 0,25 (mesure : `training/scripts/measure_latency.py`) |
 | ENF-02 | Latence | Latence perçue ≈ H + temps d'inférence, mesurée en p50 et p95 |
 | ENF-03 | Fichiers | Une analyse de fichier ne bloque jamais l'interface (arrière-plan avec statut) |
 | ENF-04 | Performance | Cibles de F1 macro, accuracy, WER et EER fixées après les premières références |
@@ -235,4 +235,5 @@ et `/docs`.
 | 11 nov. 2026 | Protocole publié dans docs/protocole.md (Ly2 et Ly5 de Lynn, décisions du 9 au 11 novembre) ; P6 : valeur des masques ; P1 : règle exacte du tirage alignée sur le protocole |
 | 12 nov. 2026 | Brique 1 (C2, PR #19) : D4 désactivé par défaut, force 0,8 provisoire, protocole d'ablation du sprint 2 ; D5 : webrtcvad à la place de Silero VAD, paramètres de nettoyage des segments fixés ; paramètres dans configs/preprocess.yaml |
 | 19 nov. 2026 | Brique 4 et protocole (§ 4, § 5) : plus d'arrêt anticipé pour tous les modèles ; courbe complète, meilleure époque et taux d'apprentissage choisis sur la validation, puis réentraînement inchangé. Diagnostic C9 (`c9_early_stopping_diagnostic.ipynb`, réglage rejoué sur 150 époques) : CNN 0,659 à l'époque 43 contre 0,767 à l'époque 145 ; CRNN 0,740 à l'époque 44 contre 0,806 à l'époque 147 |
+| 20 nov. 2026 | ENF-01 corrigé (C13) : RTF = temps de calcul / durée du son analysé ; la condition « calcul < H » sur une fenêtre W = 2 s équivaut à RTF < H / W = 0,25, et non RTF < 1. Le profil temps réel prend, pour chaque tâche, le modèle dont le p95 sur 2 s est sous H (le meilleur F1 si plusieurs passent) |
 | 21 nov. 2026 | Brique 7, U5 (relecture du point d'étape du front) : barres de probabilités en CSS, sans dépendance ; Recharts seulement si un vrai graphique en a besoin ; wavesurfer.js non utilisé, la forme d'onde est dessinée en canvas |
