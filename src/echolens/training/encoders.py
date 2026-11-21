@@ -1,8 +1,9 @@
 """Passage des extraits dans les encodeurs gelés de la famille B (C10, Brique 4, R7).
 
 Seul module qui importe torch et transformers (extra [ml], installés d'office sur Kaggle).
-Les calculs purs (trames utiles de Whisper, moyennes par couche, fichiers) sont dans
-echolens.training.embeddings, testés en CI sans torch.
+Les calculs purs sont dans echolens.core.models.whisper_frames (trames utiles de Whisper,
+moyennes par couche, partagés avec l'application) et echolens.training.embeddings (fichiers),
+testés en CI sans torch.
 
 Règles (R7, Brique 4) : signal brut 16 kHz de load_audio, extrait entier, sans débruitage ni
 VAD ; normalisation du feature extractor de chaque modèle ; un extrait à la fois, sans
@@ -23,13 +24,9 @@ from transformers import AutoFeatureExtractor, AutoModel, WhisperModel
 
 from echolens.core.audio import load_audio
 from echolens.core.data.manifest import ManifestRow, audio_path
-from echolens.training.embeddings import (
-    EmbeddingMetadata,
-    EncoderConfig,
-    FloatArray,
-    layer_means,
-    whisper_useful_frames,
-)
+from echolens.core.models.whisper_encoder import stack_hidden_states, whisper_hidden_states
+from echolens.core.models.whisper_frames import layer_means, whisper_useful_frames
+from echolens.training.embeddings import EmbeddingMetadata, EncoderConfig, FloatArray
 
 # Affiche l'avancement tous les PROGRESS_EVERY extraits.
 PROGRESS_EVERY = 500
@@ -109,7 +106,7 @@ def embed_ssl(signal: FloatArray, encoder: LoadedEncoder) -> FloatArray:
     with torch.no_grad():
         outputs = encoder.model(input_values, output_hidden_states=True)
     # Étape 3 : toutes les sorties de couches, entrée comprise, moyennées dans le temps.
-    hidden_states = _stack_hidden_states(outputs.hidden_states)
+    hidden_states = stack_hidden_states(outputs.hidden_states)
     return layer_means(hidden_states)
 
 
@@ -118,14 +115,11 @@ def embed_whisper(signal: FloatArray, encoder: LoadedEncoder) -> WhisperEmbeddin
     samples_per_frame, max_frames = _whisper_frame_settings(encoder.config)
     # Étape 1 : trames utiles (50 par seconde) ; refuse un extrait de plus de 30 s.
     useful_frames = whisper_useful_frames(len(signal), samples_per_frame, max_frames)
-    # Étape 2 : log-Mel de Whisper, complété jusqu'à 30 s : l'encodeur exige 3 000 trames.
-    inputs = encoder.feature_extractor(
-        signal, sampling_rate=encoder.sample_rate, padding="max_length", return_tensors="pt"
+    # Étape 2 : passage dans l'encodeur, avec le log-Mel de Whisper complété jusqu'à 30 s
+    # (même fonction que l'application, R5).
+    hidden_states = whisper_hidden_states(
+        signal, encoder.feature_extractor, encoder.model, encoder.device, encoder.sample_rate
     )
-    input_features = inputs["input_features"].to(encoder.device)
-    with torch.no_grad():
-        outputs = encoder.model(input_features, output_hidden_states=True)
-    hidden_states = _stack_hidden_states(outputs.hidden_states)
     # Étape 3 : moyenne sur les seules trames utiles (Brique 4) et, à part, sur les 1 500
     # trames, pour mesurer l'effet du remplissage.
     useful_mean = layer_means(hidden_states, useful_frames)
@@ -202,14 +196,6 @@ def _load_model(config: EncoderConfig) -> torch.nn.Module:
         return encoder
     model: torch.nn.Module = AutoModel.from_pretrained(config.checkpoint, revision=config.revision)
     return model
-
-
-def _stack_hidden_states(hidden_states: tuple[torch.Tensor, ...]) -> FloatArray:
-    # Tuple de (1, temps, dimension), un par sortie de couche → (couches, temps, dimension).
-    stacked = torch.stack(hidden_states, dim=0)
-    single_clip = stacked[:, 0, :, :]
-    as_numpy = single_clip.cpu().numpy()
-    return np.asarray(as_numpy, dtype=np.float32)
 
 
 def _whisper_frame_settings(config: EncoderConfig) -> tuple[int, int]:

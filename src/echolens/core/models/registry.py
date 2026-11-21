@@ -48,7 +48,10 @@ class ModelEntry(BaseModel):
     family: Family
     profiles: list[Profile] = Field(min_length=1)
     version: str = "0.1.0"
+    # Dépôt des poids, sous la forme hf://<utilisateur>/<dépôt> (Hugging Face Hub, I7).
     weights: str = ""
+    # Révision figée du dépôt (hash de commit, 40 caractères) : toujours les mêmes poids.
+    revision: str = ""
     labels: list[str] = Field(default_factory=list)
     metrics: dict[str, float] = Field(default_factory=dict)
     description: str = ""
@@ -75,6 +78,22 @@ class ModelRegistry(BaseModel):
             if entry.id == model_id:
                 return entry
         raise KeyError(f"Modèle inconnu : {model_id}")
+
+    def model_for(self, task: Task, profile: Profile) -> ModelEntry | None:
+        """Le modèle d'une tâche dans un profil, ou None s'il n'y en a pas.
+
+        Lève ValueError si plusieurs modèles se disputent la même tâche dans le même profil :
+        le choix ne doit jamais dépendre de l'ordre du fichier.
+        """
+        candidates = self.for_task(task, profile)
+        if not candidates:
+            return None
+        if len(candidates) > 1:
+            names = ", ".join(entry.id for entry in candidates)
+            raise ValueError(
+                f"Plusieurs modèles pour {task.value} en profil {profile.value} : {names}"
+            )
+        return candidates[0]
 
     def for_task(self, task: Task, profile: Profile | None = None) -> list[ModelEntry]:
         """Liste les modèles d'une tâche, éventuellement filtrés par profil."""

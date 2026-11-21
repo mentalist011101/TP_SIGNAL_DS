@@ -36,8 +36,14 @@ class AppSettings(BaseModel):
     web_dist_dir: Path = REPO_ROOT / "web" / "dist"
     registry_path: Path = CONFIG_DIR / "registry.yaml"
     features_path: Path = CONFIG_DIR / "features.yaml"
-    # Prédicteur des analyses (C13) : « demo » (faux prédicteur déterministe) pour l'instant.
-    inference_backend: Literal["demo"] = "demo"
+    # Prédicteur des analyses (C13) : « demo » (faux prédicteur, sans torch) ou « models »
+    # (vrais modèles du registre, extra [ml]).
+    inference_backend: Literal["demo", "models"] = "demo"
+    # Vrai : les modèles sont chargés au démarrage (démo) plutôt qu'à la première analyse.
+    preload_models: bool = False
+    # Dossier local de modèles (<dossier>/<id>/config.json et model.safetensors) ; vide :
+    # téléchargement depuis Hugging Face à la révision figée du registre.
+    models_dir: Path | None = None
 
     def resolved_database_url(self) -> str:
         """Renvoie l'URL SQLAlchemy ; par défaut une base SQLite dans data_dir."""

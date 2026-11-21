@@ -27,6 +27,7 @@ from echolens.config import CONFIG_DIR, load_yaml
 from echolens.core.audio import load_audio
 from echolens.core.data.manifest import ManifestRow, audio_path
 from echolens.core.features import FeatureConfig, FloatArray, log_mel_spectrogram
+from echolens.core.models.network_config import NetworkConfig
 from echolens.training.esc50_svm import esc50_target
 from echolens.training.evaluation import IntArray
 
@@ -34,17 +35,6 @@ FAMILY_A_CONFIG_PATH = CONFIG_DIR / "family_a.yaml"
 # P6 : valeur des masques de SpecAugment, appliqués après la standardisation. 0 est alors la
 # moyenne de l'entraînement : le masque retire de l'information sans ajouter d'énergie.
 MASK_VALUE = 0.0
-
-
-class NetworkConfig(BaseModel):
-    """Forme des réseaux CNN et CRNN (Brique 4)."""
-
-    channels: list[int] = Field(min_length=1)
-    kernel_size: int = Field(gt=0)
-    padding: int = Field(ge=0)
-    pool_size: int = Field(gt=0)
-    dropout: float = Field(ge=0, lt=1)
-    gru_hidden_size: int = Field(gt=0)
 
 
 class AugmentationConfig(BaseModel):
