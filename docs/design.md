@@ -7,7 +7,7 @@ le vert mousse, les étiquettes en mono et la palette magma réservée aux donn�
 
 Les jetons sont définis dans `web/src/index.css`, pour un thème sombre (anthracite chaud) et un
 thème clair « papier ». **Par défaut, la page suit le thème du système** (`prefers-color-scheme`),
-y compris s'il change pendant la visite. Le bouton de thème (barre latérale) bascule de l'un à
+y compris s'il change pendant la visite. Le bouton de thème (barre latérale, en-tête de l'accueil) bascule de l'un à
 l'autre et mémorise ce choix dans le navigateur, qui prime ensuite sur le système
 (`web/src/theme.ts`, attribut `data-theme` sur `<html>`).
 
@@ -46,7 +46,8 @@ distinguent par une bordure fine. Fond de page : grille de points (`dot-grid`). 
 
 - **Uniquement des jetons** : aucune couleur Tailwind (`slate-500`…) ni code hexadécimal dans
   les composants. `npm run check:tokens` le vérifie, en local et dans la CI. Le canvas lit les
-  jetons avec `readCssColor` (`web/src/theme.ts`, seul fichier autorisé à lire les couleurs).
+  jetons avec `readCssColor` ; la palette magma de l'illustration de l'accueil est aussi dans
+  `web/src/theme.ts`, seul fichier autorisé à porter des couleurs.
 - **Accent monochrome = ce qui se clique** : bouton principal en pilule crème (sombre) ou
   encre (clair), cases à cocher, segment choisi, focus. Aucun des outils de référence n'a de
   bouton principal coloré : la couleur reste rare.
@@ -60,10 +61,11 @@ distinguent par une bordure fine. Fond de page : grille de points (`dot-grid`). 
 - **Serif pour les grands titres seulement** (titres de page, chiffres clés, résultat
   principal) ; Inter demi-gras pour les titres de carte ; mono pour Hz, dB, durées, noms de
   fichiers et étiquettes.
-- **Honnêteté** : des probabilités du faux
+- **Honnêteté** : une illustration est marquée « Illustration », des probabilités du faux
   prédicteur sont signalées par le bandeau « démo », une fonction pas encore branchée est
   marquée « bientôt ».
-- **Mouvement** : les animations (ruban d'ondes, points « en direct », suivi d'analyse)
+- **Mouvement** : les animations (aperçu de l'accueil, ruban d'ondes, points « en direct », suivi
+  d'analyse)
   s'arrêtent quand le système demande moins d'animations (`motion-safe`,
   `prefers-reduced-motion`).
 - **Contraste WCAG AA** (4,5:1 pour le texte) dans les deux thèmes.
