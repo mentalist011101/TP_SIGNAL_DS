@@ -51,7 +51,9 @@ distinguent par une bordure fine. Fond de page : grille de points (`dot-grid`). 
   encre (clair), cases à cocher, segment choisi, focus. Aucun des outils de référence n'a de
   bouton principal coloré : la couleur reste rare.
 - **Vert mousse = la marque** : logo, statut « terminée », indicateur « en direct », mot mis
-  en valeur dans un titre. Jamais un bouton.
+  en valeur dans un titre, et sur la frise temporelle la parole détectée, la tête de lecture
+  et le remplissage des fenêtres d'événements (opacité selon la probabilité, plafonnée pour
+  garder le texte lisible). Jamais un bouton.
 - **Danger = les erreurs** : messages d'échec, refus de fichier. Pas pour décorer.
 - **Magma réservé aux données** : la palette du spectrogramme ne sert à rien d'autre, et
   l'interface n'utilise pas ses couleurs.
