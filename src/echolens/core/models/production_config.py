@@ -67,7 +67,7 @@ class ProductionModelConfig(BaseModel):
 
     model_id: str
     task: Literal["emotion", "sound_event"]
-    architecture: Literal["layer_weighted_head", "crnn"]
+    architecture: Literal["layer_weighted_head", "cnn", "crnn"]
     # Identifiants des classes, dans l'ordre des sorties du modèle.
     labels: list[str] = Field(min_length=2)
     # Statistiques de l'entraînement, à réappliquer telles quelles (R4) : (couches, dimension)

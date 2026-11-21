@@ -24,8 +24,9 @@ from huggingface_hub import hf_hub_download
 
 from echolens.core.data.class_labels import ClassLabels
 from echolens.core.features import FeatureConfig, log_mel_spectrogram
+from echolens.core.frame_windows import centered_start, frame_window, window_frame_count
 from echolens.core.inference import FloatArray, ProbabilityArray
-from echolens.core.models.family_a import SpectrogramCrnn
+from echolens.core.models.family_a import SpectrogramCnn, SpectrogramCrnn
 from echolens.core.models.heads import LayerWeightedHead
 from echolens.core.models.production_config import (
     CONFIG_FILE,
@@ -45,6 +46,8 @@ from echolens.core.models.whisper_encoder import (
 from echolens.services.predictor import ModelInfo
 
 HF_PREFIX = "hf://"
+# Réseaux de la famille A, qui lisent le log-Mel (les têtes lisent l'encodeur Whisper).
+SPECTROGRAM_ARCHITECTURES = ("cnn", "crnn")
 # Les modèles tournent sur CPU : c'est la machine de référence de l'application (ENF-01).
 DEVICE = torch.device("cpu")
 
@@ -131,8 +134,8 @@ class ModelPredictor:
         return entry
 
     def _scores(self, loaded: LoadedModel, window: FloatArray) -> torch.Tensor:
-        if loaded.config.architecture == "crnn":
-            return self._crnn_scores(loaded, window)
+        if loaded.config.architecture in SPECTROGRAM_ARCHITECTURES:
+            return self._spectrogram_scores(loaded, window)
         return self._head_scores(loaded, window)
 
     def _head_scores(self, loaded: LoadedModel, window: FloatArray) -> torch.Tensor:
@@ -147,12 +150,18 @@ class ModelPredictor:
             scores: torch.Tensor = loaded.network(inputs)
         return scores[0]
 
-    def _crnn_scores(self, loaded: LoadedModel, window: FloatArray) -> torch.Tensor:
-        # Étape 1 : log-Mel par le module unique de features (R5), puis standardisation par
-        # bande avec les statistiques de l'entraînement (R4).
+    def _spectrogram_scores(self, loaded: LoadedModel, window: FloatArray) -> torch.Tensor:
+        # Étape 1 : log-Mel par le module unique de features (R5), ramené à la longueur de la
+        # fenêtre du modèle : fenêtre centrale, ou silence ajouté à la fin (comme au test).
         log_mel = log_mel_spectrogram(window, self.feature_config)
+        window_frames = window_frame_count(loaded.config.window_s, self.feature_config)
+        length = log_mel.shape[1]
+        start = centered_start(length, window_frames)
+        silence_db = self.feature_config.db_floor
+        fixed = frame_window(log_mel, length, start, window_frames, silence_db)
+        # Étape 2 : standardisation par bande avec les statistiques de l'entraînement (R4).
         band_count = len(loaded.mean)
-        centered = log_mel - loaded.mean.reshape(band_count, 1)
+        centered = fixed - loaded.mean.reshape(band_count, 1)
         standardized = centered / loaded.std.reshape(band_count, 1)
         as_float32 = standardized.astype(np.float32)
         inputs = torch.from_numpy(as_float32).unsqueeze(0)
@@ -217,13 +226,13 @@ class ModelPredictor:
         expected = self._expected_labels(entry.task)
         if config.labels != expected:
             raise ModelLoadError(f"{entry.id} : classes différentes de configs/labels.yaml")
-        # Le CRNN n'est valable qu'avec le log-Mel exact de son entraînement (R5).
-        if config.architecture == "crnn":
+        # Un réseau sur log-Mel n'est valable qu'avec le log-Mel exact de son entraînement (R5).
+        if config.architecture in SPECTROGRAM_ARCHITECTURES:
             current = config_fingerprint(self.features_path)
             if config.features_sha256 != current:
                 raise ModelLoadError(
                     f"{entry.id} : configs/features.yaml a changé depuis l'entraînement du "
-                    "CRNN ; il faut le réentraîner avec les nouvelles features"
+                    "réseau ; il faut le réentraîner avec les nouvelles features"
                 )
 
     def _expected_labels(self, task: Task) -> list[str]:
@@ -241,9 +250,11 @@ def calibrated_probabilities(scores: torch.Tensor, temperature: float) -> Probab
 
 def _build_network(config: ProductionModelConfig) -> torch.nn.Module:
     class_count = len(config.labels)
-    if config.architecture == "crnn":
+    if config.architecture in SPECTROGRAM_ARCHITECTURES:
         if config.network is None:
             raise ModelLoadError(f"{config.model_id} : forme du réseau absente de config.json")
+        if config.architecture == "cnn":
+            return SpectrogramCnn(class_count, config.network)
         return SpectrogramCrnn(class_count, config.network)
     if config.head is None:
         raise ModelLoadError(f"{config.model_id} : forme de la tête absente de config.json")
