@@ -1,11 +1,8 @@
 import { useState } from 'react'
 import type { AnalysisTask, ClassProbability, TaskResult } from '../../api/client.ts'
 import { TASK_LABELS } from '../../labels.ts'
-import { formatProbability, mainProbability } from './taskResult.ts'
+import { formatProbability, isDemoResult, mainProbability } from './taskResult.ts'
 import ProbabilityBars from './ProbabilityBars.tsx'
-
-// Identifiant du faux prédicteur dans le contrat de l'API (C13).
-const DEMO_MODEL_ID = 'demo'
 
 // Événements sonores : on montre les 5 classes les plus probables sur 50, le reste sur demande.
 const SOUND_EVENT_TOP_COUNT = 5
@@ -110,7 +107,7 @@ interface TaskResultCardProps {
 // cartes viennent du faux prédicteur, en plus du bandeau posé au-dessus des cartes.
 export default function TaskResultCard({ task, result }: TaskResultCardProps) {
   const title = TASK_LABELS[task]
-  const isDemo = result !== null && result.model_id === DEMO_MODEL_ID
+  const isDemo = result !== null && isDemoResult(result)
   return (
     <article className={CARD_CLASSES}>
       <div className="flex items-center justify-between gap-3">

@@ -9,7 +9,9 @@ import {
 import AnalysisProgress from '../components/analyze/AnalysisProgress.tsx'
 import ResultAudio from '../components/result/ResultAudio.tsx'
 import ResultHeader from '../components/result/ResultHeader.tsx'
+import DemoNotice from '../components/result/DemoNotice.tsx'
 import ResultHighlights from '../components/result/ResultHighlights.tsx'
+import { hasDemoResult } from '../components/result/taskResult.ts'
 import { AnalysisNotFound, FailedAnalysis } from '../components/result/ResultMessages.tsx'
 import TaskResultList from '../components/result/TaskResultList.tsx'
 import { ArrowLeftIcon } from '../components/icons.tsx'
@@ -31,11 +33,14 @@ function MissingAnalysis({ error }: { error: Error | null }) {
   return <p className="text-sm text-danger">{describeApiError(error)}</p>
 }
 
-// Corps de la page : la raison d'un échec, ou l'audio puis une carte par tâche demandée.
+// Corps de la page : la raison d'un échec, ou l'audio puis une carte par tâche demandée. Le
+// bandeau de démonstration passe avant tout chiffre, chiffres clés compris : on ne montre
+// jamais de probabilités du faux prédicteur sans le dire d'abord.
 function ResultBody({ analysis }: { analysis: Analysis }) {
   if (analysis.status === 'failed') {
     return <FailedAnalysis reason={analysis.error_message} />
   }
+  const isDemo = hasDemoResult(analysis)
   return (
     <>
       {isAnalysisRunning(analysis) && (
@@ -46,6 +51,7 @@ function ResultBody({ analysis }: { analysis: Analysis }) {
           </p>
         </div>
       )}
+      {isDemo && <DemoNotice />}
       <ResultHighlights analysis={analysis} />
       <ResultAudio analysis={analysis} />
       <TaskResultList analysis={analysis} />

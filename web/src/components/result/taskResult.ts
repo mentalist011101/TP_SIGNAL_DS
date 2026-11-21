@@ -1,4 +1,7 @@
-import type { TaskResult } from '../../api/client.ts'
+import type { Analysis, TaskResult } from '../../api/client.ts'
+
+// Identifiant du faux prédicteur dans le contrat de l'API (C13).
+const DEMO_MODEL_ID = 'demo'
 
 // Plus petite probabilité affichée en chiffres (0,1 %) : en dessous, l'arrondi donnerait
 // « 0 % », ce qui laisserait croire que la classe est impossible. Règle de Nicole (C21).
@@ -20,4 +23,27 @@ export function mainProbability(result: TaskResult): number | null {
     }
   }
   return null
+}
+
+// Vrai si ce résultat affiche des probabilités du faux prédicteur : seulement en done, car
+// no_speech et unavailable n'affichent aucun chiffre.
+export function isDemoResult(result: TaskResult): boolean {
+  if (result.status !== 'done') {
+    return false
+  }
+  return result.model_id === DEMO_MODEL_ID
+}
+
+// Vrai si au moins une tâche de l'analyse affiche des probabilités de démonstration.
+export function hasDemoResult(analysis: Analysis): boolean {
+  if (analysis.results === null) {
+    return false
+  }
+  for (const task of analysis.tasks) {
+    const result = analysis.results[task]
+    if (result !== undefined && isDemoResult(result)) {
+      return true
+    }
+  }
+  return false
 }

@@ -1,12 +1,9 @@
 import { Link } from 'react-router-dom'
 import type { Analysis, AnalysisTask } from '../../api/client.ts'
 import { TASK_LABELS } from '../../labels.ts'
-import { formatProbability, mainProbability } from '../result/taskResult.ts'
+import { formatProbability, hasDemoResult, mainProbability } from '../result/taskResult.ts'
 import StatusBadge from '../StatusBadge.tsx'
 import DeleteControl from './DeleteControl.tsx'
-
-// Identifiant du faux prédicteur dans le contrat de l'API (C13).
-const DEMO_MODEL_ID = 'demo'
 
 const ITEM_CLASSES =
   'flex flex-wrap items-center justify-between gap-x-6 gap-y-3 px-4 py-3 transition-colors duration-200 ease-out-soft hover:bg-paper-alt'
@@ -43,20 +40,6 @@ function taskSummary(analysis: Analysis, task: AnalysisTask): string | null {
   }
   const percent = formatProbability(probability)
   return `${result.label_fr} ${percent}`
-}
-
-// Vrai si au moins un résultat vient du faux prédicteur : on le signale sur la carte.
-function hasDemoResult(analysis: Analysis): boolean {
-  if (analysis.results === null) {
-    return false
-  }
-  for (const task of analysis.tasks) {
-    const result = analysis.results[task]
-    if (result !== undefined && result.model_id === DEMO_MODEL_ID) {
-      return true
-    }
-  }
-  return false
 }
 
 // Étiquette d'une tâche demandée, avec son résultat principal s'il existe.
