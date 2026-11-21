@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState, type ChangeEvent, type RefObject } from 'react'
+import { MicIcon, UploadIcon } from '../icons.tsx'
 
 // Formats acceptés par le serveur (EF-01).
 const ACCEPTED_FORMATS = '.wav,.mp3,.flac,.ogg,.webm,.m4a'
 
 const BUTTON_CLASSES =
-  'rounded-btn border border-rule-strong bg-card px-4 py-2 text-sm font-medium text-ink shadow-hard-sm transition-colors duration-200 ease-out-soft hover:bg-paper-alt'
+  'inline-flex items-center gap-2 rounded-btn border border-rule-strong bg-card px-4 py-2 text-sm font-medium text-ink transition-colors duration-200 ease-out-soft hover:bg-paper-alt'
 
 type AudioHandler = (file: File) => void
 
@@ -127,7 +128,7 @@ export default function AudioPicker({ onAudioSelected }: AudioPickerProps) {
 
   return (
     <div className="space-y-2">
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-wrap justify-center gap-3">
         <input
           ref={inputRef}
           type="file"
@@ -136,9 +137,11 @@ export default function AudioPicker({ onAudioSelected }: AudioPickerProps) {
           onChange={handleFileChange}
         />
         <button type="button" className={BUTTON_CLASSES} onClick={() => inputRef.current?.click()}>
+          <UploadIcon />
           Importer un fichier
         </button>
         <button type="button" className={BUTTON_CLASSES} onClick={microphone.toggle}>
+          <MicIcon />
           {microphone.isRecording ? 'Arrêter l’enregistrement' : 'Enregistrer au micro'}
         </button>
       </div>

@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 // Préfixe commun de l'API versionnée exposée par Flask.
 export const API_BASE = '/api/v1'
@@ -34,6 +34,15 @@ async function readErrorMessage(response: Response, path: string): Promise<strin
   return fallbackMessage
 }
 
+// Message à afficher pour une erreur d'appel : celui de l'API (en français), ou « serveur
+// injoignable » quand fetch n'a obtenu aucune réponse (son propre message est en anglais).
+export function describeApiError(error: Error): string {
+  if (error instanceof ApiError) {
+    return error.message
+  }
+  return 'Serveur injoignable : vérifiez que l’application est lancée, puis réessayez.'
+}
+
 // Appel JSON générique : lève une ApiError lisible si la réponse n'est pas 2xx.
 export async function apiGet<T>(path: string): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`)
@@ -52,6 +61,15 @@ export async function apiPostForm<T>(path: string, form: FormData): Promise<T> {
     throw new ApiError(response.status, message)
   }
   return (await response.json()) as T
+}
+
+// Suppression : l'API répond 204 (sans corps) ; on ne lit donc pas de JSON en retour.
+export async function apiDelete(path: string): Promise<void> {
+  const response = await fetch(`${API_BASE}${path}`, { method: 'DELETE' })
+  if (!response.ok) {
+    const message = await readErrorMessage(response, path)
+    throw new ApiError(response.status, message)
+  }
 }
 
 export interface HealthResponse {
@@ -94,6 +112,49 @@ export interface SpectrogramInfo {
   colormap_stops: string[]
 }
 
+// Résultats d'une analyse terminée (C13, schémas de src/echolens/api/result_schemas.py).
+// done : résultat calculé ; no_speech : émotion demandée mais aucune parole détectée ;
+// unavailable : tâche pas encore branchée. Dans les deux derniers cas, « message » dit pourquoi.
+export type TaskResultStatus = 'done' | 'no_speech' | 'unavailable'
+
+// Probabilité d'une classe, entre 0 et 1 ; label_fr est le libellé à afficher.
+export interface ClassProbability {
+  label: string
+  label_fr: string
+  probability: number
+}
+
+// Résultat d'un morceau de l'audio, pour la future frise temporelle (EF-12).
+export interface SegmentResult {
+  start_s: number
+  end_s: number
+  label: string
+  label_fr: string
+  probabilities: ClassProbability[]
+}
+
+// Résultat d'une tâche. Les probabilités arrivent triées de la plus probable à la moins
+// probable, de somme 1 : le front les affiche sans les recalculer (R5).
+export interface TaskResult {
+  status: TaskResultStatus
+  message: string | null
+  label: string | null
+  label_fr: string | null
+  probabilities: ClassProbability[]
+  model_id: string | null
+  model_version: string | null
+  calibrated: boolean | null
+  segments: SegmentResult[]
+}
+
+// Un résultat par tâche demandée ; une tâche non demandée est absente.
+export interface AnalysisResults {
+  emotion?: TaskResult
+  sound_event?: TaskResult
+  transcription?: TaskResult
+  speaker?: TaskResult
+}
+
 export interface Analysis {
   id: string
   created_at: string
@@ -106,6 +167,8 @@ export interface Analysis {
   audio_url: string | null
   spectrogram_url: string | null
   spectrogram: SpectrogramInfo | null
+  // null tant que l'analyse n'est pas terminée (et en cas d'échec).
+  results: AnalysisResults | null
 }
 
 export interface AnalysisRequest {
@@ -166,6 +229,58 @@ export function useAnalysis(analysisId: string | null) {
     refetchInterval: (query) => {
       const analysis = query.state.data
       return nextPollDelay(analysis)
+    },
+  })
+}
+
+// Nombre d'analyses chargées par l'historique : le maximum accepté par l'API (MAX_PAGE_SIZE).
+const HISTORY_LIMIT = 100
+
+// Clé du cache de l'historique, partagée par la lecture et la suppression.
+const HISTORY_QUERY_KEY = ['analyses']
+
+// Vrai si au moins une analyse de la liste tourne encore (pending ou processing).
+function hasRunningAnalysis(analyses: Analysis[]): boolean {
+  for (const analysis of analyses) {
+    if (isAnalysisRunning(analysis)) {
+      return true
+    }
+  }
+  return false
+}
+
+// Historique : les analyses les plus récentes d'abord (EF-08). Rafraîchi chaque seconde tant
+// qu'une analyse de la liste tourne encore, pour que son statut se mette à jour tout seul.
+export function useAnalysisHistory() {
+  return useQuery({
+    queryKey: HISTORY_QUERY_KEY,
+    queryFn: () => {
+      const path = `/analyses?limit=${HISTORY_LIMIT}`
+      return apiGet<Analysis[]>(path)
+    },
+    refetchInterval: (query) => {
+      const analyses = query.state.data
+      if (analyses === undefined) {
+        return false
+      }
+      if (hasRunningAnalysis(analyses)) {
+        return POLL_INTERVAL_MS
+      }
+      return false
+    },
+  })
+}
+
+// Suppression d'une analyse, puis rechargement de l'historique pour la faire disparaître.
+export function useDeleteAnalysis() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (analysisId: string) => {
+      const path = `/analyses/${analysisId}`
+      return apiDelete(path)
+    },
+    onSuccess: () => {
+      return queryClient.invalidateQueries({ queryKey: HISTORY_QUERY_KEY })
     },
   })
 }
