@@ -5,15 +5,17 @@ EchoLens se présente comme un produit : une plateforme où l'on dépose un audi
 SaaS actuels (Linear, ElevenLabs, Cluster) en gardant l'identité de la v1 : le papier et l'encre,
 le vert mousse, les étiquettes en mono et la palette magma réservée aux données.
 
-Les jetons sont définis dans `web/src/index.css`. Le thème **sombre est le thème par défaut** ;
-le thème clair « papier » s'active par le bouton de thème (barre latérale), qui pose `data-theme="light"` sur `<html>` et mémorise le choix dans le navigateur
-(`web/src/theme.ts`).
+Les jetons sont définis dans `web/src/index.css`, pour un thème sombre (anthracite chaud) et un
+thème clair « papier ». **Par défaut, la page suit le thème du système** (`prefers-color-scheme`),
+y compris s'il change pendant la visite. Le bouton de thème (barre latérale) bascule de l'un à
+l'autre et mémorise ce choix dans le navigateur, qui prime ensuite sur le système
+(`web/src/theme.ts`, attribut `data-theme` sur `<html>`).
 
 ## Jetons
 
 Les noms disent le **rôle**, jamais la couleur.
 
-| Jeton | Sombre (défaut) | Clair | Rôle |
+| Jeton | Sombre | Clair | Rôle |
 | --- | --- | --- | --- |
 | `paper` | `#131211` | `#f7f3ea` | Fond de la page |
 | `paper-alt` | `#24221f` | `#ebe4d4` | Zones en retrait, survols, pistes des barres |
@@ -70,5 +72,5 @@ distinguent par une bordure fine. Fond de page : grille de points (`dot-grid`). 
 
 La v1 reprenait la charte du portfolio de Luciano (papier, encre, Archivo, rayons de 3 et
 6 px, ombres dures). La v2 en garde le papier et l'encre (thème clair), le vert mousse, les
-étiquettes mono et la palette magma, et adopte le sombre par défaut, le serif pour les titres,
+étiquettes mono et la palette magma, et adopte un thème sombre (le système choisit), le serif pour les titres,
 les boutons en pilule et les surfaces plates.
