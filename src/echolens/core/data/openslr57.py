@@ -37,6 +37,8 @@ SUBSET_OF_FOLDER = {
 # Lettre du genre dans un dossier de locuteur comme « gabon_f_024 » → format du manifeste.
 GENDER_LETTERS: dict[str, Gender] = {"m": "M", "f": "F"}
 SPEAKER_NAME_FIELD_COUNT = 3
+# Extensions qui suivent parfois l'identifiant d'un extrait dans les transcriptions.
+TRANSCRIPT_ID_EXTENSIONS = (".wav", ".tdf")
 # Fichiers défectueux connus (illisibles ou de 0 s), exclus du manifeste ; vide pour l'instant.
 KNOWN_BAD_FILES: frozenset[str] = frozenset()
 
@@ -101,9 +103,13 @@ def parse_transcript_line(line: str) -> tuple[str, str] | None:
         return None
     first_word = parts[0]
     text = parts[1].strip()
-    # Path(...).stem retire les dossiers et l'extension (.wav, .tdf) : il reste le nom de
-    # l'extrait, le même que celui du fichier audio.
-    utterance_id = Path(first_word).stem
+    # On retire les dossiers puis l'extension connue. Path(...).stem ne convient pas : les noms
+    # contiennent des points (« afc-gabon_16.06.12_019_read_0017 ») qu'il prendrait pour une
+    # extension.
+    utterance_id = Path(first_word).name
+    for extension in TRANSCRIPT_ID_EXTENSIONS:
+        if utterance_id.endswith(extension):
+            utterance_id = utterance_id.removesuffix(extension)
     return utterance_id, text
 
 

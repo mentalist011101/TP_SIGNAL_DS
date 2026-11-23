@@ -200,6 +200,11 @@ def test_parse_transcript_line_forms() -> None:
     assert wav_form == ("abc_001", "le texte")
     assert tdf_form == ("abc_002", "texte")
     assert bare_form == ("abc_003", "texte")
+    # Les points du nom ne sont pas une extension (bug trouvé sur le vrai jeu).
+    dotted_form = parse_transcript_line("afc-gabon_16.06.12_019_read_0017 texte")
+    assert dotted_form == ("afc-gabon_16.06.12_019_read_0017", "texte")
+    dotted_tdf = parse_transcript_line("afc-gabon_16.06.11_002_conv_0023.tdf texte")
+    assert dotted_tdf == ("afc-gabon_16.06.11_002_conv_0023", "texte")
     assert parse_transcript_line("") is None
     assert parse_transcript_line("abc_004") is None
 
