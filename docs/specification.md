@@ -51,7 +51,7 @@ polyphoniques, déploiement public, application mobile.
 
 | ID | Domaine | Exigence |
 | --- | --- | --- |
-| ENF-01 | Temps réel | En flux micro, inférence d'une fenêtre plus courte que le décalage H = 0,5 s (RTF < 1) sur la machine CPU de référence |
+| ENF-01 | Temps réel | En flux micro (fenêtre W = 2 s, décalage H = 0,5 s), le calcul d'une fenêtre se termine avant la suivante : calcul < H, au p95, sur la machine CPU de référence. Avec RTF = temps de calcul / durée du son analysé, cela équivaut à RTF < H / W = 0,25 (mesure : `training/scripts/measure_latency.py`) |
 | ENF-02 | Latence | Latence perçue ≈ H + temps d'inférence, mesurée en p50 et p95 |
 | ENF-03 | Fichiers | Une analyse de fichier ne bloque jamais l'interface (arrière-plan avec statut) |
 | ENF-04 | Performance | Cibles de F1 macro, accuracy, WER et EER fixées après les premières références |
@@ -144,8 +144,9 @@ Le détail des règles fait foi dans `docs/protocole.md`.
 
 Points à respecter : moyennes par couche calculées une seule fois (la moyenne commute avec la
 somme pondérée) ; pour Whisper, ignorer les trames de remplissage jusqu'à 30 s ; entraînement
-AdamW, schedule cosinus, early stopping sur le F1 macro de validation, 3 graines pour les
-résultats principaux ; deux profils, « qualité » (fichiers) et « temps réel » (flux).
+AdamW, schedule cosinus, courbe complète, meilleure époque choisie sur la validation (F1 macro,
+sans arrêt anticipé : le cosinus va jusqu'au bout), 3 graines pour les résultats principaux ;
+deux profils, « qualité » (fichiers) et « temps réel » (flux).
 
 | ID | Hypothèse à trancher |
 | --- | --- |
@@ -198,7 +199,7 @@ résultats principaux ; deux profils, « qualité » (fichiers) et « temps rée
 | U2 | Tailwind CSS (+ shadcn/ui) |
 | U3 | TanStack Query, React Router |
 | U4 | Types TypeScript générés depuis l'OpenAPI (`npm run gen:api`) |
-| U5 | wavesurfer.js (plugin regions), Recharts, WebSocket natif |
+| U5 | Barres de probabilités en CSS ; Recharts seulement si un vrai graphique en a besoin (courbes, comparaisons) ; forme d'onde en canvas (wavesurfer.js non utilisé) ; WebSocket natif |
 | U6 | Spectrogramme calculé côté serveur par `core` |
 | U7 | Erreurs soignées, interface en français |
 
@@ -233,3 +234,6 @@ et `/docs`.
 | 9 nov. 2026 | Brique 3, d'après les règles de protocole de Lynn (Ly2, Ly5) : P1 précisé (tirage par genre, découpage versionné), P3 (réglage sur le fold k+1 puis réentraînement sur 4 folds), P12 (règle de normalisation fixée, nombres en lettres), P13 (enregistrements de l'équipe) ; R2 appliqué dans le code (PR #1) |
 | 11 nov. 2026 | Protocole publié dans docs/protocole.md (Ly2 et Ly5 de Lynn, décisions du 9 au 11 novembre) ; P6 : valeur des masques ; P1 : règle exacte du tirage alignée sur le protocole |
 | 12 nov. 2026 | Brique 1 (C2, PR #19) : D4 désactivé par défaut, force 0,8 provisoire, protocole d'ablation du sprint 2 ; D5 : webrtcvad à la place de Silero VAD, paramètres de nettoyage des segments fixés ; paramètres dans configs/preprocess.yaml |
+| 19 nov. 2026 | Brique 4 et protocole (§ 4, § 5) : plus d'arrêt anticipé pour tous les modèles ; courbe complète, meilleure époque et taux d'apprentissage choisis sur la validation, puis réentraînement inchangé. Diagnostic C9 (`c9_early_stopping_diagnostic.ipynb`, réglage rejoué sur 150 époques) : CNN 0,659 à l'époque 43 contre 0,767 à l'époque 145 ; CRNN 0,740 à l'époque 44 contre 0,806 à l'époque 147 |
+| 20 nov. 2026 | ENF-01 corrigé (C13) : RTF = temps de calcul / durée du son analysé ; la condition « calcul < H » sur une fenêtre W = 2 s équivaut à RTF < H / W = 0,25, et non RTF < 1. Le profil temps réel prend, pour chaque tâche, le modèle dont le p95 sur 2 s est sous H (le meilleur F1 si plusieurs passent) |
+| 21 nov. 2026 | Brique 7, U5 (relecture du point d'étape du front) : barres de probabilités en CSS, sans dépendance ; Recharts seulement si un vrai graphique en a besoin ; wavesurfer.js non utilisé, la forme d'onde est dessinée en canvas |

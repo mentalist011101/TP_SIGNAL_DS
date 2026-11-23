@@ -28,6 +28,7 @@ from marshmallow import Schema, fields, validate
 # abort de webargs (republié par flask-smorest) : typé NoReturn, ce qui satisfait mypy.
 from webargs.flaskparser import abort
 
+from echolens.api.result_schemas import ResultsSchema
 from echolens.core.features import FeatureConfig, mel_axis_position
 from echolens.core.models.registry import Profile, Task
 from echolens.services.analysis_service import (
@@ -186,6 +187,15 @@ class AnalysisSchema(Schema):
         metadata={
             "description": "Axes et échelle de couleurs de l'image du spectrogramme ; "
             "null tant que status ≠ done."
+        },
+    )
+    results = fields.Nested(
+        ResultsSchema,
+        allow_none=True,
+        metadata={
+            "description": "Résultats : un objet par tâche demandée (emotion, sound_event, "
+            "transcription, speaker), avec le résultat global et les segments ; null tant "
+            "que status ≠ done (en attente, en cours ou échec)."
         },
     )
 

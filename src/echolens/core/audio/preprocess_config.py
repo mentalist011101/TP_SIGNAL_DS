@@ -61,9 +61,8 @@ class WindowConfig(BaseModel):
 
 
 class WindowProfiles(BaseModel):
-    """Fenêtres des événements sonores et du flux micro (D5, D8)."""
+    """Fenêtres du flux micro (D8). Celles des analyses de fichiers sont dans inference.yaml."""
 
-    events: WindowConfig
     stream: WindowConfig
 
 

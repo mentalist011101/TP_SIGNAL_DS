@@ -1,0 +1,98 @@
+import { Link, useParams } from 'react-router-dom'
+import {
+  ApiError,
+  describeApiError,
+  isAnalysisRunning,
+  useAnalysis,
+  type Analysis,
+} from '../api/client.ts'
+import AnalysisProgress from '../components/analyze/AnalysisProgress.tsx'
+import ResultAudio from '../components/result/ResultAudio.tsx'
+import ResultHeader from '../components/result/ResultHeader.tsx'
+import DemoNotice from '../components/result/DemoNotice.tsx'
+import ResultHighlights from '../components/result/ResultHighlights.tsx'
+import { hasDemoResult } from '../components/result/taskResult.ts'
+import { AnalysisNotFound, FailedAnalysis } from '../components/result/ResultMessages.tsx'
+import TaskResultList from '../components/result/TaskResultList.tsx'
+import { ArrowLeftIcon } from '../components/icons.tsx'
+
+const BACK_LINK_CLASSES =
+  'inline-flex items-center gap-1.5 text-sm font-semibold text-accent-ink hover:underline'
+
+// Code HTTP de l'API pour une analyse inconnue.
+const NOT_FOUND_STATUS = 404
+
+// Avant la première réponse : chargement, analyse introuvable, ou serveur injoignable.
+function MissingAnalysis({ error }: { error: Error | null }) {
+  if (error === null) {
+    return <p className="text-sm text-ink-soft">Chargement de l’analyse…</p>
+  }
+  if (error instanceof ApiError && error.status === NOT_FOUND_STATUS) {
+    return <AnalysisNotFound />
+  }
+  return <p className="text-sm text-danger">{describeApiError(error)}</p>
+}
+
+// Corps de la page : la raison d'un échec, ou l'audio puis une carte par tâche demandée. Le
+// bandeau de démonstration passe avant tout chiffre, chiffres clés compris : on ne montre
+// jamais de probabilités du faux prédicteur sans le dire d'abord.
+function ResultBody({ analysis }: { analysis: Analysis }) {
+  if (analysis.status === 'failed') {
+    return <FailedAnalysis reason={analysis.error_message} />
+  }
+  const isDemo = hasDemoResult(analysis)
+  return (
+    <>
+      {isAnalysisRunning(analysis) && (
+        <div className="space-y-3 rounded-card border border-rule bg-card p-5">
+          <AnalysisProgress analysis={analysis} isSubmitting={false} errorMessage={null} />
+          <p className="text-sm text-ink-soft">
+            Vous pouvez quitter cette page : l’analyse continue et restera dans l’historique.
+          </p>
+        </div>
+      )}
+      {isDemo && <DemoNotice />}
+      <ResultHighlights analysis={analysis} />
+      <ResultAudio analysis={analysis} />
+      <TaskResultList analysis={analysis} />
+    </>
+  )
+}
+
+// Page Résultat (C21, EF-05 à EF-08), adresse /analyses/{id} : ouverte par la page Analyser
+// à la fin d'une analyse, ou depuis l'historique. useAnalysis interroge l'API chaque seconde
+// tant que l'analyse est en attente ou en cours, puis s'arrête.
+export default function ResultPage() {
+  const params = useParams()
+  const analysisId = params.analysisId ?? null
+  const query = useAnalysis(analysisId)
+  const analysis = query.data
+
+  let content = <MissingAnalysis error={query.error} />
+  if (analysis !== undefined) {
+    content = (
+      <>
+        <ResultHeader analysis={analysis} />
+        {/* Une interrogation a échoué alors qu'on avait déjà l'analyse (F11) : on garde
+            l'affichage, et la suivante réessaiera toute seule. */}
+        {query.error !== null && (
+          <p className="text-sm text-danger">
+            Connexion au serveur perdue. Nouvelle tentative en cours…
+          </p>
+        )}
+        <ResultBody analysis={analysis} />
+      </>
+    )
+  }
+
+  return (
+    <section className="space-y-6">
+      {/* « Nouvelle analyse » est déjà dans le menu : ici, seulement le retour. */}
+      <Link to="/historique" className={BACK_LINK_CLASSES}>
+        <ArrowLeftIcon />
+        Historique
+      </Link>
+      {content}
+    </section>
+  )
+}

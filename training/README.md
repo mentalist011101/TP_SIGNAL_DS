@@ -37,7 +37,9 @@ os.environ["HF_TOKEN"] = secrets.get_secret("HF_TOKEN")
 | --- | --- | --- |
 | `c3_manifests_emotions.ipynb` | C3 : manifestes de CREMA-D et de RAVDESS (P1, P9), sans GPU ni ffmpeg | `cremad.csv` et `ravdess.csv` (→ `data/manifests/`) |
 | `c5_esc50_mfcc_svm.ipynb` | C5 : référence MFCC + SVM sur ESC-50 (P3, P4, P5), sans GPU | `esc50.csv` (→ `data/manifests/`), `esc50_mfcc_svm.json` (→ `training/results/`), matrice en 5 catégories (→ `report/figures/`) |
+| `c9_family_a_esc50.ipynb` | C9 : CNN et CRNN de la famille A sur le log-Mel d'ESC-50 (Brique 4, R4, R6, P3, P6, P8), GPU T4 | `esc50_family_a_cnn.json` et `esc50_family_a_crnn.json` (→ `training/results/`), matrices en 5 catégories et exemples d'attention (→ `report/figures/`) ; en sortie Kaggle seulement : log-Mel, prédictions, probabilités, poids d'attention et poids des 15 modèles finaux par réseau |
 | `c10_embeddings.ipynb` | C10 : moyennes par couche des encodeurs gelés de la famille B (Brique 4, R6, R7), GPU T4 | datasets Kaggle privés `echolens-emb-wav2vec2-base`, `echolens-emb-mhubert-147`, `echolens-emb-whisper-base` (avec `padded/`), jamais sur GitHub |
+| `c11_family_b_heads.ipynb` | C11 : têtes de la famille B sur les représentations de C10 (Brique 4, R4, P3, P8), CPU, datasets `echolens-emb-*` attachés | `c11_family_b_esc50.json` et `c11_family_b_emotions.json` (→ `training/results/`) ; têtes, standardisation et probabilités en sorties du notebook, jamais sur GitHub |
 
 ## Règles
 

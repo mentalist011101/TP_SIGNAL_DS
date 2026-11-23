@@ -11,6 +11,7 @@ import shutil
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import soundfile as sf
@@ -20,9 +21,19 @@ from werkzeug.datastructures import FileStorage
 from werkzeug.utils import secure_filename
 
 from echolens.config import AppSettings
-from echolens.core.audio import AudioDecodeError, AudioTooLongError, is_silent, load_audio
+from echolens.core.audio import (
+    AudioDecodeError,
+    AudioTooLongError,
+    is_silent,
+    load_audio,
+    load_preprocess_config,
+)
 from echolens.core.audio.io import TARGET_SAMPLE_RATE
+from echolens.core.data.class_labels import load_class_labels
 from echolens.core.features import FeatureConfig, log_mel_spectrogram
+from echolens.core.inference import load_inference_config
+from echolens.services.predictor import make_predictor
+from echolens.services.results import ResultContext, build_results
 from echolens.services.spectrogram_image import save_spectrogram_png
 from echolens.services.storage import AnalysisRecord, AnalysisStatus
 
@@ -49,6 +60,7 @@ class AnalysisService:
         self.session_factory = session_factory
         # Paramètres des features lus une seule fois : les mêmes que l'entraînement (R5).
         self.feature_config = FeatureConfig.from_yaml(settings.features_path)
+        self.result_context = _make_result_context(settings)
         self.executor = ThreadPoolExecutor(max_workers=settings.analysis_workers)
         self._fail_interrupted_analyses()
 
@@ -177,19 +189,23 @@ class AnalysisService:
         self.executor.submit(self._process, analysis_id)
 
     def _process(self, analysis_id: str) -> None:
-        # Traitement d'une analyse : conversion, puis spectrogramme. Les étapes suivantes
-        # (modèles) s'ajouteront après le spectrogramme, dans le même bloc try.
+        # Traitement d'une analyse : conversion, spectrogramme, puis résultats des tâches
+        # demandées. Les résultats ne sont enregistrés qu'avec le statut done : results reste
+        # null pendant le traitement et en cas d'échec.
         self._update(analysis_id, status=AnalysisStatus.PROCESSING)
         try:
             duration_s = self._convert_audio(analysis_id)
             self._save_spectrogram(analysis_id)
+            results = self._compute_results(analysis_id)
         except Exception as error:
             # Frontière du thread : toute erreur doit finir en statut failed, sinon elle
             # serait perdue dans le pool et l'analyse resterait « processing » pour toujours.
             message = f"Échec du traitement : {error}"
             self._update(analysis_id, status=AnalysisStatus.FAILED, error_message=message)
             return
-        self._update(analysis_id, status=AnalysisStatus.DONE, duration_s=duration_s)
+        self._update(
+            analysis_id, status=AnalysisStatus.DONE, duration_s=duration_s, results=results
+        )
 
     def _convert_audio(self, analysis_id: str) -> float:
         # Décodage en mono 16 kHz float32 (D1, D2), puis écriture en WAV PCM 16 bits.
@@ -213,6 +229,13 @@ class AnalysisService:
         image_path = self.spectrogram_path(analysis_id)
         save_spectrogram_png(log_mel, image_path, self.feature_config)
 
+    def _compute_results(self, analysis_id: str) -> dict[str, Any]:
+        # Étape 1 : l'audio converti, relu par le point d'entrée unique du cœur (D1, D2).
+        signal = load_audio(self.converted_audio_path(analysis_id))
+        # Étape 2 : un résultat par tâche demandée, global calculé à partir des segments.
+        record = self.get_analysis(analysis_id)
+        return build_results(signal, record.tasks, record.profile, self.result_context)
+
     def _original_audio_path(self, analysis_id: str) -> Path:
         # L'extension est conservée dans le nom original.<ext> : on retrouve le fichier dans
         # le dossier plutôt que de la redéduire du nom importé.
@@ -228,6 +251,7 @@ class AnalysisService:
         status: AnalysisStatus,
         error_message: str | None = None,
         duration_s: float | None = None,
+        results: dict[str, Any] | None = None,
     ) -> None:
         with self.session_factory() as session:
             record = session.get(AnalysisRecord, analysis_id)
@@ -238,7 +262,21 @@ class AnalysisService:
             record.error_message = error_message
             if duration_s is not None:
                 record.duration_s = duration_s
+            if results is not None:
+                record.results = results
             session.commit()
+
+
+def _make_result_context(settings: AppSettings) -> ResultContext:
+    # Classes, prédicteur et découpage lus une seule fois, au démarrage, dans configs/.
+    labels = load_class_labels()
+    predictor = make_predictor(settings, labels)
+    return ResultContext(
+        predictor=predictor,
+        labels=labels,
+        inference_config=load_inference_config(),
+        vad_config=load_preprocess_config().vad,
+    )
 
 
 def _clean_filename(sent_name: str, extension: str) -> str:

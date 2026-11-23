@@ -5,6 +5,7 @@ Les étiquettes sont des entiers de 0 à n_classes − 1.
 
 from __future__ import annotations
 
+import csv
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -12,6 +13,8 @@ from pathlib import Path
 import numpy as np
 import numpy.typing as npt
 from pydantic import BaseModel, Field
+from scipy.optimize import minimize_scalar
+from scipy.special import logsumexp
 from scipy.stats import binomtest, chi2
 from sklearn.metrics import accuracy_score, confusion_matrix, f1_score, roc_curve
 
@@ -20,6 +23,7 @@ from echolens.config import load_yaml
 IntArray = npt.NDArray[np.int_]
 FloatMatrix = npt.NDArray[np.float64]
 FloatArray = npt.NDArray[np.float64]
+PREDICTION_COLUMNS = ["path", "fold", "target", "prediction"]
 
 
 class EvaluationConfig(BaseModel):
@@ -30,6 +34,10 @@ class EvaluationConfig(BaseModel):
     ece_bins: int = Field(default=10, gt=0)
     seed: int = 42
     mcnemar_exact_below: int = Field(default=25, gt=0)
+    temperature_min: float = Field(default=0.05, gt=0)
+    temperature_max: float = Field(default=20.0, gt=0)
+    temperature_log_tolerance: float = Field(default=1e-5, gt=0)
+    probability_floor: float = Field(default=1e-12, gt=0)
 
     @classmethod
     def from_yaml(cls, path: Path) -> EvaluationConfig:
@@ -63,6 +71,13 @@ def normalized_confusion(y_true: IntArray, y_pred: IntArray, n_classes: int) -> 
     safe_totals = np.maximum(row_totals, 1)
     normalized = counts / safe_totals
     return np.asarray(normalized, dtype=np.float64)
+
+
+def per_class_f1(y_true: IntArray, y_pred: IntArray, n_classes: int) -> FloatArray:
+    """F1 de chaque classe, de 0 à n_classes − 1, même pour une classe absente (P4)."""
+    all_classes = np.arange(n_classes)
+    scores = f1_score(y_true, y_pred, labels=all_classes, average=None, zero_division=0.0)
+    return np.asarray(scores, dtype=np.float64)
 
 
 def to_categories(labels: IntArray, group_size: int = 10) -> IntArray:
@@ -127,6 +142,84 @@ def bootstrap_ci(
     tail = (1.0 - config.confidence) / 2.0
     low, high = np.quantile(scores, [tail, 1.0 - tail])
     return float(low), float(high)
+
+
+@dataclass(frozen=True)
+class ClipPrediction:
+    """Prédiction d'un modèle pour un extrait de test, identifié par son chemin de manifeste."""
+
+    path: str
+    fold: int
+    target: int
+    prediction: int
+
+
+@dataclass(frozen=True)
+class AlignedPredictions:
+    """Prédictions de deux modèles sur exactement les mêmes extraits, dans le même ordre."""
+
+    paths: list[str]
+    y_true: IntArray
+    pred_a: IntArray
+    pred_b: IntArray
+
+
+def save_predictions(predictions: list[ClipPrediction], path: Path) -> None:
+    """Écrit les prédictions de test en CSV (path, fold, target, prediction) pour McNemar (P8)."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.writer(handle, lineterminator="\n")
+        writer.writerow(PREDICTION_COLUMNS)
+        for item in predictions:
+            writer.writerow([item.path, item.fold, item.target, item.prediction])
+
+
+def load_predictions(path: Path) -> list[ClipPrediction]:
+    """Relit un fichier écrit par save_predictions."""
+    predictions: list[ClipPrediction] = []
+    with path.open(encoding="utf-8", newline="") as handle:
+        for record in csv.DictReader(handle):
+            item = ClipPrediction(
+                path=record["path"],
+                fold=int(record["fold"]),
+                target=int(record["target"]),
+                prediction=int(record["prediction"]),
+            )
+            predictions.append(item)
+    return predictions
+
+
+def align_predictions(
+    first: list[ClipPrediction], second: list[ClipPrediction]
+) -> AlignedPredictions:
+    """Met côte à côte les prédictions de deux modèles, extrait par extrait (P8).
+
+    McNemar compare les deux modèles sur les MÊMES extraits : on refuse deux fichiers qui ne
+    couvrent pas exactement les mêmes chemins, ou qui ne donnent pas la même vraie classe.
+    """
+    second_by_path = {item.path: item for item in second}
+    if len(second_by_path) != len(first) or len(second) != len(first):
+        raise ValueError("Les deux fichiers de prédictions n'ont pas le même nombre d'extraits")
+    paths: list[str] = []
+    y_true: list[int] = []
+    pred_a: list[int] = []
+    pred_b: list[int] = []
+    for item in sorted(first, key=_prediction_path):
+        other = second_by_path.get(item.path)
+        if other is None or other.target != item.target:
+            raise ValueError(
+                f"Extrait absent ou de classe différente dans l'autre fichier : {item.path}"
+            )
+        paths.append(item.path)
+        y_true.append(item.target)
+        pred_a.append(item.prediction)
+        pred_b.append(other.prediction)
+    return AlignedPredictions(
+        paths=paths,
+        y_true=np.array(y_true, dtype=np.int_),
+        pred_a=np.array(pred_a, dtype=np.int_),
+        pred_b=np.array(pred_b, dtype=np.int_),
+    )
 
 
 @dataclass(frozen=True)
@@ -228,6 +321,47 @@ def expected_calibration_error(
     return CalibrationResult(float(ece), bin_confidence, bin_accuracy, bin_counts)
 
 
+def apply_temperature(
+    probabilities: FloatMatrix, temperature: float, config: EvaluationConfig
+) -> FloatMatrix:
+    """Probabilités calibrées : softmax(log p / T), extrait par extrait (E2, ENF-06).
+
+    log p remplace les logits du modèle : log p = logits − constante (par extrait), et le
+    softmax ignore une constante ajoutée à tous les scores. T > 1 aplatit les probabilités
+    (modèle trop sûr de lui), T < 1 les accentue, T = 1 ne change rien. La classe prédite ne
+    change jamais : diviser par T > 0 garde l'ordre des scores.
+    """
+    logits = _log_probabilities(probabilities, config)
+    scaled = logits / temperature
+    log_normalizer = logsumexp(scaled, axis=1, keepdims=True)
+    calibrated = np.exp(scaled - log_normalizer)
+    return np.asarray(calibrated, dtype=np.float64)
+
+
+def fit_temperature(
+    y_true: IntArray, probabilities: FloatMatrix, config: EvaluationConfig
+) -> float:
+    """Température T qui minimise la log-vraisemblance négative des vraies classes (E2).
+
+    On cherche log T plutôt que T : T doit rester positif, et l'écart entre T = 0,5 et T = 1
+    compte autant que celui entre 1 et 2. Recherche bornée (scipy, méthode « bounded ») entre
+    temperature_min et temperature_max. À faire sur des données qui n'ont pas servi à
+    entraîner le modèle (validation, ou fold de test d'un tour).
+    """
+    if len(y_true) != len(probabilities):
+        raise ValueError("y_true et probabilities doivent avoir le même nombre d'extraits")
+    logits = _log_probabilities(probabilities, config)
+    log_bounds = (np.log(config.temperature_min), np.log(config.temperature_max))
+    result = minimize_scalar(
+        _negative_log_likelihood,
+        bounds=log_bounds,
+        args=(logits, y_true),
+        method="bounded",
+        options={"xatol": config.temperature_log_tolerance},
+    )
+    return float(np.exp(result.x))
+
+
 @dataclass(frozen=True)
 class EerResult:
     """Taux d'égale erreur et seuil de décision correspondant."""
@@ -255,3 +389,27 @@ def equal_error_rate(labels: IntArray, scores: FloatArray) -> EerResult:
     best = int(np.argmin(np.abs(fnr - fpr)))
     eer = float((fpr[best] + fnr[best]) / 2.0)
     return EerResult(eer, float(thresholds[best]))
+
+
+def _prediction_path(item: ClipPrediction) -> str:
+    return item.path
+
+
+def _log_probabilities(probabilities: FloatMatrix, config: EvaluationConfig) -> FloatMatrix:
+    # Plancher avant le logarithme : une probabilité nulle donnerait −∞.
+    floored = np.maximum(probabilities, config.probability_floor)
+    return np.asarray(np.log(floored), dtype=np.float64)
+
+
+def _negative_log_likelihood(
+    log_temperature: float, logits: FloatMatrix, y_true: IntArray
+) -> float:
+    # NLL(T) = − moyenne de log softmax(logits / T)[vraie classe].
+    temperature = np.exp(log_temperature)
+    scaled = logits / temperature
+    log_normalizer = logsumexp(scaled, axis=1, keepdims=True)
+    log_softmax = scaled - log_normalizer
+    # Pour l'extrait i, on lit la case de sa vraie classe y_true[i].
+    rows = np.arange(len(y_true))
+    true_class_log_probabilities = log_softmax[rows, y_true]
+    return float(-true_class_log_probabilities.mean())

@@ -13,6 +13,7 @@ from echolens.training.esc50_svm import (
     cross_validate,
     esc50_target,
     extract_features,
+    predictions_of_test_folds,
     run_fold,
     summarize_mfcc,
     validation_fold,
@@ -144,3 +145,21 @@ def test_extract_features_writes_then_reads_cache(
     cached_features, _, _ = extract_features(rows, tmp_path, feature_config, cache_path)
     assert len(loaded_paths) == 2
     np.testing.assert_allclose(cached_features, features)
+
+
+def test_test_predictions_cover_each_clip_once_with_its_manifest_path(
+    svm_config: SvmConfig,
+) -> None:
+    features, targets, folds = separated_clouds()
+    rows = []
+    for index in range(len(targets)):
+        path = f"audio/{folds[index]}-{index}-A-{targets[index]}.wav"
+        rows.append(ManifestRow(dataset="esc50", path=path, duration_s=5.0, fold=int(folds[index])))
+    result = cross_validate(features, targets, folds, svm_config)
+    predictions = predictions_of_test_folds(result, rows)
+    assert len(predictions) == len(rows)
+    assert sorted(item.path for item in predictions) == sorted(row.path for row in rows)
+    for item in predictions:
+        # Le fold et la classe écrits dans le nom concordent avec la ligne du manifeste.
+        assert item.path.startswith(f"audio/{item.fold}-")
+        assert item.path.endswith(f"-{item.target}.wav")

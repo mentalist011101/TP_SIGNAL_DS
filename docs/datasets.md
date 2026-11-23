@@ -135,8 +135,8 @@ Les règles viennent de Ly2 ; le code est dans `echolens.core.data.emotions` et
 - **ESC-50 (P3)** : `esc50_round(k, 5)` donne, au tour k, le fold de test k, le fold de
   validation (k + 1, et 1 après 5) qui sert seulement à régler époques et hyperparamètres sur
   3 folds d'entraînement, puis les 4 folds hors test de l'entraînement final (comparabilité
-  avec la littérature). Un modèle sans early stopping (MFCC + SVM) s'entraîne directement sur
-  les 4 folds.
+  avec la littérature). Un modèle sans époques (MFCC + SVM) choisit ses hyperparamètres sur le
+  fold de validation, puis s'entraîne directement sur les 4 folds.
 - **Hors domaine (P7)** : CaFE, ACE, OpenSLR 57 et nos enregistrements (`team`) sont toujours
   en test ; `split_of_row` ne leur donne jamais d'autre partie.
 - **Tests** : `tests/unit/test_splits.py` vérifie chaque règle, y compris sur les vrais

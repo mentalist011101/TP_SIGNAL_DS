@@ -1,0 +1,74 @@
+{
+  "models": {
+    "echolens-sound-event-crnn": {
+      "task": "sound_event",
+      "f1_macro": 0.8266,
+      "2s": {
+        "p50_s": 0.038302550005028024,
+        "p95_s": 0.15729048999055503,
+        "rtf_p95": 0.07864524499527752
+      },
+      "5s": {
+        "p50_s": 0.08179280000331346,
+        "p95_s": 0.40102734999090706,
+        "rtf_p95": 0.08020546999818141
+      },
+      "parameters": 698355,
+      "weights_mb": 2.800612,
+      "total_parameters": 698355
+    },
+    "echolens-sound-event-whisper-base": {
+      "task": "sound_event",
+      "f1_macro": 0.8303,
+      "2s": {
+        "p50_s": 1.8562837499921443,
+        "p95_s": 4.217613305008849,
+        "rtf_p95": 2.1088066525044247
+      },
+      "5s": {
+        "p50_s": 2.1422880000027362,
+        "p95_s": 4.731680605019207,
+        "rtf_p95": 0.9463361210038415
+      },
+      "parameters": 144185,
+      "weights_mb": 0.577124,
+      "encoder_parameters": 20590592,
+      "total_parameters": 20734777
+    },
+    "echolens-emotion-whisper-base": {
+      "task": "emotion",
+      "f1_macro": 0.7535,
+      "2s": {
+        "p50_s": 1.623048249995918,
+        "p95_s": 4.265936274996782,
+        "rtf_p95": 2.132968137498391
+      },
+      "5s": {
+        "p50_s": 1.4555255000013858,
+        "p95_s": 3.0370445100154013,
+        "rtf_p95": 0.6074089020030803
+      },
+      "parameters": 132877,
+      "weights_mb": 0.531892,
+      "encoder_parameters": 20590592,
+      "total_parameters": 20723469
+    }
+  },
+  "machine": {
+    "processor": "Intel(R) Core(TM) i5-6200U CPU @ 2.30GHz",
+    "machine": "AMD64",
+    "system": "Windows 10",
+    "logical_cpus": 4,
+    "torch_threads": 2,
+    "torch_version": "2.15.0+cpu",
+    "python": "3.11.15"
+  },
+  "stream_window_s": 2.0,
+  "stream_hop_s": 0.5,
+  "rtf_limit": 0.25,
+  "measured_windows": 200,
+  "realtime_choice": {
+    "emotion": null,
+    "sound_event": "echolens-sound-event-crnn"
+  }
+}

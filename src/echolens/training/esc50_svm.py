@@ -23,6 +23,7 @@ from echolens.core.audio import load_audio
 from echolens.core.data.manifest import ManifestRow, audio_path
 from echolens.core.features import FeatureConfig, FloatArray, mfcc
 from echolens.training.evaluation import (
+    ClipPrediction,
     FloatMatrix,
     IntArray,
     accuracy,
@@ -57,6 +58,8 @@ class FoldResult:
     chosen_c: float
     macro_f1: float
     accuracy: float
+    # Positions des extraits de test dans le manifeste, dans l'ordre de y_true et y_pred.
+    test_indices: IntArray
     y_true: IntArray
     y_pred: IntArray
     model: Pipeline
@@ -192,6 +195,7 @@ def run_fold(
     # Étape 2 : réentraînement avec ce C sur tout ce qui n'est pas le test (validation incluse).
     is_test = folds == test_fold
     is_train = ~is_test
+    test_indices = np.flatnonzero(is_test)
     model = make_svm(chosen_c, svm_config)
     model.fit(features[is_train], targets[is_train])
     # Étape 3 : une seule évaluation sur le fold de test.
@@ -205,6 +209,7 @@ def run_fold(
         chosen_c=chosen_c,
         macro_f1=fold_f1,
         accuracy=fold_accuracy,
+        test_indices=test_indices.astype(np.int_),
         y_true=y_true,
         y_pred=y_pred,
         model=model,
@@ -239,6 +244,26 @@ def cross_validate(
         confusion_classes=confusion_classes,
         confusion_categories=confusion_categories,
     )
+
+
+def predictions_of_test_folds(
+    result: CrossValidationResult, rows: list[ManifestRow]
+) -> list[ClipPrediction]:
+    """Prédictions des 5 folds de test réunies, une par extrait, pour McNemar (P8).
+
+    rows est le manifeste qui a servi à extract_features, dans le même ordre.
+    """
+    predictions: list[ClipPrediction] = []
+    for fold_result in result.folds:
+        for position, index in enumerate(fold_result.test_indices):
+            item = ClipPrediction(
+                path=rows[index].path,
+                fold=fold_result.test_fold,
+                target=int(fold_result.y_true[position]),
+                prediction=int(fold_result.y_pred[position]),
+            )
+            predictions.append(item)
+    return predictions
 
 
 def _cumulated_confusions(
