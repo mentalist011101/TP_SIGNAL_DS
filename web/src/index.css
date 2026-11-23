@@ -54,6 +54,77 @@
 
   /* Courbe des transitions (survols). */
   --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* Animations de la page d'accueil. Toutes sont appelées avec motion-safe: : elles
+     s'arrêtent quand le système demande moins d'animations. */
+  /* Bandeau qui défile sans fin : sa liste est répétée deux fois, on glisse d'une moitié. */
+  --animate-marquee: marquee 70s linear infinite;
+  /* Barre d'égaliseur qui monte et descend. */
+  --animate-equalizer: equalizer 1.1s ease-in-out infinite;
+  /* Étiquette qui apparaît, reste, puis s'efface : un cycle de 8 s. */
+  --animate-pop-cycle: pop-cycle 8s ease-out infinite;
+  /* Tête de lecture qui traverse une frise. */
+  --animate-playhead: playhead 8s linear infinite;
+  /* Texte qui s'écrit lettre à lettre, puis recommence. */
+  --animate-typing: typing 5s steps(24, end) infinite;
+  /* Curseur qui clignote. */
+  --animate-caret: caret 1s step-end infinite;
+
+  @keyframes marquee {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-50%);
+    }
+  }
+  @keyframes equalizer {
+    0%,
+    100% {
+      transform: scaleY(0.35);
+    }
+    50% {
+      transform: scaleY(1);
+    }
+  }
+  @keyframes pop-cycle {
+    0% {
+      opacity: 0;
+      transform: translateY(6px) scale(0.96);
+    }
+    8%,
+    80% {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+    92%,
+    100% {
+      opacity: 0;
+      transform: translateY(0) scale(1);
+    }
+  }
+  @keyframes playhead {
+    from {
+      left: 0%;
+    }
+    to {
+      left: 100%;
+    }
+  }
+  @keyframes typing {
+    0% {
+      width: 0;
+    }
+    60%,
+    100% {
+      width: 24ch;
+    }
+  }
+  @keyframes caret {
+    50% {
+      opacity: 0;
+    }
+  }
 }
 
 :root {
