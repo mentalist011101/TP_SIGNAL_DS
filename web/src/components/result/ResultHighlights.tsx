@@ -1,6 +1,6 @@
 import type { Analysis, AnalysisTask, TaskResult } from '../../api/client.ts'
 import { TASK_LABELS } from '../../labels.ts'
-import { formatProbability, mainProbability } from './taskResult.ts'
+import MainResultValue from './MainResultValue.tsx'
 
 interface Highlight {
   task: AnalysisTask
@@ -31,16 +31,10 @@ function modelLine(highlight: Highlight): string {
 
 // Une case : la tâche, son résultat principal en grand et sa probabilité.
 function HighlightTile({ task, result }: Highlight) {
-  const probability = mainProbability(result)
   return (
     <div className="space-y-1 bg-card px-6 py-5">
       <p className="label-mono text-ink-faint">{TASK_LABELS[task]}</p>
-      <p className="flex flex-wrap items-baseline gap-x-3">
-        <span className="font-display text-4xl leading-tight">{result.label_fr}</span>
-        {probability !== null && (
-          <span className="font-mono text-ink-soft">{formatProbability(probability)}</span>
-        )}
-      </p>
+      <MainResultValue result={result} leading="leading-tight" />
     </div>
   )
 }
