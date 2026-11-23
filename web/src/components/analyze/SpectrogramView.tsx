@@ -157,8 +157,9 @@ interface SpectrogramFigureProps {
   durationSeconds: number
 }
 
-// Spectrogramme complet : image, axe des fréquences, axe du temps et légende.
-function SpectrogramFigure({ url, info, durationSeconds }: SpectrogramFigureProps) {
+// Spectrogramme complet : image, axe des fréquences, axe du temps et légende. Exporté pour
+// l'exemple réel de l'accueil, dont l'image est figée dans public/exemple/.
+export function SpectrogramFigure({ url, info, durationSeconds }: SpectrogramFigureProps) {
   return (
     <div className="space-y-1">
       <SpectrogramImage url={url} info={info} />

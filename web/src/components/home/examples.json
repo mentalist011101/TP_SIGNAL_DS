@@ -1,0 +1,443 @@
+{
+  "generated_at": "2026-11-23T16:14:06.262Z",
+  "examples": [
+    {
+      "slug": "parole",
+      "title": "Parole",
+      "task": "emotion",
+      "source": "CREMA-D, extrait 1001_DFA_ANG_XX : acteur du jeu de test, jamais entendu à l’entraînement, phrase jouée en colère",
+      "licence": "ODbL 1.0",
+      "duration_s": 2.2755625,
+      "created_at": "2026-11-21T12:29:55.742065+00:00",
+      "spectrogram": {
+        "colormap": "magma",
+        "colormap_stops": ["#000004", "#3b0f70", "#8c2981", "#de4968", "#fe9f6d", "#fcfdbf"],
+        "db_max": 40,
+        "db_min": -80,
+        "f_max_hz": 8000,
+        "f_min_hz": 0,
+        "frame_step_s": 0.01,
+        "frequency_ticks": [
+          {
+            "hz": 250,
+            "position": 0.12118329190548657
+          },
+          {
+            "hz": 500,
+            "position": 0.21388767262316413
+          },
+          {
+            "hz": 1000,
+            "position": 0.35210472615658556
+          },
+          {
+            "hz": 2000,
+            "position": 0.5356856367482236
+          },
+          {
+            "hz": 4000,
+            "position": 0.7556503916380363
+          },
+          {
+            "hz": 8000,
+            "position": 1
+          }
+        ],
+        "n_mels": 64
+      },
+      "result": {
+        "status": "done",
+        "label_fr": "Colère",
+        "probabilities": [
+          {
+            "label": "angry",
+            "label_fr": "Colère",
+            "probability": 0.9869954803782143
+          },
+          {
+            "label": "disgust",
+            "label_fr": "Dégoût",
+            "probability": 0.011229005700282903
+          },
+          {
+            "label": "happy",
+            "label_fr": "Joie",
+            "probability": 0.0009695808271468407
+          },
+          {
+            "label": "neutral",
+            "label_fr": "Neutre",
+            "probability": 0.0005783770774030372
+          },
+          {
+            "label": "fear",
+            "label_fr": "Peur",
+            "probability": 0.00021146955466614322
+          },
+          {
+            "label": "sad",
+            "label_fr": "Tristesse",
+            "probability": 0.000016086462286802586
+          }
+        ],
+        "model_id": "echolens-emotion-whisper-base",
+        "model_version": "1.0.0",
+        "calibrated": true
+      }
+    },
+    {
+      "slug": "ambiance",
+      "title": "Son d’ambiance",
+      "task": "sound_event",
+      "source": "ESC-50, extrait 1-17367-A-10 (pluie)",
+      "licence": "CC BY-NC 3.0",
+      "duration_s": 5,
+      "created_at": "2026-11-21T12:30:24.207992+00:00",
+      "spectrogram": {
+        "colormap": "magma",
+        "colormap_stops": ["#000004", "#3b0f70", "#8c2981", "#de4968", "#fe9f6d", "#fcfdbf"],
+        "db_max": 40,
+        "db_min": -80,
+        "f_max_hz": 8000,
+        "f_min_hz": 0,
+        "frame_step_s": 0.01,
+        "frequency_ticks": [
+          {
+            "hz": 250,
+            "position": 0.12118329190548657
+          },
+          {
+            "hz": 500,
+            "position": 0.21388767262316413
+          },
+          {
+            "hz": 1000,
+            "position": 0.35210472615658556
+          },
+          {
+            "hz": 2000,
+            "position": 0.5356856367482236
+          },
+          {
+            "hz": 4000,
+            "position": 0.7556503916380363
+          },
+          {
+            "hz": 8000,
+            "position": 1
+          }
+        ],
+        "n_mels": 64
+      },
+      "result": {
+        "status": "done",
+        "label_fr": "Pluie",
+        "probabilities": [
+          {
+            "label": "rain",
+            "label_fr": "Pluie",
+            "probability": 0.9982432922852874
+          },
+          {
+            "label": "sea_waves",
+            "label_fr": "Vagues",
+            "probability": 0.0006252736532835642
+          },
+          {
+            "label": "clapping",
+            "label_fr": "Applaudissements",
+            "probability": 0.0005027698355481821
+          },
+          {
+            "label": "crickets",
+            "label_fr": "Grillons",
+            "probability": 0.0001174597835978871
+          },
+          {
+            "label": "glass_breaking",
+            "label_fr": "Verre brisé",
+            "probability": 0.00008830394516074487
+          },
+          {
+            "label": "footsteps",
+            "label_fr": "Bruits de pas",
+            "probability": 0.00007100657317976262
+          },
+          {
+            "label": "engine",
+            "label_fr": "Moteur",
+            "probability": 0.00006824843049998287
+          },
+          {
+            "label": "door_wood_creaks",
+            "label_fr": "Grincement de porte",
+            "probability": 0.00006702489981334813
+          },
+          {
+            "label": "brushing_teeth",
+            "label_fr": "Brossage de dents",
+            "probability": 0.00004335518216201454
+          },
+          {
+            "label": "toilet_flush",
+            "label_fr": "Chasse d'eau",
+            "probability": 0.00003709238884030972
+          },
+          {
+            "label": "vacuum_cleaner",
+            "label_fr": "Aspirateur",
+            "probability": 0.00003082111902192327
+          },
+          {
+            "label": "chainsaw",
+            "label_fr": "Tronçonneuse",
+            "probability": 0.000023901199125010897
+          },
+          {
+            "label": "fireworks",
+            "label_fr": "Feux d'artifice",
+            "probability": 0.000017353069955488703
+          },
+          {
+            "label": "frog",
+            "label_fr": "Grenouille",
+            "probability": 0.000012573063867649489
+          },
+          {
+            "label": "chirping_birds",
+            "label_fr": "Chants d'oiseaux",
+            "probability": 0.00001001142363184156
+          },
+          {
+            "label": "wind",
+            "label_fr": "Vent",
+            "probability": 0.000009544962462223686
+          },
+          {
+            "label": "hand_saw",
+            "label_fr": "Scie à main",
+            "probability": 0.000009061269096695265
+          },
+          {
+            "label": "pouring_water",
+            "label_fr": "Eau versée",
+            "probability": 0.000006852781408158539
+          },
+          {
+            "label": "washing_machine",
+            "label_fr": "Machine à laver",
+            "probability": 0.000003936955513802532
+          },
+          {
+            "label": "car_horn",
+            "label_fr": "Klaxon",
+            "probability": 0.0000018043898289924628
+          },
+          {
+            "label": "crow",
+            "label_fr": "Corbeau",
+            "probability": 0.0000017373254577543288
+          },
+          {
+            "label": "church_bells",
+            "label_fr": "Cloches d'église",
+            "probability": 0.0000015837525085289916
+          },
+          {
+            "label": "airplane",
+            "label_fr": "Avion",
+            "probability": 0.0000013865221619984452
+          },
+          {
+            "label": "pig",
+            "label_fr": "Cochon",
+            "probability": 0.000001171438338727577
+          },
+          {
+            "label": "snoring",
+            "label_fr": "Ronflement",
+            "probability": 8.576308745455788e-7
+          },
+          {
+            "label": "clock_alarm",
+            "label_fr": "Réveil",
+            "probability": 8.424849652616533e-7
+          },
+          {
+            "label": "siren",
+            "label_fr": "Sirène",
+            "probability": 6.233515243011922e-7
+          },
+          {
+            "label": "crackling_fire",
+            "label_fr": "Feu qui crépite",
+            "probability": 5.062846076773126e-7
+          },
+          {
+            "label": "breathing",
+            "label_fr": "Respiration",
+            "probability": 3.7214281918148253e-7
+          },
+          {
+            "label": "keyboard_typing",
+            "label_fr": "Frappe au clavier",
+            "probability": 2.5889615544664746e-7
+          },
+          {
+            "label": "water_drops",
+            "label_fr": "Gouttes d'eau",
+            "probability": 1.8864883532827187e-7
+          },
+          {
+            "label": "mouse_click",
+            "label_fr": "Clic de souris",
+            "probability": 1.6556432273792662e-7
+          },
+          {
+            "label": "hen",
+            "label_fr": "Poule",
+            "probability": 1.2929058776434498e-7
+          },
+          {
+            "label": "insects",
+            "label_fr": "Insectes",
+            "probability": 1.2111893442536834e-7
+          },
+          {
+            "label": "helicopter",
+            "label_fr": "Hélicoptère",
+            "probability": 9.79120167487764e-8
+          },
+          {
+            "label": "crying_baby",
+            "label_fr": "Pleurs de bébé",
+            "probability": 7.439673360292828e-8
+          },
+          {
+            "label": "sheep",
+            "label_fr": "Mouton",
+            "probability": 7.14540401538175e-8
+          },
+          {
+            "label": "cat",
+            "label_fr": "Chat",
+            "probability": 5.655623427602453e-8
+          },
+          {
+            "label": "can_opening",
+            "label_fr": "Ouverture de canette",
+            "probability": 2.0559303374798275e-8
+          },
+          {
+            "label": "laughing",
+            "label_fr": "Rires",
+            "probability": 1.39028578311193e-8
+          },
+          {
+            "label": "train",
+            "label_fr": "Train",
+            "probability": 1.2365964821554017e-8
+          },
+          {
+            "label": "dog",
+            "label_fr": "Chien",
+            "probability": 1.148963570282019e-8
+          },
+          {
+            "label": "thunderstorm",
+            "label_fr": "Orage",
+            "probability": 3.542431863145368e-9
+          },
+          {
+            "label": "drinking_sipping",
+            "label_fr": "Gorgées",
+            "probability": 2.1206655971648303e-9
+          },
+          {
+            "label": "door_wood_knock",
+            "label_fr": "Coups à la porte",
+            "probability": 1.7257635509665797e-9
+          },
+          {
+            "label": "clock_tick",
+            "label_fr": "Tic-tac d'horloge",
+            "probability": 9.618612384924066e-10
+          },
+          {
+            "label": "coughing",
+            "label_fr": "Toux",
+            "probability": 5.263010415480616e-10
+          },
+          {
+            "label": "cow",
+            "label_fr": "Vache",
+            "probability": 4.1172852971467625e-10
+          },
+          {
+            "label": "sneezing",
+            "label_fr": "Éternuement",
+            "probability": 2.468052828885293e-10
+          },
+          {
+            "label": "rooster",
+            "label_fr": "Coq",
+            "probability": 1.6427783353080962e-10
+          }
+        ],
+        "model_id": "echolens-sound-event-whisper-base",
+        "model_version": "1.0.0",
+        "calibrated": true
+      }
+    }
+  ],
+  "models": [
+    {
+      "accuracy": 0.7495,
+      "calibrated": true,
+      "description": "Tête sur l'encodeur gelé de Whisper base (somme pondérée des couches, MLP), calibrée (T = 1,109)",
+      "f1_macro": 0.7535,
+      "family": "B",
+      "huggingface_url": "https://huggingface.co/Mentalist0101/echolens-emotion-whisper-base",
+      "id": "echolens-emotion-whisper-base",
+      "profiles": ["quality"],
+      "revision": "c443b6f2093e4a4683b2316b6459bd1b6b06e287",
+      "task": "emotion",
+      "temperature": 1.109,
+      "version": "1.0.0"
+    },
+    {
+      "accuracy": 0.8347,
+      "calibrated": true,
+      "description": "Tête sur l'encodeur gelé de Whisper base, entraînée sur les 5 folds d'ESC-50, calibrée (T = 1,461)",
+      "f1_macro": 0.8303,
+      "family": "B",
+      "huggingface_url": "https://huggingface.co/Mentalist0101/echolens-sound-event-whisper-base",
+      "id": "echolens-sound-event-whisper-base",
+      "profiles": ["quality"],
+      "revision": "27f3e6a28eb5f1a809ed8ddb32fc177f08afce11",
+      "task": "sound_event",
+      "temperature": 1.461,
+      "version": "1.0.0"
+    },
+    {
+      "accuracy": 0.8322,
+      "calibrated": true,
+      "description": "CRNN (4 blocs conv, BiGRU, attention) sur log-Mel 64 bandes, 5 folds d'ESC-50, calibré (T = 0,786)",
+      "f1_macro": 0.8266,
+      "family": "A",
+      "huggingface_url": "https://huggingface.co/Mentalist0101/echolens-sound-event-crnn",
+      "id": "echolens-sound-event-crnn",
+      "profiles": ["realtime"],
+      "revision": "f3be3ad0d1a9cf719a79ad9076d2322cd6dd2115",
+      "task": "sound_event",
+      "temperature": 0.786,
+      "version": "1.0.0"
+    }
+  ],
+  "reference": {
+    "name": "MFCC + SVM",
+    "task": "sound_event",
+    "f1_macro": 0.403,
+    "source": "C5, PR #11 (F1 macro 0,4029 ± 0,0397 sur les 5 folds)"
+  }
+}

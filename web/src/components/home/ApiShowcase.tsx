@@ -1,3 +1,4 @@
+import { HOME_EXAMPLES, type HomeExample } from './examples.ts'
 import Reveal from './Reveal.tsx'
 
 // Une ligne de JSON : indentation, clé (vide pour une accolade seule) et valeur affichée.
@@ -7,25 +8,28 @@ interface JsonLine {
   value: string
 }
 
-// Extrait raccourci du format de GET /api/v1/analyses/{id} (contrat de la PR #26), avec un
-// modèle d'exemple à la place du faux prédicteur.
-const RESPONSE_LINES: JsonLine[] = [
-  { indent: 0, key: '', value: '{' },
-  { indent: 1, key: 'status', value: '"done",' },
-  { indent: 1, key: 'duration_s', value: '8.0,' },
-  { indent: 1, key: 'results', value: '{' },
-  { indent: 2, key: 'emotion', value: '{' },
-  { indent: 3, key: 'label_fr', value: '"Colère",' },
-  { indent: 3, key: 'probabilities', value: '[ … 6 classes ],' },
-  { indent: 3, key: 'model_id', value: '"emotion-cnn",' },
-  { indent: 3, key: 'model_version', value: '"0.1.0",' },
-  { indent: 3, key: 'calibrated', value: 'true,' },
-  { indent: 3, key: 'segments', value: '[ … ]' },
-  { indent: 2, key: '', value: '},' },
-  { indent: 2, key: 'sound_event', value: '{ … 50 classes }' },
-  { indent: 1, key: '', value: '}' },
-  { indent: 0, key: '', value: '}' },
-]
+// Extrait raccourci de la vraie réponse de GET /api/v1/analyses/{id} pour l'exemple « Parole »
+// (contrat de la PR #26), avec les valeurs figées par scripts/export-example.mjs.
+function responseLines(example: HomeExample): JsonLine[] {
+  const result = example.result
+  return [
+    { indent: 0, key: '', value: '{' },
+    { indent: 1, key: 'status', value: '"done",' },
+    { indent: 1, key: 'duration_s', value: `${example.duration_s},` },
+    { indent: 1, key: 'results', value: '{' },
+    { indent: 2, key: 'emotion', value: '{' },
+    { indent: 3, key: 'label_fr', value: `"${result.label_fr}",` },
+    { indent: 3, key: 'probabilities', value: `[ … ${result.probabilities.length} classes ],` },
+    { indent: 3, key: 'model_id', value: `"${result.model_id}",` },
+    { indent: 3, key: 'model_version', value: `"${result.model_version}",` },
+    { indent: 3, key: 'calibrated', value: `${result.calibrated},` },
+    { indent: 3, key: 'segments', value: '[ … ]' },
+    { indent: 2, key: '', value: '},' },
+    { indent: 2, key: 'sound_event', value: '{ … 50 classes }' },
+    { indent: 1, key: '', value: '}' },
+    { indent: 0, key: '', value: '}' },
+  ]
+}
 
 const POINTS = [
   'Chaque résultat porte son modèle, sa version et sa calibration.',
@@ -74,11 +78,11 @@ export default function ApiShowcase() {
       <Reveal delayMs={150}>
         <div className="overflow-hidden rounded-card border border-rule bg-night">
           <p className="border-b border-on-night/10 px-5 py-3 font-mono text-xs text-on-night/70">
-            GET /api/v1/analyses/fe2c36ef…
+            GET /api/v1/analyses/{'{id}'} · exemple « Parole »
           </p>
           <pre className="overflow-x-auto px-5 py-4 font-mono text-sm leading-6 text-on-night">
             <code>
-              {RESPONSE_LINES.map((line, index) => (
+              {responseLines(HOME_EXAMPLES[0]).map((line, index) => (
                 <CodeLine key={index} line={line} />
               ))}
             </code>
