@@ -1,6 +1,8 @@
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
+import { Navigate } from 'react-router-dom'
 import {
-  ApiError,
+  describeApiError,
+  isAnalysisRunning,
   useAnalysis,
   useCreateAnalysis,
   type Analysis,
@@ -8,27 +10,29 @@ import {
   type AnalysisRequest,
   type AnalysisTask,
 } from '../api/client.ts'
-import AnalysisStatus from '../components/analyze/AnalysisStatus.tsx'
-import AudioPicker from '../components/analyze/AudioPicker.tsx'
-import SpectrogramView from '../components/analyze/SpectrogramView.tsx'
+import AnalysisProgress from '../components/analyze/AnalysisProgress.tsx'
+import AudioPanel from '../components/analyze/AudioPanel.tsx'
 import TaskSelector from '../components/analyze/TaskSelector.tsx'
-import WaveformCanvas from '../components/analyze/WaveformCanvas.tsx'
 
 // Tâches cochées à l'ouverture de la page.
 const DEFAULT_TASKS: AnalysisTask[] = ['emotion', 'sound_event']
 
 const ANALYZE_BUTTON_CLASSES =
-  'rounded-btn bg-accent px-5 py-2 text-sm font-semibold text-on-accent transition-colors duration-200 ease-out-soft hover:bg-accent-deep disabled:cursor-not-allowed disabled:opacity-50'
+  'w-full rounded-btn bg-accent px-5 py-2.5 font-semibold text-on-accent transition-colors duration-200 ease-out-soft hover:bg-accent-deep disabled:cursor-not-allowed disabled:opacity-50'
 
-// Message à afficher pour une erreur : celui de l'API, ou serveur injoignable (erreur réseau).
+// Colonne des réglages : reste visible quand on fait défiler un long aperçu (grand écran).
+const SETTINGS_CLASSES = 'space-y-5 rounded-card border border-rule bg-card p-5 lg:sticky lg:top-10'
+
+// L'audio en grand à gauche, les réglages dans une colonne étroite à droite ; une seule colonne
+// sur téléphone. minmax(0, …) empêche le canvas d'élargir sa colonne.
+const LAYOUT_CLASSES = 'grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_21rem]'
+
+// Message à afficher pour une erreur, ou null s'il n'y en a pas.
 function describeError(error: Error | null): string | null {
   if (error === null) {
     return null
   }
-  if (error instanceof ApiError) {
-    return error.message
-  }
-  return 'Serveur injoignable : vérifiez que l’application est lancée, puis réessayez.'
+  return describeApiError(error)
 }
 
 // Explique pourquoi le bouton Analyser est désactivé ; null quand tout est prêt.
@@ -37,31 +41,9 @@ function analyzeHint(hasFile: boolean, hasTasks: boolean): string | null {
     return 'Importez un fichier ou enregistrez-vous au micro pour commencer.'
   }
   if (!hasTasks) {
-    return 'Cochez au moins une tâche pour lancer l’analyse.'
+    return 'Cochez au moins un outil pour lancer l’analyse.'
   }
   return null
-}
-
-// Clé qui change à chaque nouveau fichier (un enregistrement a toujours une date différente).
-function fileKey(file: File): string {
-  return `${file.name}-${file.lastModified}`
-}
-
-// Lecteur audio : l'URL locale (blob:) est créée pour le fichier, puis libérée quand il change.
-function AudioPlayer({ file }: { file: File }) {
-  const audioRef = useRef<HTMLAudioElement>(null)
-  useEffect(() => {
-    const audio = audioRef.current
-    if (audio === null) {
-      return
-    }
-    const objectUrl = URL.createObjectURL(file)
-    audio.src = objectUrl
-    return () => {
-      URL.revokeObjectURL(objectUrl)
-    }
-  }, [file])
-  return <audio ref={audioRef} controls className="w-full" />
 }
 
 // Ce que la page sait de l'analyse lancée.
@@ -70,7 +52,20 @@ interface AnalysisRun {
   reset: () => void
   analysis: Analysis | undefined
   isSubmitting: boolean
+  // Vrai de l'envoi jusqu'à la fin du traitement : on ne relance pas pendant ce temps.
+  isBusy: boolean
   errorMessage: string | null
+}
+
+// Vrai pendant l'envoi, puis tant que le serveur n'a pas fini (en attente ou en cours).
+function isRunBusy(isSubmitting: boolean, analysis: Analysis | undefined): boolean {
+  if (isSubmitting) {
+    return true
+  }
+  if (analysis === undefined) {
+    return false
+  }
+  return isAnalysisRunning(analysis)
 }
 
 // Envoi (POST) puis suivi (GET chaque seconde) d'une analyse.
@@ -87,42 +82,25 @@ function useAnalysisRun(): AnalysisRun {
     reset: createAnalysis.reset,
     analysis: latestAnalysis,
     isSubmitting: createAnalysis.isPending,
+    isBusy: isRunBusy(createAnalysis.isPending, latestAnalysis),
     errorMessage: describeError(error),
   }
 }
 
-interface AudioPreviewProps {
-  file: File
-  analysis: Analysis | undefined
-}
-
-// Lecteur, forme d'onde et spectrogramme de l'audio choisi. La forme d'onde et l'image du
-// spectrogramme ont la même largeur (w-full) et couvrent la même durée : elles sont alignées.
-// La page lui donne une clé par fichier : un nouvel audio repart d'un aperçu vierge.
-function AudioPreview({ file, analysis }: AudioPreviewProps) {
-  return (
-    <div className="space-y-3">
-      <p className="text-sm text-ink-soft">
-        Fichier : <span className="font-mono">{file.name}</span>
-      </p>
-      <AudioPlayer file={file} />
-      <h2 className="font-display text-lg font-bold">Forme d’onde</h2>
-      <WaveformCanvas file={file} />
-      <h2 className="font-display text-lg font-bold">Spectrogramme</h2>
-      <SpectrogramView analysis={analysis} />
-    </div>
-  )
-}
-
 interface AnalyzeButtonProps {
   hint: string | null
-  isSubmitting: boolean
+  isBusy: boolean
   onClick: () => void
 }
 
-// Bouton Analyser, désactivé avec une explication tant qu'il manque le fichier ou une tâche.
-function AnalyzeButton({ hint, isSubmitting, onClick }: AnalyzeButtonProps) {
-  const isDisabled = hint !== null || isSubmitting
+// Bouton Analyser : désactivé avec une explication tant qu'il manque le fichier ou une tâche,
+// et pendant qu'une analyse tourne.
+function AnalyzeButton({ hint, isBusy, onClick }: AnalyzeButtonProps) {
+  const isDisabled = hint !== null || isBusy
+  let label = 'Analyser'
+  if (isBusy) {
+    label = 'Analyse en cours…'
+  }
   return (
     <div className="space-y-2">
       <button
@@ -131,47 +109,47 @@ function AnalyzeButton({ hint, isSubmitting, onClick }: AnalyzeButtonProps) {
         disabled={isDisabled}
         onClick={onClick}
       >
-        Analyser
+        {label}
       </button>
       {hint !== null && <p className="text-sm text-ink-soft">{hint}</p>}
     </div>
   )
 }
 
-interface AnalysisPanelProps {
+interface SettingsPanelProps {
+  tasks: AnalysisTask[]
+  profile: AnalysisProfile
   run: AnalysisRun
   hint: string | null
+  onTasksChange: (tasks: AnalysisTask[]) => void
+  onProfileChange: (profile: AnalysisProfile) => void
   onAnalyze: () => void
 }
 
-// Bouton Analyser suivi du statut de l'analyse lancée.
-function AnalysisPanel({ run, hint, onAnalyze }: AnalysisPanelProps) {
+// Colonne des réglages : tâches, profil, puis le bouton Analyser et le suivi de l'envoi.
+function SettingsPanel(props: SettingsPanelProps) {
   return (
-    <>
-      <AnalyzeButton hint={hint} isSubmitting={run.isSubmitting} onClick={onAnalyze} />
-      <AnalysisStatus
-        analysis={run.analysis}
-        isSubmitting={run.isSubmitting}
-        errorMessage={run.errorMessage}
+    <aside className={SETTINGS_CLASSES} aria-label="Réglages de l’analyse">
+      <TaskSelector
+        tasks={props.tasks}
+        profile={props.profile}
+        onTasksChange={props.onTasksChange}
+        onProfileChange={props.onProfileChange}
       />
-    </>
+      <div className="space-y-3 border-t border-rule pt-5">
+        <AnalyzeButton hint={props.hint} isBusy={props.run.isBusy} onClick={props.onAnalyze} />
+        <AnalysisProgress
+          analysis={props.run.analysis}
+          isSubmitting={props.run.isSubmitting}
+          errorMessage={props.run.errorMessage}
+        />
+      </div>
+    </aside>
   )
 }
 
-// Titre et consigne de la page.
-function PageIntro() {
-  return (
-    <>
-      <h1 className="font-display text-3xl font-extrabold tracking-tight">Analyser un audio</h1>
-      <p className="text-ink-soft">
-        Importez un fichier ou enregistrez-vous au micro, choisissez les tâches, puis lancez
-        l’analyse.
-      </p>
-    </>
-  )
-}
-
-// Page Analyser : choix de l'audio, des tâches et du profil, puis suivi de l'analyse.
+// Page Analyser (C20) : l'audio en grand à gauche, les réglages à droite (empilés sur
+// téléphone). Quand l'analyse est terminée, sa page Résultat s'ouvre.
 export default function AnalyzePage() {
   const [audioFile, setAudioFile] = useState<File | null>(null)
   const [tasks, setTasks] = useState<AnalysisTask[]>(DEFAULT_TASKS)
@@ -191,20 +169,34 @@ export default function AnalyzePage() {
     }
   }
 
+  // Analyse terminée : on passe à sa page Résultat (C21). En cas d'échec, on reste ici avec la
+  // raison, sans perdre l'audio ni les choix.
+  const latestAnalysis = run.analysis
+  if (latestAnalysis !== undefined && latestAnalysis.status === 'done') {
+    return <Navigate to={`/analyses/${latestAnalysis.id}`} />
+  }
+
   return (
     <section className="space-y-6">
-      <PageIntro />
-      <AudioPicker onAudioSelected={handleAudioSelected} />
-      {audioFile !== null && (
-        <AudioPreview key={fileKey(audioFile)} file={audioFile} analysis={run.analysis} />
-      )}
-      <TaskSelector
-        tasks={tasks}
-        profile={profile}
-        onTasksChange={setTasks}
-        onProfileChange={setProfile}
-      />
-      <AnalysisPanel run={run} hint={hint} onAnalyze={handleAnalyze} />
+      <div className="space-y-2">
+        <p className="font-mono text-xs text-ink-faint">Espace / Nouvelle analyse</p>
+        <h1 className="text-5xl leading-tight">Nouvelle analyse</h1>
+        <p className="text-ink-soft">
+          Choisissez un audio, les outils et le profil : le résultat s’ouvre dès qu’il est prêt.
+        </p>
+      </div>
+      <div className={LAYOUT_CLASSES}>
+        <AudioPanel file={audioFile} onAudioSelected={handleAudioSelected} />
+        <SettingsPanel
+          tasks={tasks}
+          profile={profile}
+          run={run}
+          hint={hint}
+          onTasksChange={setTasks}
+          onProfileChange={setProfile}
+          onAnalyze={handleAnalyze}
+        />
+      </div>
     </section>
   )
 }

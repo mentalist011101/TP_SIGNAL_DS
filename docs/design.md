@@ -1,59 +1,76 @@
-# Charte graphique d'EchoLens
+# Charte graphique d'EchoLens (v2)
 
-La charte reprend celle du portfolio de Luciano (papier, encre, polices, rayons, ombres), avec un
-accent propre à EchoLens : un vert mousse. Les jetons sont définis dans `web/src/index.css` ; le
-thème sombre suit la préférence du système et ne change que leurs valeurs.
+EchoLens se présente comme un produit : une plateforme où l'on dépose un audio pour en extraire
+événements sonores, émotions, transcription et locuteurs. La charte v2 s'inspire des outils
+SaaS actuels (Linear, ElevenLabs, Cluster) en gardant l'identité de la v1 : le papier et l'encre,
+le vert mousse, les étiquettes en mono et la palette magma réservée aux données.
+
+Les jetons sont définis dans `web/src/index.css`, pour un thème sombre (anthracite chaud) et un
+thème clair « papier ». **Par défaut, la page suit le thème du système** (`prefers-color-scheme`),
+y compris s'il change pendant la visite. Le bouton de thème (barre latérale) bascule de l'un à
+l'autre et mémorise ce choix dans le navigateur, qui prime ensuite sur le système
+(`web/src/theme.ts`, attribut `data-theme` sur `<html>`).
 
 ## Jetons
 
 Les noms disent le **rôle**, jamais la couleur.
 
-| Jeton | Clair | Sombre | Rôle |
+| Jeton | Sombre | Clair | Rôle |
 | --- | --- | --- | --- |
-| `paper` | `#f7f3ea` | `#12151c` | Fond de la page |
-| `paper-alt` | `#efe9dc` | `#171b24` | Zones en retrait, survols discrets |
-| `card` | `#fffdf8` | `#1b202b` | Fond des cartes |
-| `ink` | `#16181d` | `#f1efe8` | Texte principal |
-| `ink-soft` | `#5c6069` | `#b6bac4` | Texte secondaire : consignes, libellés |
-| `ink-faint` | `#8a8d95` | `#7e8492` | Mentions discrètes |
-| `rule` | encre à 14 % | blanc à 12 % | Filets et bordures légères |
-| `rule-strong` | encre à 32 % | blanc à 26 % | Bordures marquées : boutons secondaires, champs |
-| `night` | `#151c2e` | `#090b10` | Fond des tracés (forme d'onde) |
+| `paper` | `#131211` | `#f7f3ea` | Fond de la page |
+| `paper-alt` | `#24221f` | `#ebe4d4` | Zones en retrait, survols, pistes des barres |
+| `card` | `#1a1917` | `#fffdf8` | Surfaces : cartes, barre latérale |
+| `ink` | `#f2efe8` | `#16181d` | Texte principal |
+| `ink-soft` | `#b5afa5` | `#55595f` | Texte secondaire : consignes, libellés |
+| `ink-faint` | `#8f897f` | `#6b6e74` | Mentions discrètes (4,5:1 au moins sur le fond) |
+| `rule` | crème à 9 % | encre à 10 % | Filets et bordures légères |
+| `rule-strong` | crème à 18 % | encre à 22 % | Bordures marquées : boutons secondaires, champs |
+| `night` | `#0b0a09` | `#151c2e` | Fond des tracés (forme d'onde) |
 | `on-night` | `#f1efe8` | `#f1efe8` | Texte posé sur `night` ou sur les données |
-| `accent` | `#4a7a3a` | `#4a7a3a` | Tout ce qui se clique |
-| `accent-deep` | `#355a29` | `#355a29` | Accent au survol |
-| `accent-soft` | `#9cc58a` | `#9cc58a` | Texte ou tracé sur fond sombre (forme d'onde) |
-| `on-accent` | `#ffffff` | `#ffffff` | Texte posé sur l'accent (bouton principal) |
-| `accent-ink` | `#4a7a3a` | `#9cc58a` | Accent employé comme texte (liens) ou contour de focus |
-| `danger` | `#b4400f` | `#e8763a` | Erreurs uniquement |
+| `accent` | `#f2efe8` | `#16181d` | Tout ce qui se clique : bouton principal, cases, segment choisi |
+| `accent-deep` | `#d9d3c7` | `#2b2e35` | Accent au survol |
+| `on-accent` | `#131211` | `#f7f3ea` | Texte posé sur l'accent |
+| `accent-ink` | `#f2efe8` | `#16181d` | Liens et contour de focus |
+| `accent-soft` | `#9cc58a` | `#9cc58a` | Tracé de la forme d'onde sur `night` |
+| `brand` | `#9cc58a` | `#4a7a3a` | Marque : logo, statut « terminée », « en direct », mot mis en valeur |
+| `danger` | `#e8763a` | `#b4400f` | Erreurs uniquement |
 
-Polices : `font-display` (Archivo 700/800), `font-sans` (Inter 400/500/600), `font-mono`
-(JetBrains Mono 400/500). Rayons : `radius-card` (3 px), `radius-btn` (6 px). Ombres :
-`shadow-card` (cartes), `shadow-hard-sm` (boutons secondaires). Transition : `ease-out-soft`.
+Polices : `font-display` (Instrument Serif, une seule graisse) pour les grands titres,
+`font-sans` (Inter 400/500/600) pour le texte et les petits titres, `font-mono`
+(JetBrains Mono 400/500) pour les valeurs techniques et les étiquettes (`label-mono`).
+Rayons : `radius-card` (16 px), `radius-btn` (pilule). Pas d'ombre portée : les surfaces se
+distinguent par une bordure fine. Fond de page : grille de points (`dot-grid`). Transition :
+`ease-out-soft`.
 
 ## Règles
 
 - **Uniquement des jetons** : aucune couleur Tailwind (`slate-500`…) ni code hexadécimal dans
   les composants. `npm run check:tokens` le vérifie, en local et dans la CI. Le canvas lit les
-  jetons avec `readCssColor` (`web/src/theme.ts`).
-- **Accent = ce qui se clique** : bouton principal, cases à cocher, focus. Rien d'autre.
-- **Contraste WCAG AA (4,5:1 pour le texte)** :
-  - texte d'un bouton principal en `on-accent` (blanc) : 5,08:1 sur l'accent, alors que
-    `on-night` ne donnait que 4,41:1 ;
-  - en mode sombre, **jamais l'accent comme couleur de texte** : il ne fait que 3,60:1 sur le
-    papier sombre. Liens et focus utilisent `accent-ink`, qui vaut `accent-soft` en sombre
-    (9,36:1 sur le papier sombre) et l'accent en clair (4,58:1 sur le papier clair).
+  jetons avec `readCssColor` (`web/src/theme.ts`, seul fichier autorisé à lire les couleurs).
+- **Accent monochrome = ce qui se clique** : bouton principal en pilule crème (sombre) ou
+  encre (clair), cases à cocher, segment choisi, focus. Aucun des outils de référence n'a de
+  bouton principal coloré : la couleur reste rare.
+- **Vert mousse = la marque** : logo, statut « terminée », indicateur « en direct », mot mis
+  en valeur dans un titre. Jamais un bouton.
 - **Danger = les erreurs** : messages d'échec, refus de fichier. Pas pour décorer.
 - **Magma réservé aux données** : la palette du spectrogramme ne sert à rien d'autre, et
-  l'interface n'utilise pas ses couleurs (d'où un accent vert, absent de magma).
-- **Pas de motif derrière les données** : le grain du papier (`paper-grain`) est sur le fond de
-  page seulement ; cartes, forme d'onde et spectrogramme restent unis.
-- **Trois polices, trois rôles** : Archivo pour les titres, Inter pour le texte, JetBrains Mono
-  pour les valeurs techniques (Hz, dB, durées, noms de fichiers).
+  l'interface n'utilise pas ses couleurs.
+- **Pas de motif derrière les données** : la grille de points est sur le fond de page
+  seulement ; cartes, forme d'onde et spectrogramme restent unis.
+- **Serif pour les grands titres seulement** (titres de page, chiffres clés, résultat
+  principal) ; Inter demi-gras pour les titres de carte ; mono pour Hz, dB, durées, noms de
+  fichiers et étiquettes.
+- **Honnêteté** : des probabilités du faux
+  prédicteur sont signalées par le bandeau « démo », une fonction pas encore branchée est
+  marquée « bientôt ».
+- **Mouvement** : les animations (ruban d'ondes, points « en direct », suivi d'analyse)
+  s'arrêtent quand le système demande moins d'animations (`motion-safe`,
+  `prefers-reduced-motion`).
+- **Contraste WCAG AA** (4,5:1 pour le texte) dans les deux thèmes.
 
 ## Origine
 
-Jetons, polices, rayons, ombres et grain viennent de la charte du portfolio de Luciano
-(`src/app/globals.css`), qui fait foi. Différences propres à EchoLens : l'accent vert mousse et
-les jetons `on-night`, `on-accent` et `accent-ink`, le danger en rouille (la couleur d'accent du portfolio), et le thème sombre
-qui suit la préférence du système au lieu d'un bouton.
+La v1 reprenait la charte du portfolio de Luciano (papier, encre, Archivo, rayons de 3 et
+6 px, ombres dures). La v2 en garde le papier et l'encre (thème clair), le vert mousse, les
+étiquettes mono et la palette magma, et adopte un thème sombre (le système choisit), le serif pour les titres,
+les boutons en pilule et les surfaces plates.
