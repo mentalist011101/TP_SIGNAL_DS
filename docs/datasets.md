@@ -74,17 +74,16 @@ donné par `audio_path(row, datasets_dir)` ; ne jamais construire ce chemin à l
 | `source` | non | Enregistrement d'origine (ex. `src_file` d'ESC-50) : deux lignes de même source ne sont jamais séparées entre deux folds. |
 | `transcript` | non | Texte prononcé tel qu'écrit dans le jeu, sans normalisation ; sert au calcul du WER. |
 
-Toutes les colonnes après `duration_s` sont optionnelles. Exemples, une ligne par jeu. Les
-chemins de CaFE et d'OpenSLR 57, ainsi que le texte d'OpenSLR 57, sont illustratifs : ils seront
-fixés par les scripts de téléchargement.
+Toutes les colonnes après `duration_s` sont optionnelles. Exemples, une ligne par jeu, tirées
+des manifestes réels :
 
 ```csv
 dataset,path,label,speaker,gender,duration_s,fold,official_split,subset,intensity,source,transcript
 esc50,audio/1-100032-A-0.wav,dog,,,5.0,1,,,,100032,
 cremad,AudioWAV/1001_DFA_ANG_XX.wav,ANG,1001,M,2.2755625,,,,XX,,
 ravdess,Actor_01/03-01-05-01-01-01-01.wav,05,01,M,3.8705416666666665,,,,01,,
-cafe,Colère/Faible/01-C-1-1.wav,C,01,,2.9,,,,1,,
-openslr57,speech/train/ca16/gabon_m_074/gabon_m_074_001.wav,,gabon_m_074,M,4.2,,train,ca16,,,bonjour à tous
+cafe,Colère/Faible/01-C-1-1.wav,C,01,M,3.22775,,,,1,,
+openslr57,speech/train/ca16/002/afc-gabon_16.06.11_002_conv_0023.wav,,002,,3.0,,train,ca16,,,bonjour je voudrais voir un docteur
 ```
 
 ## Sources réellement utilisées
@@ -98,11 +97,18 @@ Les manifestes de `data/manifests/` ont été construits sur Kaggle par les note
 | CREMA-D | copie Kaggle `ejlok1/cremad` (https://www.kaggle.com/datasets/ejlok1/cremad), dossier `AudioWAV` | 7 442 WAV ; noms comparés un à un au dépôt officiel CheyneyComputerScience/CREMA-D |
 | CREMA-D, genre | `VideoDemographics.csv` du dépôt officiel (https://github.com/CheyneyComputerScience/CREMA-D), téléchargé à chaque exécution, jamais commité (I8) | 91 acteurs, 48 M et 43 F |
 | RAVDESS | copie Kaggle `uwrfkaggler/ravdess-emotional-speech-audio` (https://www.kaggle.com/datasets/uwrfkaggler/ravdess-emotional-speech-audio), dossiers `Actor_01` … `Actor_24` à la racine | 1 440 WAV ; la copie contient chaque fichier **en double** (une seconde fois sous `audio_speech_actors_01-24/`) : un seul des deux dossiers est pris, les doublons ne sont jamais comptés |
+| CaFE | archive officielle `CaFE_48k.zip` sur Zenodo (https://zenodo.org/records/1478765), notebook `c16_manifests_hors_domaine.ipynb` | 936 WAV, 12 acteurs (6 M, 6 F) ; 144 extraits par émotion, 72 pour le neutre |
+| OpenSLR 57 | archive officielle `African_Accented_French.tar.gz` (https://www.openslr.org/57/), même notebook | 16 656 WAV : train 14 394, dev 986, devtest 761, test 515 ; ca16 7 273, niger 986, yaounde 8 397 ; 19,9 h |
 
 Écart connu : la copie Kaggle de CREMA-D nomme un fichier `1040_ITH_SAD_X.wav` (intensité `X`)
 au lieu de `1040_ITH_SAD_XX.wav` dans le dépôt officiel ; c'est la seule différence sur les
 7 442 fichiers. `KNOWN_MISNAMED_FILES` (`core/data/cremad.py`) lit ses champs sur le nom
 officiel ; le chemin du manifeste garde le nom réel du fichier dans la copie.
+
+Transcriptions d'OpenSLR 57 : le test officiel (515), le dev niger (986) et yaounde (8 397) sont
+complets. Il en manque dans ca16 : 481 sur 761 en devtest, 3 063 sur 5 997 en train. Ces
+extraits n'ont pas de ligne dans les fichiers de transcription de l'archive ; leur `transcript`
+reste vide. Le WER se calcule donc sur le test officiel et sur yaounde (P10).
 
 ## Fichiers défectueux
 
@@ -153,5 +159,5 @@ les lire aux endroits suivants.
 | ESC-50 | `meta/esc50.csv`, colonne `category` | sans objet | `fold` et `src_file` dans le même CSV |
 | CREMA-D | nom de fichier `1001_DFA_ANG_XX` : 3e champ (`ANG`, `DIS`, `FEA`, `HAP`, `NEU`, `SAD`) | acteur = 1er champ ; genre dans `VideoDemographics.csv` (colonne `Sex`) | intensité = 4e champ (`LO`, `MD`, `HI`, `XX`) ; récupérer uniquement `AudioWAV` via Git LFS |
 | RAVDESS | nom de fichier, 3e code (`01` à `08`) | acteur = 7e code ; impair = homme, pair = femme | intensité = 4e code ; garder modalité `03` et canal `01` |
-| CaFE | nom de fichier acteur-émotion-intensité-phrase, émotion `C`, `D`, `J`, `N`, `P`, `S`, `T` | acteur = 1er champ ; genre dans `Readme.txt` (à vérifier) | intensité `1` ou `2` (neutre toujours `1`) ; 936 fichiers ; ne jamais lire les noms de dossiers (accents mal encodés dans l'archive) |
-| OpenSLR 57 | sans objet | dossier du locuteur ; pour `ca16`, `pays_genre_numéro` (`gabon_m_074`) ; `yaounde` et `niger` à vérifier | découpage officiel = dossier `speech/<split>` ; sous-corpus = dossier suivant ; transcriptions en 5 formats selon le sous-corpus, chemins absolus `/mnt/corpora/...` à réduire au nom de fichier |
+| CaFE | nom de fichier acteur-émotion-intensité-phrase, émotion `C`, `D`, `J`, `N`, `P`, `S`, `T` | acteur = 1er champ ; genre d'après `Readme.txt` : acteur impair = homme, pair = femme | intensité `1` ou `2` (neutre toujours `1`) ; 936 fichiers ; ne jamais lire les noms de dossiers (accents mal encodés dans l'archive) |
+| OpenSLR 57 | sans objet | dossier qui contient le fichier ; genre seulement dans le test `ca16`, dont les dossiers sont `pays_genre_numéro` (`gabon_f_024`) ; ailleurs (`002`, `ctell1-01`, `niger_sys1_1`) le genre reste vide | découpage officiel = dossier `speech/<split>` ; sous-corpus = dossier suivant ; transcriptions dans `transcripts/<split>/**.txt`, une ligne « identifiant texte » ; l'identifiant (chemin `.wav`, nom `.tdf` ou nom nu) est réduit au nom du fichier sans extension, en gardant les points du nom (`16.06.12`) |
