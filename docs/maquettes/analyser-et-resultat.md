@@ -170,7 +170,8 @@ Règles d'affichage :
 | Élément | Règle |
 | --- | --- |
 | Cartes de tâche | Seules les tâches demandées apparaissent |
-| Probabilités | Toutes les classes pour l'émotion (6) ; les 5 premières pour l'événement (50), avec un lien « Voir tout » ; libellés français de `configs/labels.yaml` ; barres Recharts (U5) |
+| Probabilités | Toutes les classes pour l'émotion (6) ; les 5 premières pour l'événement (50), avec un lien « Voir tout » ; libellés français renvoyés par l'API (`label_fr`) ; barres en CSS, avec le pourcentage écrit (U5, décision du 21 novembre 2026) |
+| Hésitation | Si les deux classes les plus probables ont moins de 0,10 d'écart, le résultat principal devient « Hésite entre X et Y », avec les deux probabilités (règle de présentation du 21 novembre 2026, constante `HESITATION_GAP` dans `web/src/components/result/taskResult.ts`) |
 | Modèle utilisé | Identifiant et version du registre sous chaque résultat, pour la traçabilité et la comparaison |
 | Curseur | Le curseur de lecture se déplace sur la forme d'onde, le spectrogramme et la frise en même temps (EF-03, wavesurfer.js) |
 | Clic sur la frise ou la transcription | La lecture saute au début du segment |
