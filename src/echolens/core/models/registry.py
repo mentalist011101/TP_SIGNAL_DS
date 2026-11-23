@@ -54,6 +54,9 @@ class ModelEntry(BaseModel):
     revision: str = ""
     labels: list[str] = Field(default_factory=list)
     metrics: dict[str, float] = Field(default_factory=dict)
+    # Température de la calibration (ENF-06), copie de calibration.temperature dans le
+    # config.json du dépôt, pour l'affichage ; None si le modèle n'est pas calibré.
+    temperature: float | None = Field(default=None, gt=0)
     description: str = ""
 
 

@@ -13,6 +13,7 @@ from echolens import __version__
 from echolens.api.analyses import blp as analyses_blp
 from echolens.api.errors import handle_http_error
 from echolens.api.health import blp as health_blp
+from echolens.api.models import blp as models_blp
 from echolens.config import AppSettings, load_settings
 from echolens.services.analysis_service import AnalysisService
 from echolens.services.storage import create_session_factory
@@ -46,6 +47,7 @@ def create_app(settings: AppSettings | None = None, **overrides: Any) -> Flask:
     api = Api(app)
     api.register_blueprint(health_blp)
     api.register_blueprint(analyses_blp)
+    api.register_blueprint(models_blp)
     # Enregistré après Api(app) pour remplacer le gestionnaire de flask-smorest : toute erreur
     # porte ainsi un « message » en français (format décrit dans echolens.api.errors).
     app.register_error_handler(HTTPException, handle_http_error)
