@@ -42,3 +42,13 @@ models:
     revision: f3be3ad0d1a9cf719a79ad9076d2322cd6dd2115
     metrics: {f1_macro: 0.8266, accuracy: 0.8322}
     description: CRNN (4 blocs conv, BiGRU, attention) sur log-Mel 64 bandes, 5 folds d'ESC-50, calibré (T = 0,786)
+  - id: echolens-emotion-crnn
+    task: emotion
+    family: A
+    profiles: [realtime]
+    version: 1.0.0
+    weights: hf://Mentalist0101/echolens-emotion-crnn
+    revision: 76f1e1a04fd7bf7c6a1da52054c2baee39616a8e
+    labels: [neutral, happy, sad, angry, fear, disgust]
+    metrics: {f1_macro: 0.6680, accuracy: 0.6664}
+    description: CRNN (4 blocs conv, BiGRU, attention) sur log-Mel 64 bandes, fenêtre de 3 s, CREMA-D et RAVDESS, calibré (T = 1,088)
