@@ -1,10 +1,11 @@
 """Manifeste de CaFE, version 48 kHz (936 fichiers, 12 acteurs, 7 émotions).
 
 Le nom de chaque fichier porte l'acteur, l'émotion, l'intensité et la phrase, séparés par des
-tirets, par exemple 01-C-1-1.wav. Le genre des acteurs vient du Readme du jeu, recopié dans
-GENDER_OF_ACTOR. Les noms des dossiers ne sont jamais lus : leurs accents sont mal encodés
-dans l'archive ; seul le nom du fichier compte. CaFE ne sert qu'au test hors domaine (P7) ;
-l'étiquette d'origine est gardée telle quelle, surprise (S) comprise, exclue plus tard (P2, P9).
+tirets, par exemple Colère/Faible/01-C-1-1.wav. Le genre des acteurs vient du Readme du jeu,
+recopié dans GENDER_OF_ACTOR (6 hommes, 6 femmes). Les noms des dossiers ne sont jamais lus :
+leurs accents peuvent être mal encodés selon l'outil qui décompresse l'archive ; seul le nom du
+fichier compte. CaFE ne sert qu'au test hors domaine (P7) ; l'étiquette d'origine est gardée
+telle quelle, surprise (S) comprise, et n'est exclue qu'au passage aux 6 classes (P2, P9).
 """
 
 from __future__ import annotations
@@ -26,8 +27,23 @@ EMOTION_CODES = frozenset({"C", "D", "J", "N", "P", "S", "T"})
 INTENSITY_CODES = frozenset({"1", "2"})
 NEUTRAL_CODE = "N"
 NEUTRAL_INTENSITY = "1"
-# Genre de chaque acteur, recopié du Readme de CaFE (à compléter d'après l'exploration Kaggle).
-GENDER_OF_ACTOR: dict[str, Gender] = {}
+# Genre de chaque acteur, recopié du Readme de CaFE (« Odd : Man, Even : Woman ») : les
+# acteurs impairs sont des hommes, les pairs des femmes. La version 1.1 du jeu a échangé les
+# fichiers des acteurs 11 et 12 pour que cette règle soit vraie (Version-ChangeLog.txt).
+GENDER_OF_ACTOR: dict[str, Gender] = {
+    "01": "M",
+    "02": "F",
+    "03": "M",
+    "04": "F",
+    "05": "M",
+    "06": "F",
+    "07": "M",
+    "08": "F",
+    "09": "M",
+    "10": "F",
+    "11": "M",
+    "12": "F",
+}
 # Fichiers défectueux connus de la copie utilisée (illisibles ou de 0 s), exclus du manifeste.
 # Chaque entrée : le nom du fichier, et en commentaire ce qui ne va pas et où on l'a constaté.
 # Vide tant qu'on n'a rien trouvé : tout autre fichier défectueux fait échouer la construction.
