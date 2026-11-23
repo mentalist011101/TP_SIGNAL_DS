@@ -1,10 +1,12 @@
 import { Link } from 'react-router-dom'
 import Brand from '../components/Brand.tsx'
 import ApiShowcase from '../components/home/ApiShowcase.tsx'
-import HowItWorks from '../components/home/HowItWorks.tsx'
-import LiveDemo from '../components/home/LiveDemo.tsx'
+import Limits from '../components/home/Limits.tsx'
+import Pipeline from '../components/home/Pipeline.tsx'
+import RealExample from '../components/home/RealExample.tsx'
+import Results from '../components/home/Results.tsx'
 import Reveal from '../components/home/Reveal.tsx'
-import SoundMarquee from '../components/home/SoundMarquee.tsx'
+import TeamBricks from '../components/home/TeamBricks.tsx'
 import ToolsBento from '../components/home/ToolsBento.tsx'
 import TrustSection from '../components/home/TrustSection.tsx'
 import WaveRibbon from '../components/WaveRibbon.tsx'
@@ -39,6 +41,12 @@ function HomeHeader() {
       >
         <Brand />
         <div className="flex items-center gap-4 text-sm sm:gap-7">
+          <a href="#exemple" className={NAV_LINK_CLASSES}>
+            Exemple
+          </a>
+          <a href="#resultats" className={NAV_LINK_CLASSES}>
+            Résultats
+          </a>
           <a href="#outils" className={NAV_LINK_CLASSES}>
             Outils
           </a>
@@ -98,12 +106,12 @@ function Hero() {
   )
 }
 
-// Aperçu en direct, en grand, juste après l'ouverture.
+// Vrai exemple figé, en grand, juste après l'ouverture.
 function DemoSection() {
   return (
-    <section className={`${CONTAINER_CLASSES} pb-8`} aria-label="Aperçu du produit">
+    <section id="exemple" className={`${CONTAINER_CLASSES} pb-8`} aria-label="Exemple réel">
       <Reveal>
-        <LiveDemo />
+        <RealExample />
       </Reveal>
     </section>
   )
@@ -178,8 +186,8 @@ function HomeFooter() {
   )
 }
 
-// Page d'accueil publique : ouverture, aperçu animé, sons reconnus, fonctionnement, outils,
-// confiance, API, puis le dernier appel à l'action.
+// Page d'accueil publique : ouverture, vrai exemple figé, chaîne de traitement, outils,
+// résultats, confiance, limites, équipe et briques, API, puis le dernier appel à l'action.
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-paper text-ink">
@@ -187,10 +195,12 @@ export default function HomePage() {
       <main className="dot-grid">
         <Hero />
         <DemoSection />
-        <SoundMarquee />
-        <HowItWorks />
+        <Pipeline />
         <ToolsBento />
+        <Results />
         <TrustSection />
+        <Limits />
+        <TeamBricks />
         <ApiShowcase />
         <FinalCta />
       </main>
