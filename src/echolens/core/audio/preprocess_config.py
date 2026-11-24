@@ -31,8 +31,14 @@ class DenoiseConfig(BaseModel):
 
 
 class VadConfig(BaseModel):
-    """Détection de parole avec webrtcvad et nettoyage des segments (D5)."""
+    """Détection de parole et nettoyage des segments (D5).
 
+    Silero (seuils avec hystérésis) en production, webrtcvad (agressivité, trames) en secours
+    sans torch ; le nettoyage des segments est commun aux deux.
+    """
+
+    silero_threshold: float = Field(gt=0, lt=1)
+    silero_end_threshold: float = Field(gt=0, lt=1)
     aggressiveness: int = Field(ge=0, le=3)
     # webrtcvad n'accepte que des trames de 10, 20 ou 30 ms.
     frame_ms: Literal[10, 20, 30]
@@ -49,6 +55,17 @@ class VadConfig(BaseModel):
                 f"padding_ms ({self.padding_ms}) est trop grand pour merge_gap_ms "
                 f"({self.merge_gap_ms}) : les marges de deux segments voisins se "
                 "chevaucheraient (il faut 2 × padding_ms ≤ merge_gap_ms)"
+            )
+        return self
+
+    @model_validator(mode="after")
+    def check_hysteresis_order(self) -> VadConfig:
+        """Refuse silero_end_threshold ≥ silero_threshold : l'hystérésis demande un seuil de
+        fin plus bas que le seuil d'ouverture."""
+        if self.silero_end_threshold >= self.silero_threshold:
+            raise ValueError(
+                f"silero_end_threshold ({self.silero_end_threshold}) doit être inférieur à "
+                f"silero_threshold ({self.silero_threshold})"
             )
         return self
 

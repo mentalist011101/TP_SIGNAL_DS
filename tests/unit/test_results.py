@@ -19,6 +19,7 @@ from echolens.services.results import (
     ResultContext,
     build_results,
 )
+from echolens.services.speech_detection import WebrtcvadDetector
 from echolens.services.storage import create_session_factory
 
 SAMPLE_RATE = 16_000
@@ -31,7 +32,8 @@ def context() -> ResultContext:
         predictor=DemoPredictor(class_counts(labels)),
         labels=labels,
         inference_config=load_inference_config(),
-        vad_config=load_preprocess_config().vad,
+        # webrtcvad explicitement : ces tests tournent sans torch (CI), comme le mode demo.
+        speech_detector=WebrtcvadDetector(load_preprocess_config().vad),
     )
 
 
@@ -104,6 +106,40 @@ def test_tone_gives_sound_events_but_no_speech(context: ResultContext) -> None:
     assert emotion["label"] is None
     assert emotion["probabilities"] == []
     assert emotion["segments"] == []
+
+
+def pure_sine(seconds: float, frequency_hz: float) -> np.ndarray:
+    times = np.arange(int(seconds * SAMPLE_RATE)) / SAMPLE_RATE
+    signal = 0.3 * np.sin(2 * np.pi * frequency_hz * times)
+    return signal.astype(np.float32)
+
+
+def white_noise(seconds: float) -> np.ndarray:
+    generator = np.random.default_rng(42)
+    signal = generator.normal(0.0, 0.05, size=int(seconds * SAMPLE_RATE))
+    return signal.astype(np.float32)
+
+
+# Limite connue de webrtcvad, VAD de secours sans torch (D5, C24) : sur Kaggle, 3 s de
+# « parole » sur 3 s pour ces deux signaux. Avec Silero (production), les mêmes signaux donnent
+# bien no_speech : tests/unit/test_silero_vad_ml.py. strict=True : si webrtcvad change de
+# comportement, pytest le signale.
+@pytest.mark.xfail(strict=True, reason="webrtcvad prend une sinusoïde pure pour de la parole")
+def test_pure_sine_gives_no_speech(context: ResultContext) -> None:
+    emotion = build_results(pure_sine(3.0, 1000.0), ["emotion"], "quality", context)["emotion"]
+    assert emotion["status"] == "no_speech"
+
+
+@pytest.mark.xfail(strict=True, reason="webrtcvad prend le bruit blanc pour de la parole")
+def test_white_noise_gives_no_speech(context: ResultContext) -> None:
+    emotion = build_results(white_noise(3.0), ["emotion"], "quality", context)["emotion"]
+    assert emotion["status"] == "no_speech"
+
+
+def test_voiced_speech_is_still_detected(context: ResultContext) -> None:
+    emotion = build_results(voiced_speech(12.0), ["emotion"], "quality", context)["emotion"]
+    assert emotion["status"] == "done"
+    assert len(emotion["segments"]) >= 1
 
 
 def test_emotion_global_is_the_duration_weighted_mean_of_segments(

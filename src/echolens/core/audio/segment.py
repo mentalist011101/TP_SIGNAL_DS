@@ -1,4 +1,8 @@
-"""Segmentation (décisions D5, D8) : zones de parole avec webrtcvad, et fenêtres glissantes."""
+"""Segmentation (décisions D5, D8) : zones de parole et fenêtres glissantes, sans torch.
+
+webrtcvad (VAD de secours sans torch), hystérésis sur les probabilités de Silero (VAD de
+production, calculées dans core.models.silero_vad) et nettoyage commun des segments.
+"""
 
 from __future__ import annotations
 
@@ -47,6 +51,24 @@ def speech_flags(signal: FloatArray, config: VadConfig) -> list[bool]:
         frame = pcm[start : start + frame_length]
         is_speech = bool(vad.is_speech(frame.tobytes(), TARGET_SAMPLE_RATE))
         flags.append(is_speech)
+    return flags
+
+
+def hysteresis_flags(probabilities: list[float], start: float, end: float) -> list[bool]:
+    """Décisions par trame à partir de probabilités de parole, avec hystérésis (Silero, D5).
+
+    Parole dès que p ≥ start, et jusqu'à ce que p < end (end < start) : un creux bref au
+    milieu d'un mot ne coupe pas le segment, mais un son faible ne peut pas en commencer un.
+    C'est la règle de get_speech_timestamps de Silero.
+    """
+    flags: list[bool] = []
+    speaking = False
+    for probability in probabilities:
+        if not speaking and probability >= start:
+            speaking = True
+        elif speaking and probability < end:
+            speaking = False
+        flags.append(speaking)
     return flags
 
 

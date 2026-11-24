@@ -35,6 +35,7 @@ from echolens.core.inference import load_inference_config
 from echolens.services.predictor import make_predictor
 from echolens.services.results import ResultContext, build_results, summarize_results
 from echolens.services.spectrogram_image import save_spectrogram_png
+from echolens.services.speech_detection import make_speech_detector
 from echolens.services.storage import AnalysisRecord, AnalysisStatus, AnalysisSummaryRecord
 
 # Format de l'audio conservé : WAV PCM 16 bits, mono 16 kHz (D2).
@@ -289,14 +290,14 @@ class AnalysisService:
 
 
 def _make_result_context(settings: AppSettings) -> ResultContext:
-    # Classes, prédicteur et découpage lus une seule fois, au démarrage, dans configs/.
+    # Classes, prédicteur, découpage et VAD préparés une seule fois, au démarrage.
     labels = load_class_labels()
     predictor = make_predictor(settings, labels)
     return ResultContext(
         predictor=predictor,
         labels=labels,
         inference_config=load_inference_config(),
-        vad_config=load_preprocess_config().vad,
+        speech_detector=make_speech_detector(load_preprocess_config().vad),
     )
 
 

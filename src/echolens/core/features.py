@@ -151,6 +151,43 @@ def mfcc(signal: FloatArray, config: FeatureConfig, with_deltas: bool = True) ->
     return np.asarray(stacked, dtype=np.float32)
 
 
+def band_power_share(
+    signal: FloatArray, config: FeatureConfig, low_hz: float, high_hz: float
+) -> FloatArray:
+    """Part de la puissance de chaque trame STFT comprise entre low_hz et high_hz (C24, D5).
+
+    Valeur de 0 à 1 par trame : 1 si toute l'énergie est dans la bande, 0 si rien n'y est.
+    Une trame de silence numérique vaut 0. Les trames sont celles de config (R1) : pour
+    aligner une trame sur une trame de la VAD, passer n_fft = hop_length = durée de la trame
+    de la VAD et center = False.
+    """
+    _check_signal(signal, config)
+
+    # Étape 1 : spectre de puissance |X|^power, une colonne par trame (R1).
+    spectrum = librosa.stft(
+        y=signal,
+        n_fft=config.n_fft,
+        hop_length=config.hop_length,
+        win_length=config.n_fft,
+        window=config.window,
+        center=config.center,
+        pad_mode=config.pad_mode,
+    )
+    power = np.abs(spectrum) ** config.power
+
+    # Étape 2 : lignes du spectre dont la fréquence est dans la bande.
+    frequencies = librosa.fft_frequencies(sr=config.sample_rate, n_fft=config.n_fft)
+    in_band = (frequencies >= low_hz) & (frequencies <= high_hz)
+
+    # Étape 3 : puissance dans la bande rapportée à la puissance totale, trame par trame.
+    # Le plancher db_amin évite de diviser par zéro sur un silence numérique.
+    band_power = power[in_band].sum(axis=0)
+    total_power = power.sum(axis=0)
+    safe_total_power = np.maximum(total_power, config.db_amin)
+    share = band_power / safe_total_power
+    return np.asarray(share, dtype=np.float32)
+
+
 def mel_axis_position(frequency_hz: float, config: FeatureConfig) -> float:
     """Hauteur relative d'une fréquence sur l'axe vertical du spectrogramme (R2).
 

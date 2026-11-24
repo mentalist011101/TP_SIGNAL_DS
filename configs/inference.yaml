@@ -1,6 +1,7 @@
 # Brique 6 : découpage de l'audio pour l'inférence (D5), puis résultat global calculé à partir
 # des segments. Lu par echolens.core.inference.InferenceConfig. La détection de parole
-# elle-même (webrtcvad) garde ses réglages dans configs/preprocess.yaml (vad).
+# elle-même (Silero, webrtcvad en secours sans torch) garde ses réglages dans
+# configs/preprocess.yaml (vad).
 
 # Événements sonores : fenêtres fixes avec recouvrement (D5). 5 s, c'est la durée des extraits
 # d'ESC-50 : le modèle voit des fenêtres de la taille de celles qu'il a apprises. Un audio plus
