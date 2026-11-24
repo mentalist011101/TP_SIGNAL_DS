@@ -1,0 +1,31 @@
+# Brique « locuteur » (C15) : évaluation de l'identification du locuteur sur OpenSLR 57 (P11).
+# Ce fichier est la source unique des paramètres de cette évaluation.
+
+# P11 : on sépare les phrases de chaque locuteur, jamais les locuteurs. Tirage unique.
+seed: 42
+# P11 : phrases tirées au hasard pour « enregistrer » la voix de chaque locuteur.
+enrollment_per_speaker: 5
+# P11 : on ne garde que les locuteurs qui ont au moins ce nombre de phrases (5 pour
+# l'enregistrement, au moins 5 pour le test).
+min_utterances_per_speaker: 10
+
+# D2 : tous les extraits entrent en mono 16 kHz (load_audio), sans débruitage ni VAD.
+sample_rate: 16000
+# Quelques extraits d'OpenSLR 57 durent jusqu'à 150 s ; on ne garde que leur début, pour
+# borner la mémoire du GPU. La médiane du jeu est de 3,6 s : presque aucun extrait n'est coupé.
+max_seconds: 20.0
+
+encoders:
+  # ECAPA-TDNN de SpeechBrain, entraîné pour la vérification du locuteur sur VoxCeleb : un
+  # vecteur de 192 valeurs par extrait. Révision : à figer après le premier passage sur Kaggle
+  # (le notebook l'affiche).
+  - id: ecapa-voxceleb
+    checkpoint: speechbrain/spkrec-ecapa-voxceleb
+    revision: null
+    kind: ecapa
+  # mHuBERT multilingue (H2), le même que pour les émotions (configs/embeddings.yaml) : une
+  # moyenne par couche ; la couche gardée est choisie sur le groupe de calibration.
+  - id: mhubert-147
+    checkpoint: utter-project/mHuBERT-147
+    revision: 7ad3fc0bc5106c58c9c13526abccad527150d135
+    kind: ssl
