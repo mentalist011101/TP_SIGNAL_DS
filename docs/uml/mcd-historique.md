@@ -60,6 +60,7 @@ Le MCD décrit les **informations** ; le code choisit comment les **ranger**.
 | ANALYSE | Une ligne de la table `analyses` (colonnes ci-dessous) |
 | DEMANDER (liste des tâches) | Colonne JSON `tasks`, par exemple `["emotion", "sound_event"]` |
 | RÉSULTAT, MODÈLE, SEGMENT, PROBABILITÉ, et leurs associations | Colonne JSON `results` : un objet par tâche demandée, qui contient son statut, son modèle, ses probabilités globales et ses segments (contrat de `result_schemas.py`) |
+| résumé (premier choix de chaque tâche) | Table `analysis_summaries`, 1-1 avec `analyses` : copie calculée pour l'historique (EF-08) |
 | TÂCHE | Pas de table : les 4 tâches sont fixes, dans le code (`Task`) |
 | MODÈLE | Pas de table : le registre `configs/registry.yaml` reste la seule source (S1) ; le résultat ne garde que `model_id`, `model_version` et `calibrated` |
 | Fichiers audio et image | Sur disque, dans `var/analyses/<id_analyse>/` (`original.<ext>`, `audio.wav`, `spectrogram.png`) : la base ne garde que l'identifiant (S3) |
@@ -81,6 +82,10 @@ fois**, à la fin du traitement, et relus **en une fois**, par la page Résultat
 jamais « tous les segments où la colère dépasse 50 % ». Une colonne JSON évite donc des jointures
 inutiles, et le JSON stocké est exactement celui que renvoie l'API. Si un jour il faut chercher
 dans les résultats, le MCD dit déjà quelles tables créer : RÉSULTAT, SEGMENT et PROBABILITÉ.
+
+La table `analysis_summaries` est une copie voulue (dénormalisation) : elle recopie de `results`
+le premier choix de chaque tâche, pour que l'historique n'ait pas à lire `results`, et elle est
+écrite dans la même transaction que `results`.
 
 ## Points encore ouverts
 
