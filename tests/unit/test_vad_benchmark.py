@@ -31,6 +31,10 @@ BAND_OPTION = VadOption(
     "webrtcvad 2 + bande ≥ 0.60", "webrtcvad_band", aggressiveness=2, band_threshold=0.6
 )
 SILERO_OPTION = VadOption("Silero ≥ 0.50", "silero", silero_threshold=0.5)
+HYSTERESIS_OPTION = VadOption(
+    "Silero ≥ 0.40, fin < 0.25", "silero", silero_threshold=0.4, silero_end_threshold=0.25
+)
+LOW_THRESHOLD_OPTION = VadOption("Silero ≥ 0.20", "silero", silero_threshold=0.2)
 
 
 def config() -> VadBenchmarkConfig:
@@ -118,20 +122,32 @@ def test_speech_recall_needs_half_the_duration() -> None:
     assert speech_recall(clips, SILERO_OPTION, vad_config(), config()) == 0.5
 
 
-def test_simplest_passing_family_wins() -> None:
+def test_best_recall_under_the_false_positive_limit_wins() -> None:
+    # Chiffres de C24 : aucune option ne tient les deux critères (passes=False partout).
     scores = [
-        OptionScore(WEBRTC_OPTION, 0.4, 0.99, passes=False),
-        OptionScore(BAND_OPTION, 0.08, 0.96, passes=True),
-        OptionScore(SILERO_OPTION, 0.01, 0.99, passes=True),
+        OptionScore(WEBRTC_OPTION, 0.976, 0.905, passes=False),
+        OptionScore(SILERO_OPTION, 0.034, 0.850, passes=False),
+        OptionScore(HYSTERESIS_OPTION, 0.072, 0.910, passes=False),
+        OptionScore(LOW_THRESHOLD_OPTION, 0.135, 0.935, passes=False),
     ]
-    selected = select_option(scores)
+    selected = select_option(scores, max_false_positive_rate=0.10)
     assert selected is not None
-    assert selected.option == BAND_OPTION
+    assert selected.option == HYSTERESIS_OPTION
 
 
-def test_no_option_selected_when_none_passes() -> None:
+def test_equal_recall_prefers_fewer_false_positives() -> None:
+    scores = [
+        OptionScore(HYSTERESIS_OPTION, 0.08, 0.90, passes=False),
+        OptionScore(SILERO_OPTION, 0.03, 0.90, passes=False),
+    ]
+    selected = select_option(scores, max_false_positive_rate=0.10)
+    assert selected is not None
+    assert selected.option == SILERO_OPTION
+
+
+def test_no_option_selected_when_all_exceed_the_false_positive_limit() -> None:
     scores = [OptionScore(WEBRTC_OPTION, 0.4, 0.99, passes=False)]
-    assert select_option(scores) is None
+    assert select_option(scores, max_false_positive_rate=0.10) is None
 
 
 def test_clip_decisions_align_webrtcvad_and_band_frames() -> None:

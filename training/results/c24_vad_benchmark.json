@@ -374,7 +374,7 @@
       "passes": false
     }
   ],
-  "selected": null,
+  "selected": "Silero ≥ 0.40, fin < 0.25",
   "false_positive_classes": {
     "webrtcvad 2": [
       [

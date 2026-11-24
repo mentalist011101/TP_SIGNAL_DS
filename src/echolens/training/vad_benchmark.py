@@ -14,6 +14,10 @@ nettoyage des segments que l'application (flags_to_segments, D5).
 Mesures : sur ESC-50 sans les classes vocales, part des extraits avec au moins 0,5 s de
 « parole » (faux positifs) ; sur 200 extraits de CREMA-D, part des extraits dont au moins
 50 % de la durée est « parole » (parole retrouvée).
+
+Choix : parmi les options à au plus 10 % de faux positifs, celle qui retrouve le plus de
+parole. Les seuils sont choisis sur les extraits qui servent aussi à les mesurer : les
+chiffres de l'option retenue sont légèrement optimistes.
 """
 
 from __future__ import annotations
@@ -42,8 +46,6 @@ from echolens.core.features import FeatureConfig, band_power_share
 VAD_BENCHMARK_CONFIG_PATH = CONFIG_DIR / "vad_benchmark.yaml"
 WEBRTCVAD_LEVELS = [0, 1, 2, 3]
 Method = Literal["webrtcvad", "webrtcvad_band", "silero"]
-# Ordre de simplicité : la première famille qui tient les deux critères l'emporte.
-METHOD_ORDER: list[Method] = ["webrtcvad", "webrtcvad_band", "silero"]
 
 
 class VadBenchmarkConfig(BaseModel):
@@ -303,22 +305,26 @@ def score_options(
     return scores
 
 
-def select_option(scores: list[OptionScore]) -> OptionScore | None:
-    """Option retenue : la famille la plus simple qui a une option valide (METHOD_ORDER).
+def select_option(scores: list[OptionScore], max_false_positive_rate: float) -> OptionScore | None:
+    """Option retenue (C24) : parmi les options à au plus max_false_positive_rate de faux
+    positifs, celle qui retrouve le plus de parole ; à égalité, la moins de faux positifs.
 
-    Dans cette famille, la plus forte parole retrouvée, puis les moins de faux positifs.
-    None si aucune option ne tient les deux critères.
+    C'est la règle réellement appliquée, car aucune option ne tient aussi l'objectif de
+    parole retrouvée (passes vaut False partout). None si toutes dépassent la limite.
     """
-    for method in METHOD_ORDER:
-        candidates = [score for score in scores if score.passes and score.option.method == method]
-        if not candidates:
-            continue
-        best = candidates[0]
-        for candidate in candidates[1:]:
-            if _is_better(candidate, best):
-                best = candidate
-        return best
-    return None
+    # Étape 1 : on écarte les options qui font trop de faux positifs.
+    candidates: list[OptionScore] = []
+    for score in scores:
+        if score.false_positive_rate <= max_false_positive_rate:
+            candidates.append(score)
+    if not candidates:
+        return None
+    # Étape 2 : parmi les autres, la plus forte parole retrouvée.
+    best = candidates[0]
+    for candidate in candidates[1:]:
+        if _is_better(candidate, best):
+            best = candidate
+    return best
 
 
 def most_frequent_labels(labels: list[str], count: int) -> list[tuple[str, int]]:
