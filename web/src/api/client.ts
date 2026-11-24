@@ -171,6 +171,40 @@ export interface Analysis {
   results: AnalysisResults | null
 }
 
+// Résumé d'une tâche dans l'historique (TaskSummarySchema) : le premier choix et sa
+// probabilité, sans segments ni liste de probabilités.
+export interface TaskResultSummary {
+  status: TaskResultStatus
+  message: string | null
+  label: string | null
+  label_fr: string | null
+  probability: number | null
+  model_id: string | null
+  model_version: string | null
+  calibrated: boolean | null
+}
+
+export interface AnalysisResultsSummary {
+  emotion?: TaskResultSummary
+  sound_event?: TaskResultSummary
+  transcription?: TaskResultSummary
+  speaker?: TaskResultSummary
+}
+
+// Analyse telle que la renvoie l'historique (GET /analyses) : ni audio, ni spectrogramme, et
+// des résultats résumés. Le détail complet se lit avec useAnalysis.
+export interface AnalysisSummary {
+  id: string
+  created_at: string
+  original_filename: string
+  status: AnalysisStatusValue
+  error_message: string | null
+  duration_s: number | null
+  tasks: AnalysisTask[]
+  profile: AnalysisProfile
+  results: AnalysisResultsSummary | null
+}
+
 export interface AnalysisRequest {
   file: File
   tasks: AnalysisTask[]
@@ -199,7 +233,7 @@ export function useCreateAnalysis() {
 }
 
 // Une analyse est encore en cours tant que le serveur n'a pas fini (done) ou échoué (failed).
-export function isAnalysisRunning(analysis: Analysis): boolean {
+export function isAnalysisRunning(analysis: Analysis | AnalysisSummary): boolean {
   if (analysis.status === 'pending') {
     return true
   }
@@ -240,7 +274,7 @@ const HISTORY_LIMIT = 100
 const HISTORY_QUERY_KEY = ['analyses']
 
 // Vrai si au moins une analyse de la liste tourne encore (pending ou processing).
-function hasRunningAnalysis(analyses: Analysis[]): boolean {
+function hasRunningAnalysis(analyses: AnalysisSummary[]): boolean {
   for (const analysis of analyses) {
     if (isAnalysisRunning(analysis)) {
       return true
@@ -249,14 +283,14 @@ function hasRunningAnalysis(analyses: Analysis[]): boolean {
   return false
 }
 
-// Historique : les analyses les plus récentes d'abord (EF-08). Rafraîchi chaque seconde tant
+// Historique : les analyses les plus récentes d'abord, en version résumée (EF-08). Rafraîchi chaque seconde tant
 // qu'une analyse de la liste tourne encore, pour que son statut se mette à jour tout seul.
 export function useAnalysisHistory() {
   return useQuery({
     queryKey: HISTORY_QUERY_KEY,
     queryFn: () => {
       const path = `/analyses?limit=${HISTORY_LIMIT}`
-      return apiGet<Analysis[]>(path)
+      return apiGet<AnalysisSummary[]>(path)
     },
     refetchInterval: (query) => {
       const analyses = query.state.data

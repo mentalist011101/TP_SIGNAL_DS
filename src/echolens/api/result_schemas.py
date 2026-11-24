@@ -1,11 +1,17 @@
 """Schémas des résultats d'une analyse (contrat de GET /api/v1/analyses/{id}, C13).
 
+Deux formes, lues dans la même colonne results :
+- complète (ResultsSchema), avec les segments, pour la page Résultat ;
+- résumée (ResultsSummarySchema), le premier choix seul, pour l'historique (GET /analyses).
+
 Un objet par tâche demandée. Chaque objet a le même format, que la tâche ait un résultat
 (done), qu'aucune parole n'ait été trouvée (no_speech) ou qu'elle ne soit pas encore branchée
 (unavailable) : le front lit toujours les mêmes champs.
 """
 
 from __future__ import annotations
+
+from typing import Any
 
 from marshmallow import Schema, fields, validate
 
@@ -107,6 +113,77 @@ class TaskResultSchema(Schema):
             "de 5 s au plus pour les émotions. Liste vide si status ≠ done."
         },
     )
+
+
+class TaskSummarySchema(Schema):
+    """Résumé d'une tâche pour l'historique : le premier choix et le modèle, rien de plus.
+
+    Il est lu dans le même objet JSON que TaskResultSchema (colonne results) : marshmallow ne
+    renvoie que les champs déclarés ici, donc les segments et la liste des probabilités sont
+    laissés de côté sans rien recalculer.
+    """
+
+    status = fields.String(
+        validate=validate.OneOf(TASK_RESULT_STATUSES),
+        metadata={"description": "Même valeur que dans le résultat complet."},
+    )
+    message = fields.String(
+        allow_none=True,
+        metadata={"description": "Message en français si status ≠ done ; sinon null."},
+    )
+    label = fields.String(
+        allow_none=True,
+        metadata={
+            "description": "Classe la plus probable sur tout l'audio ; null si status ≠ done."
+        },
+    )
+    label_fr = fields.String(
+        allow_none=True,
+        metadata={"description": "Libellé français de cette classe ; null si status ≠ done."},
+    )
+    probability = fields.Method(
+        "get_probability",
+        metadata={
+            "type": "number",
+            "nullable": True,
+            "description": "Probabilité de cette classe (premier choix), entre 0 et 1 ; null "
+            "si status ≠ done.",
+        },
+    )
+    model_id = fields.String(
+        allow_none=True,
+        metadata={"description": "Identifiant du modèle (registre) ; « demo » ou null."},
+    )
+    model_version = fields.String(
+        allow_none=True,
+        metadata={"description": "Version du modèle ; null si la tâche n'est pas branchée."},
+    )
+    calibrated = fields.Boolean(
+        allow_none=True,
+        metadata={
+            "description": "Vrai si les probabilités sont calibrées (ENF-06) ; null si la "
+            "tâche n'est pas branchée."
+        },
+    )
+
+    def get_probability(self, task_result: dict[str, Any]) -> float | None:
+        probabilities = task_result["probabilities"]
+        if not probabilities:
+            return None
+        # La liste est triée de la plus probable à la moins probable : le premier élément est
+        # le premier choix, celui de « label ».
+        first_choice = probabilities[0]
+        probability: float = first_choice["probability"]
+        return probability
+
+
+class ResultsSummarySchema(Schema):
+    """Résumé des résultats pour l'historique : une entrée par tâche demandée."""
+
+    emotion = fields.Nested(TaskSummarySchema)
+    sound_event = fields.Nested(TaskSummarySchema)
+    transcription = fields.Nested(TaskSummarySchema)
+    speaker = fields.Nested(TaskSummarySchema)
 
 
 class ResultsSchema(Schema):

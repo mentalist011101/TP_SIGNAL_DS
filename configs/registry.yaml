@@ -56,4 +56,5 @@ models:
     revision: 76f1e1a04fd7bf7c6a1da52054c2baee39616a8e
     labels: [neutral, happy, sad, angry, fear, disgust]
     metrics: {f1_macro: 0.6680, accuracy: 0.6664}
+    temperature: 1.088
     description: CRNN (4 blocs conv, BiGRU, attention) sur log-Mel 64 bandes, fenêtre de 3 s, CREMA-D et RAVDESS, calibré (T = 1,088)

@@ -183,7 +183,7 @@ deux profils, « qualité » (fichiers) et « temps réel » (flux).
 | --- | --- | --- |
 | POST | `/api/v1/analyses` | Import, choix des tâches et du profil, renvoie un identifiant |
 | GET | `/api/v1/analyses/{id}` | Statut et résultats |
-| GET | `/api/v1/analyses` | Historique filtrable |
+| GET | `/api/v1/analyses` | Historique filtrable, résumé : premier choix de chaque tâche, sans segments |
 | GET | `/api/v1/analyses/{id}/export` | Export `json`, `csv` ou `pdf` |
 | GET | `/api/v1/models` | Registre et métriques |
 | POST | `/api/v1/compare` | Même fichier dans plusieurs modèles |

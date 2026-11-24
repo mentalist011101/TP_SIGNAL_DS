@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
-import type { Analysis, AnalysisTask } from '../../api/client.ts'
+import type { AnalysisSummary, AnalysisTask } from '../../api/client.ts'
 import { TASK_LABELS } from '../../labels.ts'
-import { formatProbability, hasDemoResult, mainProbability } from '../result/taskResult.ts'
+import { formatProbability, hasDemoResult } from '../result/taskResult.ts'
 import StatusBadge from '../StatusBadge.tsx'
 import DeleteControl from './DeleteControl.tsx'
 
@@ -24,9 +24,9 @@ function formatDuration(durationSeconds: number | null): string {
   return `${formatted} s`
 }
 
-// « Peur 30,5 % » : résultat principal d'une tâche terminée, tel que renvoyé par l'API ;
+// « Peur 30,5 % » : premier choix d'une tâche terminée, tel que résumé par l'API ;
 // null tant qu'il n'y en a pas (analyse en cours, no_speech, unavailable).
-function taskSummary(analysis: Analysis, task: AnalysisTask): string | null {
+function taskSummary(analysis: AnalysisSummary, task: AnalysisTask): string | null {
   if (analysis.results === null) {
     return null
   }
@@ -34,16 +34,15 @@ function taskSummary(analysis: Analysis, task: AnalysisTask): string | null {
   if (result === undefined || result.status !== 'done') {
     return null
   }
-  const probability = mainProbability(result)
-  if (probability === null) {
+  if (result.probability === null) {
     return result.label_fr
   }
-  const percent = formatProbability(probability)
+  const percent = formatProbability(result.probability)
   return `${result.label_fr} ${percent}`
 }
 
 // Étiquette d'une tâche demandée, avec son résultat principal s'il existe.
-function TaskChip({ analysis, task }: { analysis: Analysis; task: AnalysisTask }) {
+function TaskChip({ analysis, task }: { analysis: AnalysisSummary; task: AnalysisTask }) {
   const summary = taskSummary(analysis, task)
   return (
     <span className="inline-flex items-center gap-2 rounded-btn bg-paper-alt px-2 py-1 text-xs">
@@ -56,7 +55,7 @@ function TaskChip({ analysis, task }: { analysis: Analysis; task: AnalysisTask }
 // Une ligne par analyse, à la manière d'une liste de tickets : statut, nom (qui ouvre le
 // résultat) et tâches à gauche ; date, durée et suppression à droite. Sur téléphone, la ligne
 // passe sur plusieurs rangées au lieu de déborder.
-function HistoryItem({ analysis }: { analysis: Analysis }) {
+function HistoryItem({ analysis }: { analysis: AnalysisSummary }) {
   const resultPath = `/analyses/${analysis.id}`
   const isDemo = hasDemoResult(analysis)
   return (
@@ -86,7 +85,7 @@ function HistoryItem({ analysis }: { analysis: Analysis }) {
 }
 
 // Liste de l'historique : un seul cadre, des lignes séparées par des filets fins.
-export default function HistoryList({ analyses }: { analyses: Analysis[] }) {
+export default function HistoryList({ analyses }: { analyses: AnalysisSummary[] }) {
   return (
     <ul className="divide-y divide-rule overflow-hidden rounded-card border border-rule bg-card">
       {analyses.map((analysis) => (
