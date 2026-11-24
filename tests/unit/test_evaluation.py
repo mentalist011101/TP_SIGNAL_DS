@@ -15,6 +15,7 @@ from echolens.training.evaluation import (
     equal_error_rate,
     expected_calibration_error,
     fit_temperature,
+    holm_correction,
     load_predictions,
     macro_f1,
     mcnemar_test,
@@ -342,3 +343,15 @@ def test_temperature_of_one_changes_nothing() -> None:
     config = EvaluationConfig.from_yaml(CONFIG_DIR / "evaluation.yaml")
     probabilities = np.array([[0.7, 0.2, 0.1], [0.1, 0.1, 0.8]])
     np.testing.assert_allclose(apply_temperature(probabilities, 1.0, config), probabilities)
+
+
+def test_holm_correction_matches_hand_computation() -> None:
+    # Triées : 0,01 × 4 = 0,04 ; 0,03 × 3 = 0,09 ; 0,04 × 2 = 0,08 → 0,09 (jamais plus petite
+    # que la précédente) ; 0,20 × 1 = 0,20. Rendues dans l'ordre reçu.
+    adjusted = holm_correction([0.01, 0.04, 0.03, 0.20])
+    assert adjusted == pytest.approx([0.04, 0.09, 0.09, 0.20])
+
+
+def test_holm_correction_never_exceeds_one_and_keeps_a_single_test() -> None:
+    assert holm_correction([0.6, 0.7]) == pytest.approx([1.0, 1.0])
+    assert holm_correction([0.03]) == pytest.approx([0.03])

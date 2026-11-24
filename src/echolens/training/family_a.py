@@ -62,12 +62,23 @@ class TrainingConfig(BaseModel):
     prediction_batch_size: int = Field(gt=0)
 
 
+class EmotionTrainingConfig(BaseModel):
+    """Réglages propres aux émotions (C12) ; le reste vient des sections communes."""
+
+    window_s: float = Field(gt=0)
+    max_epochs: int = Field(gt=0)
+    learning_rates: list[float] = Field(min_length=1)
+    tuning_seed: int
+    seeds: list[int] = Field(min_length=1)
+
+
 class FamilyAConfig(BaseModel):
     """Contenu de configs/family_a.yaml."""
 
     network: NetworkConfig
     augmentation: AugmentationConfig
     training: TrainingConfig
+    emotions: EmotionTrainingConfig | None = None
 
 
 @dataclass(frozen=True)

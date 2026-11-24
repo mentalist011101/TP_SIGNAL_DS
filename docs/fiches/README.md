@@ -13,3 +13,4 @@ justification, l'emplacement du code, les résultats, et dix questions probables
 | `donnees-et-protocole.md` | Lynn |
 | `interface-et-demo.md` | Nicole |
 | `grad-cam.md` | Nicole |
+| `diagrammes-uml.md` | Nicole |

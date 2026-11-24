@@ -10,6 +10,8 @@
 #   weights   hf://<utilisateur>/<dépôt> ; revision : hash de commit du dépôt (40 caractères)
 #   metrics   F1 macro et accuracy de test : ESC-50, moyenne des 5 tours (P3) ; émotions,
 #             moyenne des 3 graines sur le test de CREMA-D et RAVDESS (P1)
+#   temperature  T de la calibration (E2, ENF-06), calibration.temperature du config.json du
+#             dépôt arrondie au millième ; sert à l'affichage (page Modèles, page Résultat)
 #
 # Dépôts publics publiés par training/scripts/export_hf.py (C13). Pour utiliser d'autres
 # poids sans les publier, le prédicteur réel sait aussi lire un dossier local (models_dir).
@@ -23,6 +25,7 @@ models:
     revision: c443b6f2093e4a4683b2316b6459bd1b6b06e287
     labels: [neutral, happy, sad, angry, fear, disgust]
     metrics: {f1_macro: 0.7535, accuracy: 0.7495}
+    temperature: 1.109
     description: Tête sur l'encodeur gelé de Whisper base (somme pondérée des couches, MLP), calibrée (T = 1,109)
   - id: echolens-sound-event-whisper-base
     task: sound_event
@@ -32,6 +35,7 @@ models:
     weights: hf://Mentalist0101/echolens-sound-event-whisper-base
     revision: 27f3e6a28eb5f1a809ed8ddb32fc177f08afce11
     metrics: {f1_macro: 0.8303, accuracy: 0.8347}
+    temperature: 1.461
     description: Tête sur l'encodeur gelé de Whisper base, entraînée sur les 5 folds d'ESC-50, calibrée (T = 1,461)
   - id: echolens-sound-event-crnn
     task: sound_event
@@ -41,4 +45,15 @@ models:
     weights: hf://Mentalist0101/echolens-sound-event-crnn
     revision: f3be3ad0d1a9cf719a79ad9076d2322cd6dd2115
     metrics: {f1_macro: 0.8266, accuracy: 0.8322}
+    temperature: 0.786
     description: CRNN (4 blocs conv, BiGRU, attention) sur log-Mel 64 bandes, 5 folds d'ESC-50, calibré (T = 0,786)
+  - id: echolens-emotion-crnn
+    task: emotion
+    family: A
+    profiles: [realtime]
+    version: 1.0.0
+    weights: hf://Mentalist0101/echolens-emotion-crnn
+    revision: 76f1e1a04fd7bf7c6a1da52054c2baee39616a8e
+    labels: [neutral, happy, sad, angry, fear, disgust]
+    metrics: {f1_macro: 0.6680, accuracy: 0.6664}
+    description: CRNN (4 blocs conv, BiGRU, attention) sur log-Mel 64 bandes, fenêtre de 3 s, CREMA-D et RAVDESS, calibré (T = 1,088)

@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { WaveIcon } from './icons.tsx'
 
-// Logo : la forme d'onde dans un carré, puis le nom en serif. Il ramène à la racine du site.
+// Logo : la forme d'onde dans un carré, puis le nom en serif. Il ramène à l'accueil.
 export default function Brand() {
   return (
     <Link to="/" className="flex items-center gap-2.5 text-ink">

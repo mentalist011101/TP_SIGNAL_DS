@@ -52,6 +52,23 @@
       "weights_mb": 0.531892,
       "encoder_parameters": 20590592,
       "total_parameters": 20723469
+    },
+    "echolens-emotion-crnn": {
+      "task": "emotion",
+      "f1_macro": 0.668,
+      "2s": {
+        "p50_s": 0.059311449993401766,
+        "p95_s": 0.3468903000059069,
+        "rtf_p95": 0.17344515000295346
+      },
+      "5s": {
+        "p50_s": 0.05042530001082923,
+        "p95_s": 0.13744501999026382,
+        "rtf_p95": 0.027489003998052763
+      },
+      "parameters": 687047,
+      "weights_mb": 2.755372,
+      "total_parameters": 687047
     }
   },
   "machine": {
@@ -68,7 +85,7 @@
   "rtf_limit": 0.25,
   "measured_windows": 200,
   "realtime_choice": {
-    "emotion": null,
+    "emotion": "echolens-emotion-crnn",
     "sound_event": "echolens-sound-event-crnn"
   }
 }

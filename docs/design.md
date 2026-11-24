@@ -7,9 +7,9 @@ le vert mousse, les étiquettes en mono et la palette magma réservée aux donn�
 
 Les jetons sont définis dans `web/src/index.css`, pour un thème sombre (anthracite chaud) et un
 thème clair « papier ». **Par défaut, la page suit le thème du système** (`prefers-color-scheme`),
-y compris s'il change pendant la visite. Le bouton de thème (barre latérale) bascule de l'un à
-l'autre et mémorise ce choix dans le navigateur, qui prime ensuite sur le système
-(`web/src/theme.ts`, attribut `data-theme` sur `<html>`).
+y compris s'il change pendant la visite. Le bouton de thème (barre latérale, en-tête de
+l'accueil) bascule de l'un à l'autre et mémorise ce choix dans le navigateur, qui prime ensuite
+sur le système (`web/src/theme.ts`, attribut `data-theme` sur `<html>`).
 
 ## Jetons
 
@@ -51,7 +51,9 @@ distinguent par une bordure fine. Fond de page : grille de points (`dot-grid`). 
   encre (clair), cases à cocher, segment choisi, focus. Aucun des outils de référence n'a de
   bouton principal coloré : la couleur reste rare.
 - **Vert mousse = la marque** : logo, statut « terminée », indicateur « en direct », mot mis
-  en valeur dans un titre. Jamais un bouton.
+  en valeur dans un titre, et sur la frise temporelle la parole détectée, la tête de lecture
+  et le remplissage des fenêtres d'événements (opacité selon la probabilité, plafonnée pour
+  garder le texte lisible). Jamais un bouton.
 - **Danger = les erreurs** : messages d'échec, refus de fichier. Pas pour décorer.
 - **Magma réservé aux données** : la palette du spectrogramme ne sert à rien d'autre, et
   l'interface n'utilise pas ses couleurs.
@@ -60,17 +62,17 @@ distinguent par une bordure fine. Fond de page : grille de points (`dot-grid`). 
 - **Serif pour les grands titres seulement** (titres de page, chiffres clés, résultat
   principal) ; Inter demi-gras pour les titres de carte ; mono pour Hz, dB, durées, noms de
   fichiers et étiquettes.
-- **Honnêteté** : des probabilités du faux
+- **Honnêteté** : une illustration est marquée « Illustration », des probabilités du faux
   prédicteur sont signalées par le bandeau « démo », une fonction pas encore branchée est
   marquée « bientôt ».
-- **Mouvement** : les animations (ruban d'ondes, points « en direct », suivi d'analyse)
-  s'arrêtent quand le système demande moins d'animations (`motion-safe`,
-  `prefers-reduced-motion`).
+- **Mouvement** : les animations (ruban d'ondes, visuels des outils de l'accueil, points « en
+  direct », suivi d'analyse) s'arrêtent quand le système demande moins d'animations
+  (`motion-safe`, `prefers-reduced-motion`).
 - **Contraste WCAG AA** (4,5:1 pour le texte) dans les deux thèmes.
 
 ## Origine
 
 La v1 reprenait la charte du portfolio de Luciano (papier, encre, Archivo, rayons de 3 et
 6 px, ombres dures). La v2 en garde le papier et l'encre (thème clair), le vert mousse, les
-étiquettes mono et la palette magma, et adopte un thème sombre (le système choisit), le serif pour les titres,
-les boutons en pilule et les surfaces plates.
+étiquettes mono et la palette magma, et adopte un thème sombre (le système choisit), le serif
+pour les titres, les boutons en pilule et les surfaces plates.

@@ -1,5 +1,6 @@
-# Modèles de production (C13) : ce que le notebook c13_production_models.ipynb entraîne,
-# calibre et publie. Lu par echolens.training.production.ProductionPlan.
+# Modèles de production (C13) : ce que les notebooks c13_production_models.ipynb (et
+# c12_family_a_emotions.ipynb pour echolens-emotion-crnn) entraînent et calibrent, et que
+# training/scripts/export_hf.py publie. Lu par echolens.training.production.ProductionPlan.
 
 seed: 42                 # graine de l'entraînement final des modèles d'ESC-50
 
@@ -23,3 +24,8 @@ models:
     architecture: crnn
     license: cc-by-nc-3.0
     data: "ESC-50, les 5 folds, réglage = médiane des 5 tours de C9"
+  - id: echolens-emotion-crnn
+    task: emotion
+    architecture: crnn
+    license: cc-by-nc-sa-4.0
+    data: "CREMA-D et RAVDESS, découpage par acteur (P1), meilleure époque de C12 (graine 42)"

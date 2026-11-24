@@ -12,7 +12,8 @@ chaque dépôt, à recopier dans configs/registry.yaml.
 
 Usage, depuis la racine du dépôt :
     uv run python training/scripts/export_hf.py --production-dir <dossier> --username <nom>
-    (ajouter --dry-run pour tout préparer et vérifier sans rien envoyer)
+    (ajouter --dry-run pour tout préparer et vérifier sans rien envoyer, et --model-id <id>
+    pour ne publier qu'un modèle)
 """
 
 from __future__ import annotations
@@ -48,6 +49,8 @@ def main() -> None:
     revisions = {}
     with tempfile.TemporaryDirectory() as staging:
         for planned in plan.models:
+            if arguments.model_id is not None and planned.id != arguments.model_id:
+                continue
             # Étape 1 : un dossier par modèle, avec les trois fichiers du dépôt.
             folder = Path(staging) / planned.id
             _prepare_folder(arguments.production_dir / planned.id, folder, planned.license)
@@ -73,6 +76,7 @@ def _parse_arguments() -> argparse.Namespace:
     parser.add_argument("--production-dir", type=Path, required=True)
     parser.add_argument("--username", required=True)
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--model-id", default=None)
     return parser.parse_args()
 
 

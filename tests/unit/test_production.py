@@ -113,7 +113,7 @@ def test_production_config_is_saved_and_reloaded(tmp_path: Path) -> None:
     assert load_production_config(path) == production
 
 
-def test_production_plan_lists_the_three_models() -> None:
+def test_production_plan_lists_the_four_models() -> None:
     plan = load_production_plan()
     assert plan.seed == 42
     ids = [planned.id for planned in plan.models]
@@ -121,8 +121,10 @@ def test_production_plan_lists_the_three_models() -> None:
         "echolens-emotion-whisper-base",
         "echolens-sound-event-whisper-base",
         "echolens-sound-event-crnn",
+        "echolens-emotion-crnn",
     ]
     assert plan.model("echolens-sound-event-crnn").license == "cc-by-nc-3.0"
+    assert plan.model("echolens-emotion-crnn").license == "cc-by-nc-sa-4.0"
     with pytest.raises(KeyError):
         plan.model("inconnu")
 

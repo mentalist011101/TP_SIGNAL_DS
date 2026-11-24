@@ -272,6 +272,25 @@ def mcnemar_test(
     return McNemarResult(both_right, only_a, only_b, both_wrong, statistic, p_value, exact=False)
 
 
+def holm_correction(p_values: Sequence[float]) -> list[float]:
+    """p-valeurs corrigées par la méthode de Holm, dans l'ordre reçu (P8, E5).
+
+    Faire plusieurs tests augmente le risque d'en trouver un « significatif » par hasard. Holm
+    trie les p croissantes et multiplie la k-ième plus petite par (nombre de tests − k + 1),
+    en gardant l'ordre (une p corrigée n'est jamais plus petite que la précédente), sans
+    dépasser 1. Une p corrigée sous 5 % garde un risque global d'erreur sous 5 %.
+    """
+    test_count = len(p_values)
+    order = np.argsort(p_values, kind="stable")
+    adjusted = [0.0] * test_count
+    running_max = 0.0
+    for rank, index in enumerate(order):
+        multiplied = (test_count - rank) * p_values[index]
+        running_max = max(running_max, multiplied)
+        adjusted[index] = min(running_max, 1.0)
+    return adjusted
+
+
 @dataclass(frozen=True)
 class CalibrationResult:
     """ECE et données du diagramme de fiabilité (un élément par intervalle de confiance)."""

@@ -20,3 +20,11 @@ export const PROFILE_LABELS: Record<AnalysisProfile, string> = {
   quality: 'Qualité',
   realtime: 'Temps réel',
 }
+
+// Familles de modèles comparées par le protocole (registre, S1).
+export const FAMILY_LABELS: Record<'baseline' | 'A' | 'B' | 'pretrained', string> = {
+  baseline: 'Référence',
+  A: 'Famille A',
+  B: 'Famille B',
+  pretrained: 'Pré-entraîné',
+}

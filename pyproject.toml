@@ -97,6 +97,7 @@ strict = true
 module = [
     "echolens.training.head_training",
     "echolens.training.family_a_models",
+    "echolens.training.family_a_emotions_training",
     "echolens.core.models.family_a",
     "echolens.core.models.heads",
 ]
