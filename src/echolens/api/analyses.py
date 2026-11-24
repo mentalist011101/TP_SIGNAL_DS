@@ -169,7 +169,8 @@ class AnalysisSummarySchema(Schema):
             "les plus précis ; realtime : modèles légers, utilisés aussi pour le micro en direct."
         },
     )
-    # Lu dans la colonne summary, renvoyé sous le nom « results » comme dans le détail.
+    # Lu dans la table analysis_summaries (AnalysisRecord.summary), renvoyé sous le nom
+    # « results » comme dans le détail.
     results = fields.Nested(
         ResultsSummarySchema,
         attribute="summary",

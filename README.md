@@ -42,15 +42,16 @@ Pour développer le front avec rechargement à chaud : `make run` dans un termin
 dans un autre, puis ouvrir http://localhost:5173.
 
 La base locale (`var/echolens.db`, l'historique des analyses) est créée au premier démarrage,
-sans outil de migration. Quand une version ajoute une colonne, deux cas :
+sans outil de migration :
 
-- la colonne `summary` (résumé de chaque analyse pour la page Historique) est ajoutée
-  automatiquement au démarrage, puis remplie une seule fois à partir des résultats déjà
-  enregistrés. Rien à faire : l'historique est conservé. Avec beaucoup d'analyses longues, ce
-  premier démarrage peut prendre quelques secondes ;
-- pour toute autre colonne manquante (par exemple `results`, ajoutée en C13), le serveur refuse
-  de démarrer avec un message clair : supprimez `var/echolens.db`, elle sera recréée vide au
-  démarrage suivant (l'historique local est perdu).
+- une **table** ajoutée par une nouvelle version est créée toute seule au démarrage. C'est le cas
+  de `analysis_summaries` (résumé de chaque analyse pour la page Historique) : au démarrage, le
+  résumé de chaque analyse terminée qui n'en a pas encore est calculé à partir de ses résultats.
+  Rien à faire, l'historique est conservé ; avec beaucoup d'analyses longues, ce premier
+  démarrage peut prendre quelques secondes ;
+- quand une version ajoute une **colonne** à une table existante (par exemple `results` en C13),
+  le serveur refuse de démarrer avec un message clair : supprimez `var/echolens.db`, elle sera
+  recréée vide au démarrage suivant (l'historique local est perdu).
 
 ### Prédicteur : faux ou vrais modèles
 

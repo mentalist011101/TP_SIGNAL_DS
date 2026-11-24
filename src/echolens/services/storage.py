@@ -1,10 +1,11 @@
-"""Persistance des analyses (décision S3) : SQLite via SQLAlchemy 2, une seule table pour l'instant.
+"""Persistance des analyses (décision S3) : SQLite via SQLAlchemy 2.
 
 Les tables des segments et des prédictions viendront avec le MCD MERISE ; elles ne sont pas
-anticipées ici : les résultats sont stockés en JSON dans la table analyses (C13). Les tables
-sont créées au démarrage, sans outil de migration : une colonne ajoutée depuis (summary) est
-créée et remplie au démarrage ; pour toute autre colonne manquante, le serveur refuse de
-démarrer et demande de supprimer la base.
+anticipées ici : les résultats sont stockés en JSON dans la table analyses (C13). La table
+analysis_summaries garde une copie calculée du premier choix de chaque tâche, pour que
+l'historique n'ait jamais à lire results (EF-08). Les tables sont créées au démarrage, sans
+outil de migration : une colonne manquante dans une table existante arrête le démarrage avec
+un message clair.
 """
 
 from __future__ import annotations
@@ -13,23 +14,17 @@ from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Any
 
-from sqlalchemy import (
-    JSON,
-    DateTime,
-    Engine,
-    String,
-    create_engine,
-    inspect,
-    select,
-    text,
-    update,
+from sqlalchemy import JSON, DateTime, Engine, ForeignKey, String, create_engine, inspect, select
+from sqlalchemy.orm import (
+    DeclarativeBase,
+    Mapped,
+    Session,
+    mapped_column,
+    relationship,
+    sessionmaker,
 )
-from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 
 from echolens.services.results import summarize_results
-
-# Seule colonne ajoutée après coup que le démarrage sait créer et remplir (voir upgrade_columns).
-SUMMARY_COLUMN = "summary"
 
 
 def _utc_now() -> datetime:
@@ -67,9 +62,34 @@ class AnalysisRecord(Base):
     # Résultats, un objet par tâche demandée (JSON, contrat de l'API) ; null tant que
     # l'analyse n'est pas terminée.
     results: Mapped[dict[str, Any] | None] = mapped_column(JSON, default=None)
-    # Résumé des résultats pour l'historique (premier choix de chaque tâche, sans segments),
-    # écrit en même temps que results ; null tant que l'analyse n'est pas terminée.
-    summary: Mapped[dict[str, Any] | None] = mapped_column(JSON, default=None)
+    # Ligne de résumé (table analysis_summaries) ; absente tant que l'analyse n'est pas
+    # terminée. cascade : supprimer l'analyse supprime aussi son résumé.
+    summary_row: Mapped[AnalysisSummaryRecord | None] = relationship(
+        back_populates="analysis", cascade="all, delete-orphan"
+    )
+
+    @property
+    def summary(self) -> dict[str, Any] | None:
+        """Résumé de l'analyse pour l'historique, ou None s'il n'y en a pas encore."""
+        if self.summary_row is None:
+            return None
+        return self.summary_row.summary
+
+
+class AnalysisSummaryRecord(Base):
+    """Résumé d'une analyse terminée : premier choix de chaque tâche, sans segments (EF-08).
+
+    Copie calculée de results (services.results.summarize_results), voulue : la liste de
+    l'historique la lit sans toucher à results. Une table à part plutôt qu'une colonne de
+    analyses : SQLite range une ligne d'un seul bloc, et lire une colonne placée après results
+    oblige à parcourir tout le JSON de results sur le disque.
+    """
+
+    __tablename__ = "analysis_summaries"
+
+    analysis_id: Mapped[str] = mapped_column(ForeignKey("analyses.id"), primary_key=True)
+    summary: Mapped[dict[str, Any]] = mapped_column(JSON)
+    analysis: Mapped[AnalysisRecord] = relationship(back_populates="summary_row")
 
 
 def create_session_factory(database_url: str) -> sessionmaker[Session]:
@@ -80,61 +100,56 @@ def create_session_factory(database_url: str) -> sessionmaker[Session]:
     """
     engine = create_engine(database_url)
     Base.metadata.create_all(engine)
-    upgrade_columns(engine)
-    return sessionmaker(bind=engine, expire_on_commit=False)
+    check_columns_are_current(engine)
+    session_factory = sessionmaker(bind=engine, expire_on_commit=False)
+    fill_missing_summaries(session_factory)
+    return session_factory
 
 
-def upgrade_columns(engine: Engine) -> None:
-    """Met à niveau une base créée par une version plus ancienne, ou refuse de démarrer.
+def check_columns_are_current(engine: Engine) -> None:
+    """Refuse une base créée par une version plus ancienne, avec un message clair.
 
     create_all crée les tables absentes, mais n'ajoute pas de colonne à une table existante :
-    sans ce contrôle, la première requête échouerait sur « no such column ». La colonne summary
-    se déduit de results : elle est ajoutée et remplie ici. Toute autre colonne manquante
-    arrête le démarrage avec un message clair.
+    sans ce contrôle, la première requête échouerait sur « no such column ».
     """
-    missing = missing_columns(engine)
-    # Étape 1 : refus si une colonne qu'on ne sait pas remplir manque.
-    unknown_missing = [name for name in missing if name != SUMMARY_COLUMN]
-    if unknown_missing:
-        raise RuntimeError(
-            f"La base de données ({engine.url}) a été créée par une version plus ancienne "
-            f"d'EchoLens : colonnes manquantes {', '.join(unknown_missing)}. Supprimez le "
-            "fichier de la base (var/echolens.db par défaut) : il sera recréé au prochain "
-            "démarrage."
-        )
-    # Étape 2 : ajout et remplissage de summary, une seule fois (la colonne existe ensuite).
-    if SUMMARY_COLUMN in missing:
-        add_summary_column(engine)
-
-
-def missing_columns(engine: Engine) -> list[str]:
-    """Colonnes du modèle AnalysisRecord absentes de la table analyses en base."""
     inspector = inspect(engine)
     existing = {column["name"] for column in inspector.get_columns(AnalysisRecord.__tablename__)}
     expected = set(AnalysisRecord.__table__.columns.keys())
-    return sorted(expected - existing)
+    missing = sorted(expected - existing)
+    if missing:
+        raise RuntimeError(
+            f"La base de données ({engine.url}) a été créée par une version plus ancienne "
+            f"d'EchoLens : colonnes manquantes {', '.join(missing)}. Supprimez le fichier de la "
+            "base (var/echolens.db par défaut) : il sera recréé au prochain démarrage."
+        )
 
 
-def add_summary_column(engine: Engine) -> None:
-    """Ajoute la colonne summary et la remplit à partir de results, pour chaque analyse.
+def fill_missing_summaries(session_factory: sessionmaker[Session]) -> None:
+    """Crée le résumé de chaque analyse terminée qui n'en a pas encore (EF-08).
 
-    Personne n'a à supprimer sa base. Limite : le pilote sqlite3 valide l'ALTER TABLE tout de
-    suite, hors transaction. Si le serveur est tué pendant le remplissage, la colonne existe
-    au démarrage suivant et n'est pas remplie de nouveau : les analyses concernées s'affichent
-    sans résultat dans l'historique, mais leur page Résultat reste complète.
+    Cas d'une base créée avant la table analysis_summaries. Une analyse à la fois, chacune
+    dans sa propre transaction : on peut relancer sans risque, et un arrêt en plein
+    remplissage est repris au démarrage suivant.
     """
-    with engine.begin() as connection:
-        # Étape 1 : la colonne, vide (NULL) pour toutes les analyses existantes.
-        connection.execute(text("ALTER TABLE analyses ADD COLUMN summary JSON"))
-        # Étape 2 : les identifiants d'abord, puis les résultats un par un, pour ne garder
-        # qu'un seul JSON complet en mémoire à la fois.
-        analysis_ids = connection.scalars(select(AnalysisRecord.id)).all()
-        for analysis_id in analysis_ids:
-            results_query = select(AnalysisRecord.results).where(AnalysisRecord.id == analysis_id)
-            results = connection.scalar(results_query)
-            # Analyse en cours ou en échec : pas de résultats, donc pas de résumé.
-            if results is None:
-                continue
-            summary = summarize_results(results)
-            summary_update = update(AnalysisRecord).where(AnalysisRecord.id == analysis_id)
-            connection.execute(summary_update.values(summary=summary))
+    # Étape 1 : analyses terminées sans ligne de résumé (jointure externe gauche).
+    query = select(AnalysisRecord.id)
+    query = query.outerjoin(AnalysisSummaryRecord)
+    query = query.where(AnalysisRecord.status == AnalysisStatus.DONE)
+    query = query.where(AnalysisSummaryRecord.analysis_id.is_(None))
+    with session_factory() as session:
+        analysis_ids = session.scalars(query).all()
+    # Étape 2 : résumé calculé depuis results, un seul JSON complet en mémoire à la fois.
+    for analysis_id in analysis_ids:
+        add_summary(session_factory, analysis_id)
+
+
+def add_summary(session_factory: sessionmaker[Session], analysis_id: str) -> None:
+    """Calcule le résumé d'une analyse depuis results et l'enregistre."""
+    with session_factory() as session:
+        results_query = select(AnalysisRecord.results).where(AnalysisRecord.id == analysis_id)
+        results = session.scalar(results_query)
+        if results is None:
+            return
+        summary = summarize_results(results)
+        session.add(AnalysisSummaryRecord(analysis_id=analysis_id, summary=summary))
+        session.commit()

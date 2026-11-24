@@ -3,7 +3,7 @@
 Deux formes :
 - complète (ResultsSchema), avec les segments, pour la page Résultat (colonne results) ;
 - résumée (ResultsSummarySchema), le premier choix seul, pour l'historique (GET /analyses,
-  colonne summary).
+  table analysis_summaries).
 
 Un objet par tâche demandée. Chaque objet a le même format, que la tâche ait un résultat
 (done), qu'aucune parole n'ait été trouvée (no_speech) ou qu'elle ne soit pas encore branchée
@@ -118,7 +118,7 @@ class TaskSummarySchema(Schema):
     """Résumé d'une tâche pour l'historique : le premier choix et le modèle, rien de plus.
 
     Il est calculé une fois à la fin de l'analyse (services.results.summarize_results) et lu
-    dans la colonne summary : l'historique ne charge jamais les résultats complets.
+    dans la table analysis_summaries : l'historique ne charge jamais les résultats complets.
     """
 
     status = fields.String(
@@ -139,8 +139,10 @@ class TaskSummarySchema(Schema):
         allow_none=True,
         metadata={"description": "Libellé français de cette classe ; null si status ≠ done."},
     )
+    # dump_only : champ calculé, en lecture seule (readOnly dans l'OpenAPI, comme avant).
     probability = fields.Float(
         allow_none=True,
+        dump_only=True,
         metadata={
             "description": "Probabilité de cette classe (premier choix), entre 0 et 1 ; null "
             "si status ≠ done.",
