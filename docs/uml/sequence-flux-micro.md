@@ -15,50 +15,9 @@ R5 (features par `core.features`), S1 (modèles du registre).
 
 ## Diagramme
 
-```mermaid
-sequenceDiagram
-    autonumber
-    actor U as Utilisateur
-    participant P as Page Direct<br>(navigateur)
-    participant WS as Route WebSocket<br>/ws/stream (flask-sock)
-    participant S as StreamSession<br>(tampon de la session)
-    participant I as Predictor<br>(services, profil temps réel)
-    participant C as core<br>(features, modèles)
+![Diagramme de séquence du flux micro](images/sequence-flux-micro.png)
 
-    U->>P: clique « Démarrer »
-    P->>P: getUserMedia (autorisation du micro)
-    P->>WS: ouverture du WebSocket
-    WS->>S: crée le tampon de la session
-
-    loop toutes les ~0,1 s, tant que le micro est ouvert
-        P->>P: rééchantillonne en 16 kHz mono, convertit en Int16
-        P->>WS: morceau PCM Int16 (binaire)
-        WS->>S: ajoute le morceau au tampon
-
-        opt 0,5 s (H) de nouveau son reçues depuis la dernière inférence
-            S->>I: fenêtre des 2 dernières secondes (W)
-            I->>C: log-Mel (core.features), puis CRNN du profil temps réel
-            C-->>I: probabilités par classe
-            I-->>WS: résultat + latence + RTF
-            WS-->>P: message JSON {début, fin, émotion, événement, latence, RTF}
-            P->>U: met à jour la frise, la latence et le RTF
-        end
-
-        opt fin d'un énoncé détectée (VAD, D5)
-            S->>I: énoncé complet
-            I->>C: transcription (faster-whisper int8)
-            C-->>I: texte
-            I-->>WS: segment de texte horodaté
-            WS-->>P: message JSON {début, fin, texte}
-            P->>U: ajoute le texte à la frise
-        end
-    end
-
-    U->>P: clique « Arrêter »
-    P->>P: arrête chaque piste du micro
-    P->>WS: fermeture du WebSocket
-    WS->>S: libère le tampon
-```
+Source modifiable : [`sequence-flux-micro.drawio`](sequence-flux-micro.drawio), à ouvrir dans draw.io (application ou app.diagrams.net). Après une modification, réexporter l'image : Fichier > Exporter en > PNG, zoom 200 %, dans `images/sequence-flux-micro.png`.
 
 ## Lecture du diagramme
 

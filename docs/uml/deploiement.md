@@ -5,66 +5,14 @@ commande via Docker, sans GPU ni Node), I4 (CI GitHub Actions), I7 (poids sur le
 Hub), I9 (Kaggle), S2 (traitements en arrière-plan).
 
 Sources : `docker/Dockerfile`, `docker/docker-compose.yml`, `.github/workflows/ci.yml`.
-Mermaid n'a pas de notation UML de déploiement : les nœuds sont des groupes, les artefacts des
-rectangles. Les éléments en **pointillés** n'existent pas encore.
+Notation UML : les nœuds sont des cubes (`«device»`, `«execution environment»`), les
+artefacts des feuilles à coin plié, les stockages des cylindres. Les éléments en **pointillés** n'existent pas encore.
 
 ## Diagramme
 
-```mermaid
-flowchart LR
-    subgraph CLIENT["«device» PC ou téléphone de l'utilisateur"]
-        BROWSER["«execution environment»<br>Navigateur<br>(front React)"]
-    end
+![Diagramme de déploiement d'EchoLens](images/deploiement.png)
 
-    subgraph HOST["«device» Machine hôte, CPU, sans GPU"]
-        subgraph DOCKER["«execution environment» Docker Engine"]
-            subgraph CONT["«container» echolens (python:3.11-slim)"]
-                GUNI["Gunicorn<br>1 worker, 8 threads (gthread)"]
-                FLASK["«artifact»<br>application Flask<br>echolens.wsgi:app"]
-                POOL["Pool de threads<br>2 analyses en parallèle (S2)"]
-                DIST["«artifact»<br>web/dist (front compilé)"]
-                CONF["«artifact»<br>configs/*.yaml"]
-                FFM["ffmpeg"]
-                TORCH["torch + transformers<br>(extra ml)"]
-                HFCACHE[("cache Hugging Face<br>dans le conteneur")]
-                GUNI --> FLASK
-                FLASK --> POOL
-                FLASK --> DIST
-                POOL --> TORCH
-            end
-            VOLVAR[("«volume» echolens-var<br>/app/var<br>SQLite + audios + résultats")]
-            VOLMOD[("«bind mount» models/<br>/app/models (lecture seule)<br>pas encore utilisé")]
-        end
-    end
-
-    subgraph HF["«device» Hugging Face Hub"]
-        WEIGHTS["«artifact»<br>poids des modèles (I7)<br>safetensors + config.json"]
-    end
-
-    subgraph KAGGLE["«device» Kaggle (GPU)"]
-        NB["«execution environment»<br>notebooks d'entraînement"]
-        KDATA[("datasets privés,<br>un par jeu (I9)")]
-    end
-
-    subgraph GH["«device» GitHub"]
-        REPO["«artifact»<br>dépôt public"]
-        CI["«execution environment»<br>GitHub Actions (CI)"]
-    end
-
-    BROWSER -- "HTTP :5000" --> GUNI
-    BROWSER -. "WebSocket :5000 /ws/stream" .-> GUNI
-    FLASK --> VOLVAR
-    TORCH --> HFCACHE
-    HFCACHE -- "hf_hub_download<br>à la révision figée du registre" --> WEIGHTS
-    VOLMOD -. "make models (à créer)" .-> WEIGHTS
-    NB --> KDATA
-    NB -- "installation du dépôt<br>en mode éditable" --> REPO
-    NB -- "publication des poids" --> WEIGHTS
-    REPO --> CI
-
-    classDef prevu stroke-dasharray: 5 5
-    class VOLMOD prevu
-```
+Source modifiable : [`deploiement.drawio`](deploiement.drawio), à ouvrir dans draw.io (application ou app.diagrams.net). Après une modification, réexporter l'image : Fichier > Exporter en > PNG, zoom 200 %, dans `images/deploiement.png`.
 
 ## Lecture du diagramme
 

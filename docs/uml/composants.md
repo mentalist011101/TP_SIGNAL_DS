@@ -4,88 +4,14 @@ Décisions : architecture en quatre couches (`docs/adr/0001-architecture-en-couc
 U7 (front), S1 à S4 (service et API), R5 (features), C13 (résultats et modèles), règles
 d'architecture de `CLAUDE.md`.
 
-Mermaid n'a pas de notation UML de composants : le diagramme utilise des groupes (un par couche)
-et des flèches de dépendance (« utilise »). Les éléments en **pointillés** n'existent pas encore.
+Notation UML : chaque couche est un groupe, chaque module un composant (rectangle à deux
+onglets) ; une flèche en tirets est une dépendance (« utilise »). Les éléments en **pointillés** n'existent pas encore.
 
 ## Diagramme
 
-```mermaid
-flowchart TB
-    subgraph WEB["«composant» web — React + TypeScript (web/src)"]
-        PAGES["pages<br>Analyser, Résultat, Historique"]
-        COMPS["components<br>analyze/, result/, history/"]
-        CLIENT["api/client.ts<br>apiGet, apiPostForm, apiDelete,<br>hooks TanStack Query"]
-        PAGES --> COMPS
-        PAGES --> CLIENT
-    end
+![Diagramme de composants d'EchoLens](images/composants.png)
 
-    subgraph API["«composant» api — façade Flask (src/echolens/api)"]
-        ANALYSES["analyses.py + result_schemas.py<br>/api/v1/analyses …"]
-        HEALTH["health.py<br>/api/v1/health"]
-        FRONT["service du front compilé<br>(create_app)"]
-        WSROUTE["/ws/stream<br>(flask-sock)"]
-    end
-
-    subgraph SERVICES["«composant» services — orchestration (src/echolens/services)"]
-        ASERVICE["AnalysisService<br>contrôle, file de traitement (S2)"]
-        STORAGE["storage.py<br>AnalysisRecord (SQLAlchemy)"]
-        SPECIMG["spectrogram_image.py<br>image PNG du log-Mel"]
-        RESULTS["results.py<br>un résultat par tâche"]
-        PREDICTOR["«interface» Predictor<br>DemoPredictor | ModelPredictor"]
-        STREAM["StreamSession<br>(tampon du flux)"]
-    end
-
-    subgraph CORE["«composant» core — calcul pur, sans Flask (src/echolens/core)"]
-        AUDIO["audio<br>load_audio, VAD, fenêtres"]
-        FEATURES["features.py<br>log_mel_spectrogram, mfcc"]
-        INFERENCE["inference.py<br>découpage, moyennes, classement"]
-        MODELS["models<br>registre, CRNN, têtes,<br>encodeur Whisper, safetensors"]
-    end
-
-    subgraph STORE["«stockage»"]
-        DB[("SQLite<br>var/echolens.db")]
-        FILES[("Fichiers<br>var/analyses/&lt;id&gt;/")]
-        CONFIGS[("configs/*.yaml")]
-    end
-
-    FFMPEG[["ffmpeg<br>(dépendance système)"]]
-    HFHUB[["Hugging Face Hub<br>poids des modèles"]]
-    TRAINING["«composant» training<br>(src/echolens/training, notebooks Kaggle)"]
-
-    CLIENT -- "HTTP JSON / multipart<br>/api/v1" --> ANALYSES
-    CLIENT --> HEALTH
-    PAGES -. "WebSocket /ws" .-> WSROUTE
-
-    ANALYSES --> ASERVICE
-    WSROUTE -.-> STREAM
-    STREAM -.-> PREDICTOR
-
-    ASERVICE --> STORAGE
-    ASERVICE --> SPECIMG
-    ASERVICE --> RESULTS
-    ASERVICE --> AUDIO
-    RESULTS --> PREDICTOR
-    RESULTS --> INFERENCE
-    RESULTS --> AUDIO
-    PREDICTOR --> MODELS
-    PREDICTOR --> FEATURES
-    ASERVICE --> FEATURES
-
-    STORAGE --> DB
-    ASERVICE --> FILES
-    AUDIO --> FFMPEG
-    MODELS --> HFHUB
-    FEATURES --> CONFIGS
-    INFERENCE --> CONFIGS
-    MODELS --> CONFIGS
-
-    TRAINING --> FEATURES
-    TRAINING --> MODELS
-    TRAINING --> AUDIO
-
-    classDef prevu stroke-dasharray: 5 5
-    class WSROUTE,STREAM prevu
-```
+Source modifiable : [`composants.drawio`](composants.drawio), à ouvrir dans draw.io (application ou app.diagrams.net). Après une modification, réexporter l'image : Fichier > Exporter en > PNG, zoom 200 %, dans `images/composants.png`.
 
 ## Rôle de chaque composant
 

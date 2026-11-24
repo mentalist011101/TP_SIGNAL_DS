@@ -10,48 +10,12 @@ code »). Seul le LOCUTEUR est encore une proposition.
 
 ## Diagramme
 
-Légende : rectangle = entité (identifiant précédé de `#`), forme arrondie = association,
+Légende : rectangle = entité (identifiant précédé de `#`), ellipse = association,
 `(min,max)` = cardinalité, lue du côté de l'entité. En **pointillés** : ce qui n'existe pas encore.
 
-```mermaid
-flowchart LR
-    ANALYSE["<b>ANALYSE</b><br>───────────<br># id_analyse<br>date_creation<br>nom_fichier_original<br>statut<br>message_erreur<br>duree_s<br>profil"]
-    TACHE["<b>TÂCHE</b><br>───────────<br># code_tache<br>libelle"]
-    RESULTAT["<b>RÉSULTAT</b><br>───────────<br># id_resultat<br>statut_tache<br>message<br>etiquette_principale"]
-    MODELE["<b>MODÈLE</b><br>───────────<br># id_modele<br>version<br>calibre"]
-    SEGMENT["<b>SEGMENT</b><br>───────────<br># id_segment<br>debut_s<br>fin_s<br>etiquette"]
-    PROBA["<b>PROBABILITÉ</b><br>───────────<br># id_probabilite<br>etiquette<br>libelle_fr<br>probabilite"]
-    LOCUTEUR["<b>LOCUTEUR</b><br>───────────<br># code_locuteur<br>nom<br>date_consentement<br>empreinte"]
+![MCD MERISE de l'historique des analyses](images/mcd-historique.png)
 
-    DEMANDER(["DEMANDER"])
-    OBTENIR(["OBTENIR"])
-    PORTER(["PORTER SUR"])
-    PRODUIRE(["PRODUIRE"])
-    DECOUPER(["DÉCOUPER"])
-    GLOBALE(["RÉSUMER"])
-    DETAILLER(["DÉTAILLER"])
-    IDENTIFIER(["IDENTIFIER<br>similarite"])
-
-    ANALYSE ---|"1,n"| DEMANDER
-    DEMANDER ---|"0,n"| TACHE
-    ANALYSE ---|"0,n"| OBTENIR
-    OBTENIR ---|"1,1"| RESULTAT
-    RESULTAT ---|"1,1"| PORTER
-    PORTER ---|"0,n"| TACHE
-    MODELE ---|"0,n"| PRODUIRE
-    PRODUIRE ---|"0,1"| RESULTAT
-    RESULTAT ---|"0,n"| DECOUPER
-    DECOUPER ---|"1,1"| SEGMENT
-    RESULTAT ---|"0,n"| GLOBALE
-    GLOBALE ---|"0,1"| PROBA
-    SEGMENT ---|"1,n"| DETAILLER
-    DETAILLER ---|"0,1"| PROBA
-    SEGMENT -.-|"0,1"| IDENTIFIER
-    IDENTIFIER -.-|"0,n"| LOCUTEUR
-
-    classDef prevu stroke-dasharray: 5 5
-    class LOCUTEUR,IDENTIFIER prevu
-```
+Source modifiable : [`mcd-historique.drawio`](mcd-historique.drawio), à ouvrir dans draw.io (application ou app.diagrams.net). Après une modification, réexporter l'image : Fichier > Exporter en > PNG, zoom 200 %, dans `images/mcd-historique.png`.
 
 ## Les entités
 

@@ -4,8 +4,9 @@ Tâche N3. Diagrammes : `docs/uml/` (séquence, composants, déploiement, MCD).
 Défendue par : Nicole.
 
 > **Comment utiliser cette fiche.** Lis d'abord la partie 1 (les notations), une seule fois.
-> Ensuite, pour chaque diagramme, ouvre le fichier sur GitHub à côté de la fiche et suis la
-> lecture pas à pas. La phrase en encadré est celle à dire au jury.
+> Ensuite, pour chaque diagramme, ouvre son image (`docs/uml/images/<nom>.png`) à côté de la
+> fiche et suis la lecture pas à pas. La phrase en encadré est celle à dire au jury. Les
+> diagrammes sont dessinés dans draw.io : la source modifiable est `docs/uml/<nom>.drawio`.
 
 ## 1. L'idée en trois phrases
 
@@ -28,9 +29,14 @@ utilise trois.
 | Symbole | Sens |
 | --- | --- |
 | `«composant»`, `«device»`, `«artifact»` | Un **stéréotype** : un mot entre guillemets « » qui dit de quelle sorte de boîte il s'agit |
-| Flèche pleine `A --> B` | A **utilise** B (A dépend de B) |
-| Flèche en pointillés | Prévu, pas encore codé |
-| Cylindre | Un stockage (base de données, fichiers) |
+| Rectangle avec deux petits onglets à gauche | Un **composant** : un module du code |
+| Cube | Un **nœud** : une machine (`«device»`) ou un logiciel qui en fait tourner d'autres (`«execution environment»`, comme Docker ou le navigateur) |
+| Feuille au coin plié | Un **artefact** : un fichier déployé (l'application, le front compilé, les poids) |
+| Cylindre | Un stockage (base de données, fichiers, volume) |
+| Flèche **en tirets** (composants) | Une **dépendance** : A **utilise** B |
+| Flèche **pleine** (déploiement) | Une communication ou un transfert : « le navigateur parle au serveur en HTTP » |
+| Flèche bleue épaisse | Le seul passage du front vers le serveur : HTTP `/api/v1` |
+| Gris en pointillés, mot `«prévu»` | Prévu, pas encore codé |
 | Boîte dans une boîte | « Tourne à l'intérieur de » (déploiement) ou « fait partie de » (composants) |
 
 Dans un diagramme de **séquence**, le temps descend : chaque colonne est un acteur, chaque flèche
