@@ -80,6 +80,25 @@ Avec Docker (aucun prérequis hormis Docker) :
 make docker       # construit l'image et lance http://localhost:5000
 ```
 
+### Export des résultats
+
+Une analyse terminée s'exporte depuis la page Résultat, ou par
+`GET /api/v1/analyses/{id}/export?format=json|csv|pdf`. Le fichier s'appelle
+`echolens_<nom du fichier>_<AAAA-MM-JJ>.<format>` :
+
+- **JSON** : le détail complet de l'analyse, identique à `GET /api/v1/analyses/{id}`.
+- **CSV** : une ligne par probabilité, globale puis de chaque segment (segments numérotés à
+  partir de 1). Une tâche sans résultat (`no_speech`, `unavailable`) a une seule ligne, avec son
+  statut dans `label`. Séparateur virgule, point décimal, UTF-8 avec BOM.
+- **PDF** : rapport d'une à deux pages en français : fichier, date, durée, profil,
+  spectrogramme, et pour chaque tâche les 3 premières classes, les segments (12 au plus, les
+  autres sont dans le CSV) et le modèle.
+
+Pour ouvrir le CSV dans un Excel en français, qui attend le point-virgule et la virgule
+décimale : **Données > À partir d'un fichier texte/CSV**, choisir le séparateur **virgule**
+(et le point comme séparateur décimal si Excel le demande). Un double-clic sur le fichier
+mettrait toutes les colonnes dans une seule.
+
 ## Commandes utiles
 
 | Commande | Effet |
