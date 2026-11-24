@@ -50,13 +50,13 @@ manifeste garde l'étiquette d'origine ; la correspondance s'applique ensuite, d
 - **Toutes les intensités sont gardées** et conservées dans le manifeste, pour analyser les
   erreurs par intensité.
 
-### Effectifs, vérifiés sur les manifestes réels (C3)
+### Effectifs, vérifiés sur les manifestes réels (C3, C16)
 
 | Jeu | Fichiers | Exclus | Gardés | neutral | Chacune des 5 autres |
 | --- | --- | --- | --- | --- | --- |
 | CREMA-D | 7 442 | 0 | 7 442 | 1 087 | 1 271 |
 | RAVDESS | 1 440 | 384 | 1 056 | 96 | 192 |
-| CaFE (attendu, sprint 2) | 936 | 144 | 792 | 72 | 144 |
+| CaFE (C16) | 936 | 144 | 792 | 72 | 144 |
 
 Sur l'entraînement (CREMA-D + RAVDESS), neutral est un peu moins fréquent (1 183 contre 1 463
 pour chacune des autres classes). Le F1 macro (P4) en tient compte.
