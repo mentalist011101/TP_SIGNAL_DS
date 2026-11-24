@@ -1252,6 +1252,7 @@
     }
   },
   "torch": "2.11.0+cpu",
+  "silero_vad": "6.3",
   "python": "3.13.18",
-  "runtime_s": 391
+  "runtime_s": 503
 }

@@ -66,6 +66,8 @@ réel n'a pas encore de modèle d'émotion.
   genre.
 - Émotions jouées par des acteurs anglophones, en studio : le transfert au français (CaFE), aux
   voix africaines et aux enregistrements de l'équipe n'est pas encore mesuré (P7).
-- L'application n'envoie au modèle que les segments où la VAD détecte de la parole ; la VAD
-  actuelle prend certains bruits stationnaires pour de la parole (voir D5).
+- L'application n'envoie au modèle que les segments où la VAD détecte de la parole. Silero
+  (production) laisse passer 7,2 % des sons non vocaux d'ESC-50, surtout des cris d'animaux ;
+  sans torch, webrtcvad (secours) prend la plupart des sons continus pour de la parole
+  (voir D5).
 - Usage non commercial, partage à l'identique (licence de RAVDESS).
