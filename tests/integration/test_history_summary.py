@@ -1,7 +1,11 @@
-"""Historique résumé : GET /api/v1/analyses ne renvoie que le premier choix de chaque tâche."""
+"""Historique résumé : GET /api/v1/analyses ne renvoie que le premier choix de chaque tâche.
+
+Le résumé est lu dans la colonne summary ; la colonne results n'est jamais chargée.
+"""
 
 import io
 import json
+from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -9,7 +13,10 @@ import pytest
 import soundfile as sf
 from flask import Flask
 from flask.testing import FlaskClient
+from sqlalchemy import Engine, create_engine, event, inspect, text
 
+from echolens.api import create_app
+from echolens.config import AppSettings
 from echolens.core.audio.segment import Segment
 from echolens.core.inference import (
     duration_weighted_mean,
@@ -19,7 +26,12 @@ from echolens.core.inference import (
 )
 from echolens.services.analysis_service import AnalysisService
 from echolens.services.predictor import ModelInfo
-from echolens.services.results import ResultContext, done_result, unavailable_result
+from echolens.services.results import (
+    ResultContext,
+    done_result,
+    summarize_results,
+    unavailable_result,
+)
 from echolens.services.storage import AnalysisRecord, AnalysisStatus
 
 ANALYSES_URL = "/api/v1/analyses"
@@ -87,6 +99,7 @@ def add_long_analyses(app: Flask, count: int) -> None:
     """Enregistre count analyses terminées de 5 min, les quatre tâches demandées."""
     service: AnalysisService = app.extensions["analysis_service"]
     results = full_results(service.result_context, LONGEST_AUDIO_S)
+    summary = summarize_results(results)
     with service.session_factory() as session:
         for index in range(count):
             record = AnalysisRecord(
@@ -97,6 +110,7 @@ def add_long_analyses(app: Flask, count: int) -> None:
                 tasks=["emotion", "sound_event", "transcription", "speaker"],
                 profile="quality",
                 results=results,
+                summary=summary,
             )
             session.add(record)
         session.commit()
@@ -159,3 +173,76 @@ def test_summary_schema_is_documented_in_openapi(client: FlaskClient) -> None:
     summary_fields = set(schemas["TaskSummary"]["properties"])
     assert "probability" in summary_fields
     assert "segments" not in summary_fields
+
+
+def test_history_query_does_not_read_results(app: Flask, client: FlaskClient) -> None:
+    add_long_analyses(app, 3)
+    service: AnalysisService = app.extensions["analysis_service"]
+    engine = service.session_factory.kw["bind"]
+    statements = record_sql_statements(engine)
+
+    client.get(ANALYSES_URL)
+
+    selects = [statement for statement in statements if statement.startswith("SELECT")]
+    assert len(selects) > 0
+    for statement in selects:
+        assert "analyses.summary" in statement
+        assert "analyses.results" not in statement
+
+
+def test_old_database_gets_summary_column_filled(tmp_path: Path) -> None:
+    # Étape 1 : une base au format de la version précédente, sans colonne summary, avec une
+    # analyse terminée (résultats complets) et une analyse en cours (pas de résultats).
+    database_path = tmp_path / "echolens.db"
+    settings = AppSettings(data_dir=tmp_path, web_dist_dir=tmp_path / "dist")
+    old_app = create_app(settings, TESTING=True)
+    old_service: AnalysisService = old_app.extensions["analysis_service"]
+    results = full_results(old_service.result_context, 30.0)
+    old_engine = create_engine(f"sqlite:///{database_path}")
+    create_old_database(old_engine, results)
+
+    # Étape 2 : démarrage de la nouvelle version sur cette base.
+    client = create_app(settings, TESTING=True).test_client()
+
+    # Étape 3 : la colonne existe, le résumé de l'analyse terminée est rempli.
+    columns = [column["name"] for column in inspect(old_engine).get_columns("analyses")]
+    assert "summary" in columns
+    history = client.get(ANALYSES_URL).get_json()
+    by_id = {analysis["id"]: analysis for analysis in history}
+    expected = summarize_results(results)
+    assert by_id["terminee"]["results"] == expected
+    assert by_id["en-cours"]["results"] is None
+    old_engine.dispose()
+
+
+def record_sql_statements(engine: Engine) -> list[str]:
+    """Liste remplie avec chaque requête SQL envoyée à la base à partir de maintenant."""
+    statements: list[str] = []
+
+    def remember(connection: Any, cursor: Any, statement: str, *args: Any) -> None:
+        statements.append(statement)
+
+    event.listen(engine, "before_cursor_execute", remember)
+    return statements
+
+
+def create_old_database(engine: Engine, results: dict[str, Any]) -> None:
+    """Remplace la table analyses par celle d'avant la colonne summary, avec deux analyses."""
+    with engine.begin() as connection:
+        connection.execute(text("DROP TABLE analyses"))
+        connection.execute(
+            text(
+                "CREATE TABLE analyses (id VARCHAR(36) PRIMARY KEY, created_at DATETIME, "
+                "original_filename VARCHAR(255), status VARCHAR(16), error_message VARCHAR, "
+                "duration_s FLOAT, tasks JSON, profile VARCHAR(16), results JSON)"
+            )
+        )
+        insert = text(
+            "INSERT INTO analyses VALUES (:id, '2026-11-24 10:00:00', 'son.wav', :status, "
+            "NULL, 30.0, :tasks, 'quality', :results)"
+        )
+        tasks = json.dumps(list(results))
+        done = {"id": "terminee", "status": "done", "tasks": tasks, "results": json.dumps(results)}
+        connection.execute(insert, done)
+        pending = {"id": "en-cours", "status": "pending", "tasks": tasks, "results": None}
+        connection.execute(insert, pending)

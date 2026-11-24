@@ -1,8 +1,9 @@
 """Schémas des résultats d'une analyse (contrat de GET /api/v1/analyses/{id}, C13).
 
-Deux formes, lues dans la même colonne results :
-- complète (ResultsSchema), avec les segments, pour la page Résultat ;
-- résumée (ResultsSummarySchema), le premier choix seul, pour l'historique (GET /analyses).
+Deux formes :
+- complète (ResultsSchema), avec les segments, pour la page Résultat (colonne results) ;
+- résumée (ResultsSummarySchema), le premier choix seul, pour l'historique (GET /analyses,
+  colonne summary).
 
 Un objet par tâche demandée. Chaque objet a le même format, que la tâche ait un résultat
 (done), qu'aucune parole n'ait été trouvée (no_speech) ou qu'elle ne soit pas encore branchée
@@ -10,8 +11,6 @@ Un objet par tâche demandée. Chaque objet a le même format, que la tâche ait
 """
 
 from __future__ import annotations
-
-from typing import Any
 
 from marshmallow import Schema, fields, validate
 
@@ -118,9 +117,8 @@ class TaskResultSchema(Schema):
 class TaskSummarySchema(Schema):
     """Résumé d'une tâche pour l'historique : le premier choix et le modèle, rien de plus.
 
-    Il est lu dans le même objet JSON que TaskResultSchema (colonne results) : marshmallow ne
-    renvoie que les champs déclarés ici, donc les segments et la liste des probabilités sont
-    laissés de côté sans rien recalculer.
+    Il est calculé une fois à la fin de l'analyse (services.results.summarize_results) et lu
+    dans la colonne summary : l'historique ne charge jamais les résultats complets.
     """
 
     status = fields.String(
@@ -141,11 +139,9 @@ class TaskSummarySchema(Schema):
         allow_none=True,
         metadata={"description": "Libellé français de cette classe ; null si status ≠ done."},
     )
-    probability = fields.Method(
-        "get_probability",
+    probability = fields.Float(
+        allow_none=True,
         metadata={
-            "type": "number",
-            "nullable": True,
             "description": "Probabilité de cette classe (premier choix), entre 0 et 1 ; null "
             "si status ≠ done.",
         },
@@ -165,16 +161,6 @@ class TaskSummarySchema(Schema):
             "tâche n'est pas branchée."
         },
     )
-
-    def get_probability(self, task_result: dict[str, Any]) -> float | None:
-        probabilities = task_result["probabilities"]
-        if not probabilities:
-            return None
-        # La liste est triée de la plus probable à la moins probable : le premier élément est
-        # le premier choix, celui de « label ».
-        first_choice = probabilities[0]
-        probability: float = first_choice["probability"]
-        return probability
 
 
 class ResultsSummarySchema(Schema):

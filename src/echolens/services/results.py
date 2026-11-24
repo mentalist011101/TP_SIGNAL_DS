@@ -190,3 +190,35 @@ def _segment_result(
         "label_fr": best.label_fr,
         "probabilities": [entry.model_dump() for entry in ranking],
     }
+
+
+def summarize_results(results: dict[str, Any]) -> dict[str, Any]:
+    """Résumé des résultats pour l'historique : une entrée par tâche, sans segments (EF-08).
+
+    Calculé une fois à la fin de l'analyse et stocké dans la colonne summary, pour que la liste
+    n'ait jamais à lire les résultats complets.
+    """
+    summary: dict[str, Any] = {}
+    for task_name, result in results.items():
+        summary[task_name] = task_summary(result)
+    return summary
+
+
+def task_summary(result: dict[str, Any]) -> dict[str, Any]:
+    """Résumé d'une tâche : statut, premier choix et sa probabilité, modèle."""
+    # La liste des probabilités est triée de la plus probable à la moins probable : le premier
+    # élément est le premier choix, celui de « label ». Elle est vide si status ≠ done.
+    probability = None
+    if result["probabilities"]:
+        first_choice = result["probabilities"][0]
+        probability = first_choice["probability"]
+    return {
+        "status": result["status"],
+        "message": result["message"],
+        "label": result["label"],
+        "label_fr": result["label_fr"],
+        "probability": probability,
+        "model_id": result["model_id"],
+        "model_version": result["model_version"],
+        "calibrated": result["calibrated"],
+    }
