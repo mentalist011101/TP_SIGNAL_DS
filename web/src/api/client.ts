@@ -284,3 +284,29 @@ export function useDeleteAnalysis() {
     },
   })
 }
+
+// Un modèle du registre (GET /api/v1/models, EF-16) : identité, famille, scores de test,
+// calibration et lien vers ses poids. Écrit à la main d'après ModelSchema (api/models.py).
+export interface ModelInfo {
+  id: string
+  task: AnalysisTask | 'voice_cloning'
+  family: 'baseline' | 'A' | 'B' | 'pretrained'
+  profiles: AnalysisProfile[]
+  version: string
+  f1_macro: number | null
+  accuracy: number | null
+  temperature: number | null
+  calibrated: boolean
+  huggingface_url: string | null
+  revision: string | null
+  description: string
+}
+
+// Catalogue des modèles : il ne change qu'avec le registre, donc une seule lecture suffit.
+export function useModels() {
+  return useQuery({
+    queryKey: ['models'],
+    queryFn: () => apiGet<ModelInfo[]>('/models'),
+    staleTime: Infinity,
+  })
+}

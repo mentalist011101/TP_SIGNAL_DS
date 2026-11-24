@@ -18,11 +18,26 @@ soignées, interface en français).
 
 ## 1. Parcours utilisateur
 
+### Adresses des pages (décision du 21 novembre 2026)
+
+| Adresse | Page | Coque |
+| --- | --- | --- |
+| `/` | Accueil public : présentation du produit, aperçu, accès à l'application | aucune (page à part) |
+| `/analyser` | Analyser : choix de l'audio, des outils et du profil, suivi de l'envoi | application (menu à gauche) |
+| `/analyses/{id}` | Résultat d'une analyse | application |
+| `/historique` | Historique des analyses | application |
+
+L'application quitte la racine : on y entre par l'accueil (« Ouvrir l'application », « Analyser
+un audio ») ou directement par `/analyser`. Une adresse inconnue ramène à l'accueil. La page
+Analyser suit l'envoi puis ouvre la page Résultat quand l'analyse est terminée ; en cas d'échec,
+elle reste affichée avec la raison.
+
 ### Parcours principal
 
 ```mermaid
 flowchart TD
-    A[Page Analyser] --> B{Source de l'audio}
+    Z[Accueil /] -->|Analyser un audio| A[Page Analyser /analyser]
+    A --> B{Source de l'audio}
     B -->|Importer un fichier| C[Choix du fichier<br>wav, mp3, flac, ogg, webm, m4a]
     B -->|Enregistrer au micro| D[Autorisation du micro<br>puis enregistrement]
     C --> E[Aperçu : nom, lecteur,<br>forme d'onde]
@@ -42,7 +57,8 @@ flowchart TD
 
 | # | L'utilisateur… | L'application… |
 | --- | --- | --- |
-| 1 | ouvre la page Analyser | affiche les deux boutons de source ; le bouton Analyser est grisé, avec la consigne « Importez un fichier ou enregistrez-vous au micro pour commencer. » |
+| 0 | ouvre le site (`/`) | affiche l'accueil ; « Analyser un audio » ou « Ouvrir l'application » mènent à `/analyser` |
+| 1 | ouvre la page Analyser (`/analyser`) | affiche les deux boutons de source ; le bouton Analyser est grisé, avec la consigne « Importez un fichier ou enregistrez-vous au micro pour commencer. » |
 | 2a | importe un fichier | affiche le nom, le lecteur et la forme d'onde |
 | 2b | clique sur « Enregistrer au micro » | demande l'autorisation, affiche « ● Enregistrement en cours… » ; à l'arrêt, coupe le micro et affiche l'aperçu |
 | 3 | coche les tâches, choisit le profil | garde par défaut Émotion et Événement sonore, profil Qualité ; si aucune tâche n'est cochée, grise le bouton et l'explique |
@@ -170,7 +186,8 @@ Règles d'affichage :
 | Élément | Règle |
 | --- | --- |
 | Cartes de tâche | Seules les tâches demandées apparaissent |
-| Probabilités | Toutes les classes pour l'émotion (6) ; les 5 premières pour l'événement (50), avec un lien « Voir tout » ; libellés français de `configs/labels.yaml` ; barres Recharts (U5) |
+| Probabilités | Toutes les classes pour l'émotion (6) ; les 5 premières pour l'événement (50), avec un lien « Voir tout » ; libellés français renvoyés par l'API (`label_fr`) ; barres en CSS, avec le pourcentage écrit (U5, décision du 21 novembre 2026) |
+| Hésitation | Si les deux classes les plus probables ont moins de 0,10 d'écart, le résultat principal devient « Hésite entre X et Y », avec les deux probabilités (règle de présentation du 21 novembre 2026, constante `HESITATION_GAP` dans `web/src/components/result/taskResult.ts`) |
 | Modèle utilisé | Identifiant et version du registre sous chaque résultat, pour la traçabilité et la comparaison |
 | Curseur | Le curseur de lecture se déplace sur la forme d'onde, le spectrogramme et la frise en même temps (EF-03, wavesurfer.js) |
 | Clic sur la frise ou la transcription | La lecture saute au début du segment |

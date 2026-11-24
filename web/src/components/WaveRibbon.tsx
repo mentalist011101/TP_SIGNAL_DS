@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { readCssColor } from '../theme.ts'
 
-// Ruban d'ondes décoratif (zone de dépôt d'Analyser) : des sinusoïdes qui glissent, plus
+// Ruban d'ondes décoratif (sous le titre de l'accueil, dans la zone de dépôt d'Analyser) : des sinusoïdes qui glissent, plus
 // amples au centre, comme une voix qui enfle puis retombe. Pure décoration (aria-hidden).
 
 interface WaveLine {

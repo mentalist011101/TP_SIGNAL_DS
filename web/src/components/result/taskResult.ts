@@ -1,4 +1,4 @@
-import type { Analysis, TaskResult } from '../../api/client.ts'
+import type { Analysis, ClassProbability, TaskResult } from '../../api/client.ts'
 
 // Identifiant du faux prédicteur dans le contrat de l'API (C13).
 const DEMO_MODEL_ID = 'demo'
@@ -46,4 +46,31 @@ export function hasDemoResult(analysis: Analysis): boolean {
     }
   }
   return false
+}
+
+// Règle de présentation (relecture du 21 novembre 2026, reportée dans les maquettes) : quand
+// les deux classes les plus probables ont moins de 0,10 d'écart, le modèle n'a pas vraiment
+// choisi. On l'écrit (« Hésite entre X et Y ») plutôt que d'annoncer un seul gagnant. Ce n'est
+// pas un calcul sur le signal (R5) : on compare deux probabilités renvoyées par l'API.
+const HESITATION_GAP = 0.1
+
+// Les deux premiers choix d'un modèle qui hésite.
+export interface Hesitation {
+  first: ClassProbability
+  second: ClassProbability
+}
+
+// Les deux premiers choix si leur écart est sous HESITATION_GAP, sinon null. La liste arrive
+// triée de la plus probable à la moins probable (contrat de la PR #26).
+export function findHesitation(result: TaskResult): Hesitation | null {
+  if (result.probabilities.length < 2) {
+    return null
+  }
+  const first = result.probabilities[0]
+  const second = result.probabilities[1]
+  const gap = first.probability - second.probability
+  if (gap >= HESITATION_GAP) {
+    return null
+  }
+  return { first, second }
 }
