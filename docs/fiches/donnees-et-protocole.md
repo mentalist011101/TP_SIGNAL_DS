@@ -4,12 +4,18 @@ Brique 3 (données, protocole, analyse d'erreurs), portée par Lynn.
 Décisions et exigences : **P1** à **P13**, **R4**, **E4**. Documents de référence :
 `docs/protocole.md` (qui fait foi), `docs/datasets.md`, `docs/specification.md` §7.
 
-> **État au 24 novembre 2026.** Les manifestes des cinq jeux publics sont construits et
-> versionnés (C3, C5, C16). Les découpages P1, P3 et P11 sont codés, testés et versionnés. Ne sont
-> **pas encore faits** : l'évaluation des émotions sur CaFE, le WER sur OpenSLR 57 (C17), le jeu
-> ACE (accès non obtenu), le manifeste de nos enregistrements (T6) et l'analyse des biais par
-> genre et de la robustesse au bruit (E3, E4). L'évaluation du locuteur (C15) est dans la
-> PR #42, pas encore fusionnée.
+> **État au 24 novembre 2026.**
+>
+> - **Fait** : les manifestes des cinq jeux publics (C3, C5, C16), dans `data/manifests/`.
+> - **Fait** : les découpages P1 (émotions) et P3 (ESC-50). Chacun est écrit dans le code, vérifié
+>   par des tests automatiques, et son résultat est enregistré dans un fichier du dépôt
+>   (`data/splits/emotion_split.csv` pour P1 ; pour P3, la colonne `fold` du manifeste).
+> - **En relecture** (PR #42) : le découpage P11 du locuteur, sur le même principe (fonction
+>   `split_enrollment`, tests, fichier `data/splits/openslr57_speakers.csv`). Ses résultats sont
+>   à refaire sur Kaggle après les corrections de la relecture.
+> - **Pas encore fait** : l'évaluation des émotions sur CaFE, le WER sur OpenSLR 57 (C17), le
+>   jeu ACE (accès non obtenu), nos enregistrements (T6), l'analyse des biais par genre et de
+>   la robustesse au bruit (E3, E4).
 
 ## 1. L'idée en trois phrases
 
@@ -50,7 +56,8 @@ Décisions et exigences : **P1** à **P13**, **R4**, **E4**. Documents de réfé
         │
         └── locuteur (OpenSLR 57) : on sépare les PHRASES de chaque personne (P11)
                  5 phrases → « voix enregistrée » │ les autres → test
-                 locuteurs répartis en calibration (seuil) / évaluation (scores)
+                 4 groupes de locuteurs : calibration + ses imposteurs (choix du seuil)
+                                          évaluation + ses imposteurs (mesure)
                  data/splits/openslr57_speakers.csv
 
  Pendant l'entraînement : moyenne et écart-type par bande Mel calculés sur le TRAIN seul (R4),
@@ -86,8 +93,8 @@ validation. RAVDESS : round(0,15 × 24 / 2) = round(1,8) = 2 et 2.
 **Fold de réglage d'ESC-50 (P3).** Au tour *k* (fold de test), le fold de validation est
 *v* = (*k* mod 5) + 1 : 2 pour le tour 1, …, 1 pour le tour 5.
 
-**F1 macro (P4)**, la métrique principale : moyenne simple des F1 de chaque classe, pour que
-la classe neutre, moins fréquente, compte autant que les autres.
+**F1 macro (P4)**, la métrique principale : moyenne simple des F1 de chaque classe, si bien que
+chaque classe pèse autant dans le score, quel que soit son nombre d'exemples.
 
 ```
   F1_c = 2 · P_c · R_c / (P_c + R_c)        F1 macro = (1 / C) · Σ_c F1_c
@@ -110,7 +117,8 @@ la classe neutre, moins fréquente, compte autant que les autres.
 | Le manifeste garde l'**étiquette d'origine** (P9) | Le manifeste décrit le jeu tel quel ; la correspondance se fait dans le code, on peut la changer sans tout reconstruire | Écrire directement les 6 classes |
 | CaFE et OpenSLR 57 en **test seulement** (P7, P10) | Ils mesurent la généralisation à une autre langue ou un autre accent ; les entraîner l'effacerait | Les ajouter à l'entraînement |
 | Locuteur : séparer les **phrases**, pas les personnes (P11) | Pour reconnaître une voix, il faut l'avoir entendue avant | Découper par personne (impossible ici) |
-| Seuil « inconnu » choisi sur **un autre groupe** de locuteurs (P11) | Choisir et mesurer sur les mêmes voix gonflerait le score | Seuil choisi sur le groupe évalué |
+| Seuil « inconnu » choisi sur **d'autres locuteurs et d'autres imposteurs** que ceux de l'évaluation (P11) | Choisir et mesurer sur les mêmes voix gonflerait le score | Seuil choisi sur le groupe évalué, ou imposteurs réutilisés |
+| Seuil pris sur le **meilleur score** parmi toutes les voix enregistrées | C'est la décision réelle de l'application ; un seuil pris sur des paires isolées acceptait à tort 72 % des inconnus | Seuil à l'EER sur des paires (phrase, voix) isolées |
 | Lire les **noms de fichiers** de CaFE, pas les dossiers | Les accents des dossiers (« Colère ») peuvent être mal encodés selon l'outil de décompression | Lire le nom du dossier |
 
 ## 5. Où se trouve le code
@@ -127,7 +135,8 @@ la classe neutre, moins fréquente, compte autant que les autres.
 | `src/echolens/core/data/splits.py:split_emotion_speakers` | Le tirage P1 : un générateur, femmes puis hommes, les premiers en test, puis validation, puis train |
 | `src/echolens/core/data/splits.py:check_no_speaker_leak` | Lève une erreur si un acteur est dans deux parties |
 | `src/echolens/core/data/splits.py:esc50_round` | Rôle des folds au tour *k* : test, réglage (*k*+1), entraînement final |
-| `src/echolens/core/data/speaker_enrollment.py:split_enrollment` | Le découpage P11 (PR #42) : 5 phrases d'enregistrement, groupes calibration et évaluation |
+| `src/echolens/core/data/speaker_enrollment.py:split_enrollment` | Le découpage P11 (PR #42) : 5 phrases d'enregistrement, puis quatre groupes de locuteurs |
+| `src/echolens/training/speaker_eval.py:choose_threshold`, `bootstrap_speaker_ci` | Seuil choisi sur la calibration seule ; intervalles par tirage de locuteurs (P8) |
 | `src/echolens/training/family_a.py:band_statistics`, `standardize` | R4 : statistiques calculées sur le seul tableau d'entraînement, réappliquées ensuite |
 | `configs/splits.yaml`, `configs/labels.yaml`, `configs/speaker.yaml` | Graine 42, parts 15 %, table des étiquettes : aucun nombre n'est écrit dans le code |
 | `tests/unit/test_splits.py`, `test_emotion_manifests.py`, `test_out_of_domain_manifests.py` | Les tests de fuite de C4 : chaque règle du protocole est un test |
@@ -153,14 +162,15 @@ la classe neutre, moins fréquente, compte autant que les autres.
 - Le genre d'OpenSLR 57 n'est connu que pour les 12 locuteurs du test officiel : l'analyse des
   biais par genre (E4) y sera très limitée.
 
-**Locuteur (C15, PR #42, pas encore fusionnée).** Sur 112 locuteurs du groupe d'évaluation et
-8 016 phrases de test : ECAPA-TDNN reconnaît la bonne personne dans **97,7 %** des cas (EER
-2,7 %), mHuBERT dans 71,1 % (EER 10,2 %). Avec le seuil choisi sur l'autre groupe, ECAPA ne
-rejette que 27,7 % des voix inconnues : le seuil pris à l'EER sur des paires isolées est trop
-bas pour une décision « meilleur score parmi 112 voix ». C'est une limite à discuter.
+**Locuteur (C15, PR #42).** Un premier passage avait donné 97,7 % d'accuracy pour ECAPA-TDNN,
+mais la relecture a montré deux défauts dans la mesure du rejet des inconnus : un seuil pris sur
+des paires isolées (72 % des inconnus acceptés à tort) et des inconnus qui avaient servi à
+choisir ce seuil. Le protocole est corrigé (quatre groupes, seuil sur le meilleur score,
+intervalles par bootstrap) ; **les résultats sont à refaire sur Kaggle**.
 
-**Pas encore disponible** : F1 sur CaFE (hors domaine), WER (C17), résultats sur nos
-enregistrements (T6), robustesse au bruit et biais par genre (E3, E4).
+**Pas encore disponible** : résultats du locuteur corrigés (C15), F1 sur CaFE (hors domaine),
+WER (C17), résultats sur nos enregistrements (T6), robustesse au bruit et biais par genre
+(E3, E4).
 
 ## 7. Dix questions probables du jury
 
@@ -196,14 +206,17 @@ enregistrements (T6), robustesse au bruit et biais par genre (E3, E4).
 
 8. **Pour le locuteur, pourquoi séparer les phrases et pas les personnes ?**
    On ne peut reconnaître que quelqu'un dont on a déjà entendu la voix. 5 phrases servent à
-   l'enregistrer, les autres à le reconnaître ; et le seuil « inconnu » est réglé sur d'autres
-   personnes que celles évaluées.
+   l'enregistrer, les autres à le reconnaître. Le seuil « inconnu » est réglé sur d'autres
+   personnes et d'autres imposteurs que ceux qui servent à le mesurer.
 
-9. **Le neutre est moins fréquent : est-ce un problème ?**
-   Un peu (1 183 neutres contre 1 463 pour chaque autre classe à l'entraînement). C'est pour cela
-   que la métrique principale est le F1 macro, où chaque classe pèse autant.
+9. **Pourquoi le F1 macro comme métrique principale ?**
+   Parce que chaque classe y pèse autant : un modèle ne peut pas avoir un bon score en ignorant
+   une classe. Le neutre est d'ailleurs un peu moins fréquent (815 extraits à l'entraînement
+   contre 1 007 pour chaque autre émotion). On rapporte aussi l'accuracy (P4), qui est la
+   métrique la plus utilisée dans les articles sur ESC-50, pour rester comparables.
 
 10. **Quelles sont les limites de vos données ?**
     CREMA-D et RAVDESS répètent les mêmes phrases pour tous les acteurs (12 et 2) ; tout est à
-    16 kHz, donc rien au-dessus de 8 kHz ; le genre manque dans la plupart d'OpenSLR 57 ; nos
-    propres enregistrements ne seront que 4 voix, donc illustratifs et non concluants.
+    16 kHz, donc rien au-dessus de 8 kHz ; le genre manque dans la plupart d'OpenSLR 57 ; dans
+    OpenSLR 57, rien ne prouve que deux dossiers différents sont deux personnes différentes ;
+    nos propres enregistrements (prévus : 4 personnes) seront illustratifs, pas concluants.
