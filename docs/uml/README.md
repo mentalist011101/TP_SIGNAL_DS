@@ -4,10 +4,12 @@ Sources textuelles (Mermaid ou PlantUML) versionnées ici, exportées en PDF pou
 
 | Diagramme | Fichier | Notation | Statut |
 | --- | --- | --- | --- |
-| Séquence du flux micro (navigateur → WebSocket → tampon → inférence → frise) | `sequence-flux-micro.md` | UML, séquence | Brouillon, à relire (flux pas encore codé) |
-| Composants (web, api, services, core, stockage) | `composants.md` | UML, composants | Brouillon, à relire |
-| Déploiement (Docker, Gunicorn, Kaggle, Hugging Face Hub) | `deploiement.md` | UML, déploiement | Brouillon, à relire |
-| Historique des analyses (analyses, segments, prédictions, locuteurs) | `mcd-historique.md` | MERISE, MCD | Brouillon : ANALYSE conforme au code, le reste proposé |
+| Séquence du flux micro (navigateur → WebSocket → tampon → inférence → frise) | `sequence-flux-micro.md` | UML, séquence | Proposition : le flux n'est pas encore codé |
+| Composants (web, api, services, core, stockage) | `composants.md` | UML, composants | Conforme au code du 24 novembre (après C13 et la PR #28) |
+| Déploiement (Docker, Gunicorn, Kaggle, Hugging Face Hub) | `deploiement.md` | UML, déploiement | Conforme au code du 24 novembre ; signale le risque du cache des modèles |
+| Historique des analyses (analyses, tâches, résultats, segments, probabilités, locuteurs) | `mcd-historique.md` | MERISE, MCD | Conforme au code (colonne JSON `results`), sauf LOCUTEUR, proposé |
+
+Pour comprendre et expliquer chaque diagramme à l'oral : `docs/fiches/diagrammes-uml.md`.
 
 Les sources sont en Mermaid : GitHub et l'aperçu Markdown de VS Code les affichent directement.
 Mermaid n'a pas de notation dédiée aux composants, au déploiement ni au MCD MERISE : ces trois

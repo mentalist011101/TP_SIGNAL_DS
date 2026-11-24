@@ -10,7 +10,8 @@ R5 (features par `core.features`), S1 (modèles du registre).
 > une page provisoire. Seuls existent : la dépendance `flask-sock` (`pyproject.toml`), Gunicorn en
 > mode threads pour le WebSocket (`docker/Dockerfile`), le relais `/ws` de Vite
 > (`web/vite.config.ts`) et `core.features.log_mel_spectrogram`.
-> Les noms `StreamSession` et `InferenceService` sont des **propositions**.
+> `StreamSession` est une **proposition**. Les modèles seraient appelés par l'interface
+> `Predictor` qui existe déjà pour les fichiers (C13), avec les modèles du profil temps réel.
 
 ## Diagramme
 
@@ -21,7 +22,7 @@ sequenceDiagram
     participant P as Page Direct<br>(navigateur)
     participant WS as Route WebSocket<br>/ws/stream (flask-sock)
     participant S as StreamSession<br>(tampon de la session)
-    participant I as InferenceService<br>(services)
+    participant I as Predictor<br>(services, profil temps réel)
     participant C as core<br>(features, modèles)
 
     U->>P: clique « Démarrer »
@@ -36,7 +37,7 @@ sequenceDiagram
 
         opt 0,5 s (H) de nouveau son reçues depuis la dernière inférence
             S->>I: fenêtre des 2 dernières secondes (W)
-            I->>C: log-Mel (core.features), puis modèles émotion et événement (profil temps réel)
+            I->>C: log-Mel (core.features), puis CRNN du profil temps réel
             C-->>I: probabilités par classe
             I-->>WS: résultat + latence + RTF
             WS-->>P: message JSON {début, fin, émotion, événement, latence, RTF}
