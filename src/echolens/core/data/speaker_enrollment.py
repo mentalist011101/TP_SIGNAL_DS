@@ -4,12 +4,21 @@ Pour reconnaître une voix, il faut l'avoir entendue avant : on ne sépare donc 
 locuteurs, on sépare leurs PHRASES. Pour chaque locuteur, 5 phrases tirées au hasard servent
 à « enregistrer » sa voix, les autres servent au test (P11).
 
-Les locuteurs sont ensuite répartis en deux groupes. Le groupe de calibration sert à choisir le
-seuil « locuteur inconnu » (et, pour mHuBERT, la couche) ; le groupe d'évaluation sert à mesurer
-les scores avec ce seuil. Choisir et mesurer sur les mêmes voix gonflerait le score (P11).
+Les locuteurs sont ensuite répartis en quatre groupes, un sur quatre dans chaque sous-corpus :
 
-Un locuteur est identifié par « sous-corpus/dossier » : le même dossier ca16 (« 002 ») apparaît
-dans train et dans devtest, et c'est la même personne (même date d'enregistrement).
+- calibration : voix enregistrées qui servent à choisir le seuil « inconnu » (et la couche de
+  mHuBERT) ;
+- imposteurs de calibration : voix jamais enregistrées, présentées au groupe de calibration
+  pour choisir ce seuil ;
+- évaluation : voix enregistrées sur lesquelles on mesure les scores ;
+- imposteurs d'évaluation : voix jamais enregistrées, présentées au groupe d'évaluation pour
+  mesurer le rejet des inconnus.
+
+Aucune voix ne sert à la fois à choisir le seuil et à le mesurer : sinon le score serait gonflé.
+
+Un locuteur est identifié par « sous-corpus/dossier » : 14 dossiers ca16 (« 002 », « 004 »…)
+apparaissent à la fois dans train et dans devtest, avec le même préfixe de session
+(afc-gabon_16.06.11_002) ; c'est la même personne, comptée une seule fois.
 """
 
 from __future__ import annotations
@@ -25,9 +34,14 @@ from echolens.config import CONFIG_DIR, load_yaml
 from echolens.core.data.manifest import ManifestRow
 
 SPEAKER_CONFIG_PATH = CONFIG_DIR / "speaker.yaml"
-SpeakerGroup = Literal["calibration", "evaluation"]
-# Ordre d'attribution des groupes : un locuteur sur deux dans chaque sous-corpus.
-GROUP_ORDER: list[SpeakerGroup] = ["calibration", "evaluation"]
+SpeakerGroup = Literal["calibration", "evaluation", "impostor_calibration", "impostor_evaluation"]
+# Ordre d'attribution des groupes : un locuteur sur quatre dans chaque sous-corpus.
+GROUP_ORDER: list[SpeakerGroup] = [
+    "calibration",
+    "evaluation",
+    "impostor_calibration",
+    "impostor_evaluation",
+]
 ENROLLMENT_COLUMNS = ["speaker", "subset", "group", "role", "path"]
 
 
@@ -144,8 +158,8 @@ def _assign_groups(
             continue
         subset = subset_of_speaker[speaker]
         speakers_by_subset.setdefault(subset, []).append(speaker)
-    # Étape 2 : dans chaque sous-corpus, ordre tiré au hasard, puis un locuteur sur deux dans
-    # chaque groupe. Les deux groupes ont ainsi les mêmes accents et la même taille.
+    # Étape 2 : dans chaque sous-corpus, ordre tiré au hasard, puis un locuteur sur quatre dans
+    # chaque groupe. Les quatre groupes ont ainsi les mêmes accents et presque la même taille.
     generator = random.Random(config.seed)
     group_of_speaker: dict[str, SpeakerGroup] = {}
     for subset in sorted(speakers_by_subset):

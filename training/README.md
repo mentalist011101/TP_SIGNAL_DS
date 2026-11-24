@@ -36,7 +36,7 @@ os.environ["HF_TOKEN"] = secrets.get_secret("HF_TOKEN")
 | Notebook | Tâche | Ce qu'il produit |
 | --- | --- | --- |
 | `c3_manifests_emotions.ipynb` | C3 : manifestes de CREMA-D et de RAVDESS (P1, P9), sans GPU ni ffmpeg | `cremad.csv` et `ravdess.csv` (→ `data/manifests/`) |
-| `c15_speaker_openslr57.ipynb` | C15 : identification du locuteur sur OpenSLR 57 avec ECAPA-TDNN et mHuBERT (P11, E1), GPU T4 | `c15_speaker_openslr57.json` (→ `training/results/`) ; vérifie que le découpage est identique à `data/splits/openslr57_speakers.csv` |
+| `c15_speaker_openslr57.ipynb` | C15 : identification du locuteur sur OpenSLR 57 avec ECAPA-TDNN et mHuBERT (P8, P11, E1), GPU T4 | `c15_speaker_openslr57.json` (→ `training/results/`) ; vérifie que le découpage est identique à `data/splits/openslr57_speakers.csv` ; en sortie Kaggle seulement : vecteurs de chaque phrase (`c15_*_embeddings.npz`) |
 | `c16_manifests_hors_domaine.ipynb` | C16 : manifestes de CaFE et d'OpenSLR 57 (P7, P9, P10), sans GPU | `cafe.csv` et `openslr57.csv` (→ `data/manifests/`) |
 | `c5_esc50_mfcc_svm.ipynb` | C5 : référence MFCC + SVM sur ESC-50 (P3, P4, P5), sans GPU | `esc50.csv` (→ `data/manifests/`), `esc50_mfcc_svm.json` (→ `training/results/`), matrice en 5 catégories (→ `report/figures/`) |
 | `c9_family_a_esc50.ipynb` | C9 : CNN et CRNN de la famille A sur le log-Mel d'ESC-50 (Brique 4, R4, R6, P3, P6, P8), GPU T4 | `esc50_family_a_cnn.json` et `esc50_family_a_crnn.json` (→ `training/results/`), matrices en 5 catégories et exemples d'attention (→ `report/figures/`) ; en sortie Kaggle seulement : log-Mel, prédictions, probabilités, poids d'attention et poids des 15 modèles finaux par réseau |

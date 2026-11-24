@@ -73,9 +73,9 @@ def test_speakers_with_too_few_phrases_are_dropped() -> None:
     assert [speaker.speaker for speaker in speakers] == ["ca16/002"]
 
 
-def test_groups_alternate_within_each_subset() -> None:
+def test_four_groups_within_each_subset() -> None:
     rows = []
-    for number in range(4):
+    for number in range(8):
         rows += make_rows("ca16", f"00{number}", 10)
         rows += make_rows("yaounde", f"ctell1-0{number}", 10)
 
@@ -83,8 +83,8 @@ def test_groups_alternate_within_each_subset() -> None:
 
     for subset in ["ca16", "yaounde"]:
         groups = [speaker.group for speaker in speakers if speaker.subset == subset]
-        assert groups.count("calibration") == 2
-        assert groups.count("evaluation") == 2
+        for group in ["calibration", "evaluation", "impostor_calibration", "impostor_evaluation"]:
+            assert groups.count(group) == 2
 
 
 def test_split_is_deterministic() -> None:
