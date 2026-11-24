@@ -7,9 +7,9 @@ le vert mousse, les étiquettes en mono et la palette magma réservée aux donn�
 
 Les jetons sont définis dans `web/src/index.css`, pour un thème sombre (anthracite chaud) et un
 thème clair « papier ». **Par défaut, la page suit le thème du système** (`prefers-color-scheme`),
-y compris s'il change pendant la visite. Le bouton de thème (barre latérale, en-tête de l'accueil) bascule de l'un à
-l'autre et mémorise ce choix dans le navigateur, qui prime ensuite sur le système
-(`web/src/theme.ts`, attribut `data-theme` sur `<html>`).
+y compris s'il change pendant la visite. Le bouton de thème (barre latérale, en-tête de
+l'accueil) bascule de l'un à l'autre et mémorise ce choix dans le navigateur, qui prime ensuite
+sur le système (`web/src/theme.ts`, attribut `data-theme` sur `<html>`).
 
 ## Jetons
 
@@ -66,14 +66,13 @@ distinguent par une bordure fine. Fond de page : grille de points (`dot-grid`). 
   prédicteur sont signalées par le bandeau « démo », une fonction pas encore branchée est
   marquée « bientôt ».
 - **Mouvement** : les animations (ruban d'ondes, visuels des outils de l'accueil, points « en
-  direct », suivi d'analyse)
-  s'arrêtent quand le système demande moins d'animations (`motion-safe`,
-  `prefers-reduced-motion`).
+  direct », suivi d'analyse) s'arrêtent quand le système demande moins d'animations
+  (`motion-safe`, `prefers-reduced-motion`).
 - **Contraste WCAG AA** (4,5:1 pour le texte) dans les deux thèmes.
 
 ## Origine
 
 La v1 reprenait la charte du portfolio de Luciano (papier, encre, Archivo, rayons de 3 et
 6 px, ombres dures). La v2 en garde le papier et l'encre (thème clair), le vert mousse, les
-étiquettes mono et la palette magma, et adopte un thème sombre (le système choisit), le serif pour les titres,
-les boutons en pilule et les surfaces plates.
+étiquettes mono et la palette magma, et adopte un thème sombre (le système choisit), le serif
+pour les titres, les boutons en pilule et les surfaces plates.
