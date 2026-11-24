@@ -51,7 +51,7 @@ SEGMENT, jamais aux deux. C'est pourquoi chacune de ses deux pattes vaut `(0,1)`
 **Contrainte de cohérence** : un RÉSULTAT ne peut PORTER SUR qu'une tâche que son ANALYSE a
 DEMANDÉE.
 
-## Du MCD au code : une seule table
+## Du MCD au code : la table analyses et sa table de résumés
 
 Le MCD décrit les **informations** ; le code choisit comment les **ranger**.
 
@@ -91,5 +91,5 @@ le premier choix de chaque tâche, pour que l'historique n'ait pas à lire `resu
 
 1. **LOCUTEUR** (EF-11) : l'empreinte vocale dans la base ou sur disque ? Le retrait du
    consentement doit effacer la personne et toutes ses identifications.
-2. Supprimer une analyse supprime déjà ses résultats (même ligne) et son dossier de fichiers
-   (`delete_analysis`).
+2. Supprimer une analyse supprime déjà ses résultats (même ligne), sa ligne de résumé (table
+   `analysis_summaries`) et son dossier de fichiers (`delete_analysis`).
