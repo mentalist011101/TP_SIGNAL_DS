@@ -50,6 +50,24 @@ def speech_flags(signal: FloatArray, config: VadConfig) -> list[bool]:
     return flags
 
 
+def hysteresis_flags(probabilities: list[float], start: float, end: float) -> list[bool]:
+    """Décisions par trame à partir de probabilités de parole, avec hystérésis (Silero, D5).
+
+    Parole dès que p ≥ start, et jusqu'à ce que p < end (end < start) : un creux bref au
+    milieu d'un mot ne coupe pas le segment, mais un son faible ne peut pas en commencer un.
+    C'est la règle de get_speech_timestamps de Silero.
+    """
+    flags: list[bool] = []
+    speaking = False
+    for probability in probabilities:
+        if not speaking and probability >= start:
+            speaking = True
+        elif speaking and probability < end:
+            speaking = False
+        flags.append(speaking)
+    return flags
+
+
 def flags_to_segments(
     flags: list[bool], frame_s: float, config: VadConfig, duration_s: float
 ) -> list[Segment]:

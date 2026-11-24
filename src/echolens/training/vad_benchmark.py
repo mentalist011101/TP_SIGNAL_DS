@@ -30,7 +30,12 @@ from pydantic import BaseModel, Field
 from echolens.config import CONFIG_DIR, load_yaml
 from echolens.core.audio.io import TARGET_SAMPLE_RATE
 from echolens.core.audio.preprocess_config import VadConfig
-from echolens.core.audio.segment import FloatArray, flags_to_segments, speech_flags
+from echolens.core.audio.segment import (
+    FloatArray,
+    flags_to_segments,
+    hysteresis_flags,
+    speech_flags,
+)
 from echolens.core.data.manifest import ManifestRow
 from echolens.core.features import FeatureConfig, band_power_share
 
@@ -194,20 +199,6 @@ def silero_end_threshold(threshold: float, config: VadBenchmarkConfig) -> float:
     sans descendre sous 0,01."""
     end_threshold = threshold - config.silero_hysteresis_gap
     return max(end_threshold, config.silero_min_end_threshold)
-
-
-def hysteresis_flags(probabilities: list[float], start: float, end: float) -> list[bool]:
-    """Parole dès que p ≥ start, et jusqu'à ce que p < end : un creux bref au milieu d'un mot
-    ne coupe pas le segment, mais un son faible ne peut pas en commencer un."""
-    flags: list[bool] = []
-    speaking = False
-    for probability in probabilities:
-        if not speaking and probability >= start:
-            speaking = True
-        elif speaking and probability < end:
-            speaking = False
-        flags.append(speaking)
-    return flags
 
 
 def option_flags(

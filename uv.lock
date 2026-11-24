@@ -654,7 +654,7 @@ requires-dist = [
     { name = "scikit-learn", marker = "extra == 'ml'", specifier = ">=1.4" },
     { name = "scipy", specifier = ">=1.12" },
     { name = "seaborn", marker = "extra == 'training'", specifier = ">=0.13" },
-    { name = "silero-vad", marker = "extra == 'ml'", specifier = ">=5.1" },
+    { name = "silero-vad", marker = "extra == 'ml'", specifier = "==6.3" },
     { name = "soundfile", specifier = ">=0.12" },
     { name = "speechbrain", marker = "extra == 'ml'", specifier = ">=1.0" },
     { name = "sqlalchemy", specifier = ">=2.0" },

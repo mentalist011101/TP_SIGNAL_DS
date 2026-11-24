@@ -13,7 +13,6 @@ from echolens.training.vad_benchmark import (
     benchmark_options,
     clip_decisions,
     false_positive_rate,
-    hysteresis_flags,
     load_clip_decisions,
     load_vad_benchmark_config,
     non_vocal_esc50_rows,
@@ -147,13 +146,6 @@ def test_decisions_survive_a_json_round_trip(tmp_path: Path) -> None:
     path = tmp_path / "decisions.json"
     save_clip_decisions(clips, path)
     assert load_clip_decisions(path) == clips
-
-
-def test_hysteresis_keeps_a_brief_dip_but_needs_the_start_threshold() -> None:
-    # Un creux à 0,4 ne coupe pas un segment ouvert à 0,5 ; un son à 0,4 n'en ouvre aucun.
-    probabilities = [0.1, 0.4, 0.6, 0.4, 0.6, 0.2, 0.4]
-    flags = hysteresis_flags(probabilities, start=0.5, end=0.35)
-    assert flags == [False, False, True, True, True, False, False]
 
 
 def test_silero_end_threshold_never_goes_below_the_floor() -> None:

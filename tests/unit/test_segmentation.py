@@ -8,6 +8,7 @@ from echolens.core.audio.segment import (
     cut_window,
     detect_speech,
     flags_to_segments,
+    hysteresis_flags,
     sliding_windows,
     speech_flags,
 )
@@ -163,3 +164,10 @@ def test_last_window_is_taken_from_the_audio_not_padded() -> None:
     windows = sliding_windows(3.2, window_s=2.0, hop_s=0.5)
     window = cut_window(signal, windows[-1], window_s=2.0)
     np.testing.assert_array_equal(window, signal[-2 * SAMPLE_RATE :])
+
+
+def test_hysteresis_keeps_a_brief_dip_but_needs_the_start_threshold() -> None:
+    # Un creux à 0,4 ne coupe pas un segment ouvert à 0,5 ; un son à 0,4 n'en ouvre aucun.
+    probabilities = [0.1, 0.4, 0.6, 0.4, 0.6, 0.2, 0.4]
+    flags = hysteresis_flags(probabilities, start=0.5, end=0.35)
+    assert flags == [False, False, True, True, True, False, False]
