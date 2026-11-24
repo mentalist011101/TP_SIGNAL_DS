@@ -22,7 +22,9 @@ certifi==2026.10.23
 cffi==2.1.1
     # via soundfile
 charset-normalizer==3.5.2
-    # via requests
+    # via
+    #   reportlab
+    #   requests
 click==8.5.0
     # via
     #   flask
@@ -237,11 +239,14 @@ packaging==26.3
     #   matplotlib
     #   onnxruntime
     #   pooch
+    #   silero-vad
     #   speechbrain
     #   transformers
     #   webargs
 pillow==13.0.0
-    # via matplotlib
+    # via
+    #   matplotlib
+    #   reportlab
 platformdirs==4.14.3
     # via pooch
 pooch==1.9.0
@@ -269,6 +274,8 @@ pyyaml==6.0.3
     #   transformers
 regex==2026.9.29
     # via transformers
+reportlab==5.1.1
+    # via echolens
 requests==2.34.2
     # via
     #   pooch
@@ -305,6 +312,8 @@ setuptools==84.2.1
     # via torch
 shellingham==1.5.4
     # via typer
+silero-vad==6.3
+    # via echolens
 simple-websocket==1.1.0
     # via flask-sock
 soundfile==0.14.0
@@ -329,6 +338,7 @@ tokenizers==0.23.3
 torch==2.15.0
     # via
     #   echolens
+    #   silero-vad
     #   speechbrain
     #   torchaudio
 torchaudio==2.11.1

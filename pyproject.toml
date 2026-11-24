@@ -21,6 +21,7 @@ dependencies = [
     "matplotlib>=3.11.2",
     "noisereduce>=3.0.3",
     "webrtcvad-wheels>=2.0.14.post1",
+    "reportlab>=4.2",
 ]
 
 [project.optional-dependencies]
