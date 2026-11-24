@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import type { AnalysisTask, ClassProbability, TaskResult } from '../../api/client.ts'
 import { TASK_LABELS } from '../../labels.ts'
-import { formatProbability, isDemoResult, mainProbability } from './taskResult.ts'
+import MainResultValue from './MainResultValue.tsx'
 import ProbabilityBars from './ProbabilityBars.tsx'
+import { isDemoResult } from './taskResult.ts'
 
 // Événements sonores : on montre les 5 classes les plus probables sur 50, le reste sur demande.
 const SOUND_EVENT_TOP_COUNT = 5
@@ -13,16 +14,10 @@ const TOGGLE_CLASSES = 'text-sm font-semibold text-accent-ink hover:underline'
 
 // Résultat principal en grand : libellé français et probabilité.
 function MainResult({ result }: { result: TaskResult }) {
-  const probability = mainProbability(result)
   return (
     <div>
       <p className="label-mono text-ink-soft">Résultat principal</p>
-      <p className="flex flex-wrap items-baseline gap-x-3">
-        <span className="font-display text-4xl leading-none">{result.label_fr}</span>
-        {probability !== null && (
-          <span className="font-mono text-lg text-ink-soft">{formatProbability(probability)}</span>
-        )}
-      </p>
+      <MainResultValue result={result} leading="leading-none" />
     </div>
   )
 }
