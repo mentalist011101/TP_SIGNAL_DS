@@ -22,16 +22,31 @@ function formatDuration(durationSeconds: number | null): string {
   return `${formatted} s`
 }
 
-// Le lien pointe sur GET /api/v1/analyses/{id} : le fichier téléchargé est la réponse de
-// l'API telle quelle, sans rien recalculer ni retirer.
-function DownloadJsonLink({ analysisId }: { analysisId: string }) {
-  const url = `${API_BASE}/analyses/${analysisId}`
-  const filename = `echolens-analyse-${analysisId}.json`
+// Formats proposés par GET /api/v1/analyses/{id}/export (EF-09, C26).
+const EXPORT_FORMATS = [
+  { format: 'json', label: 'JSON' },
+  { format: 'csv', label: 'CSV' },
+  { format: 'pdf', label: 'PDF' },
+]
+
+// Un lien par format. Le serveur construit le fichier et propose son nom
+// (echolens_<nom>_<date>.<format>) : download sans valeur garde ce nom.
+function ExportLinks({ analysisId }: { analysisId: string }) {
+  const exportUrl = `${API_BASE}/analyses/${analysisId}/export`
   return (
-    <a href={url} download={filename} className={DOWNLOAD_CLASSES}>
-      <DownloadIcon />
-      Télécharger le résultat (JSON)
-    </a>
+    <div className="flex flex-wrap gap-2">
+      {EXPORT_FORMATS.map((item) => (
+        <a
+          key={item.format}
+          href={`${exportUrl}?format=${item.format}`}
+          download
+          className={DOWNLOAD_CLASSES}
+        >
+          <DownloadIcon />
+          Télécharger {item.label}
+        </a>
+      ))}
+    </div>
   )
 }
 
@@ -51,7 +66,7 @@ export default function ResultHeader({ analysis }: { analysis: Analysis }) {
           <span>profil {profileLabel}</span>
         </div>
       </div>
-      {analysis.status === 'done' && <DownloadJsonLink analysisId={analysis.id} />}
+      {analysis.status === 'done' && <ExportLinks analysisId={analysis.id} />}
     </div>
   )
 }
