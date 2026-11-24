@@ -138,6 +138,18 @@ phrases.
 2. On ne garde que les locuteurs qui ont au moins 10 phrases.
 3. Le seuil « locuteur inconnu » est choisi sur un groupe de locuteurs et évalué sur un autre.
 
+Mise en œuvre (C15, `core/data/speaker_enrollment.py`, `configs/speaker.yaml`) :
+
+- un locuteur d'OpenSLR 57 est identifié par « sous-corpus/dossier » : le dossier ca16 `002`
+  de train et celui de devtest sont la même personne ;
+- 225 locuteurs sur 233 ont au moins 10 phrases. Dans chaque sous-corpus, un locuteur sur deux,
+  tiré au hasard, va dans le groupe de calibration, l'autre dans le groupe d'évaluation :
+  113 et 112 locuteurs, 7 476 et 8 016 phrases de test ;
+- le découpage est versionné dans `data/splits/openslr57_speakers.csv` (une ligne par phrase) ;
+- la calibration fixe le seuil (à l'EER) et, pour mHuBERT, la couche ; l'évaluation donne
+  l'accuracy, l'EER et les taux en ensemble ouvert. Les voix « inconnues » sont les phrases
+  de test des locuteurs de calibration, absents des voix enregistrées de l'évaluation.
+
 ## 7. Normalisation du WER (P10, P12)
 
 Le WER est mesuré sur le test officiel d'OpenSLR 57 et sur le sous-corpus `yaounde` (rangé dans
