@@ -15,6 +15,7 @@ from typing import Any
 
 import numpy as np
 import torch
+from huggingface_hub import snapshot_download
 from speechbrain.inference.speaker import EncoderClassifier
 
 from echolens.core.audio import load_audio
@@ -29,11 +30,14 @@ PROGRESS_EVERY = 1000
 
 
 def load_ecapa(config: SpeakerEncoderConfig, savedir: Path, device: torch.device) -> Any:
-    """Charge ECAPA-TDNN (SpeechBrain), gelé, à la révision de la config si elle est figée."""
+    """Charge ECAPA-TDNN (SpeechBrain), gelé, à la révision figée dans configs/speaker.yaml."""
+    # Étape 1 : téléchargement du dépôt à la révision exacte. SpeechBrain ne sait pas choisir une
+    # révision lui-même : on lui donne ensuite le dossier local.
+    local_dir = snapshot_download(repo_id=config.checkpoint, revision=config.revision)
+    # Étape 2 : construction du modèle à partir de ce dossier.
     model = EncoderClassifier.from_hparams(
-        source=config.checkpoint,
+        source=local_dir,
         savedir=str(savedir),
-        revision=config.revision,
         run_opts={"device": str(device)},
     )
     # Encodeur gelé : mode évaluation (dropout et normalisation de lot figés).

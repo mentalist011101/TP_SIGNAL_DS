@@ -17,11 +17,10 @@ max_seconds: 20.0
 
 encoders:
   # ECAPA-TDNN de SpeechBrain, entraîné pour la vérification du locuteur sur VoxCeleb : un
-  # vecteur de 192 valeurs par extrait. Révision : à figer après le premier passage sur Kaggle
-  # (le notebook l'affiche).
+  # vecteur de 192 valeurs par extrait. Révision relevée sur Kaggle le 24 novembre 2026.
   - id: ecapa-voxceleb
     checkpoint: speechbrain/spkrec-ecapa-voxceleb
-    revision: null
+    revision: 0f99f2d0ebe89ac095bcc5903c4dd8f72b367286
     kind: ecapa
   # mHuBERT multilingue (H2), le même que pour les émotions (configs/embeddings.yaml) : une
   # moyenne par couche ; la couche gardée est choisie sur le groupe de calibration.
