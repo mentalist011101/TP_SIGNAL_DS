@@ -39,8 +39,10 @@ def two_cafe_actors(monkeypatch: pytest.MonkeyPatch) -> None:
 
 @pytest.mark.usefixtures("two_cafe_actors")
 def test_cafe_fields(tmp_path: Path) -> None:
-    # Dossiers aux noms quelconques : seuls les noms de fichiers sont lus.
-    write_wav(tmp_path / "Col?re" / "Faible" / "01-C-1-1.wav", seconds=0.5)
+    # Dossier au nom cassé, comme « Colère » extrait d'une archive mal décodée : « è » (0x8A
+    # en CP850) relu en CP1252 donne « Š ». « ? » serait plus réaliste mais est interdit sous
+    # Windows. Le chemin est gardé tel quel ; l'émotion est lue dans le nom du fichier.
+    write_wav(tmp_path / "ColŠre" / "Faible" / "01-C-1-1.wav", seconds=0.5)
     write_wav(tmp_path / "Neutre" / "02-N-1-3.wav", seconds=1.0)
 
     rows = build_cafe_manifest(tmp_path)
@@ -48,7 +50,7 @@ def test_cafe_fields(tmp_path: Path) -> None:
     assert len(rows) == 2
     first = rows[0]
     assert first.dataset == "cafe"
-    assert first.path == "Col?re/Faible/01-C-1-1.wav"
+    assert first.path == "ColŠre/Faible/01-C-1-1.wav"
     assert first.label == "C"
     assert first.speaker == "01"
     assert first.gender == "M"
