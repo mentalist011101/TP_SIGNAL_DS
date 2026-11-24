@@ -1,0 +1,215 @@
+% Porteuse : Lynn (brique 3). Sources : docs/protocole.md (qui fait foi), docs/datasets.md,
+% data/manifests/, data/splits/. Aucun chiffre n'est écrit ici sans venir de ces fichiers.
+\section{Données et protocole expérimental}
+\label{sec:donnees}
+
+Cette section décrit les jeux de données, la façon dont ils sont décrits (les manifestes), et
+les règles de découpage qui garantissent qu'aucune information du test ne sert à
+l'entraînement. Chaque règle porte l'identifiant de la spécification (P pour protocole, R pour
+représentation) et correspond à un test automatique du dépôt.
+
+\subsection{Jeux de données et rôle de chacun}
+\label{sec:jeux}
+
+Les modèles apprennent sur de la parole anglaise jouée par des acteurs et sur des sons
+d'environnement, puis sont mesurés sur trois niveaux de test de plus en plus éloignés de
+l'entraînement (P7) : en domaine, hors domaine, et les voix de l'équipe
+(tableau~\ref{tab:jeux}). Un jeu de test n'entre jamais en entraînement ni en validation.
+
+\begin{table}[ht]
+  \centering
+  \small
+  \begin{tabularx}{\linewidth}{@{}l>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}p{2.6cm}r>{\raggedright\arraybackslash}p{3.3cm}@{}}
+    \toprule
+    Jeu & Contenu & Tâche & Fichiers & Rôle \\
+    \midrule
+    CREMA-D    & 91 acteurs anglophones (48 H, 43 F), 12 phrases & Émotions & 7\,442 & entraînement, validation, test \\
+    RAVDESS    & 24 acteurs anglophones (12 H, 12 F), 2 phrases  & Émotions & 1\,440 & entraînement, validation, test \\
+    ESC-50     & 50 classes de sons, extraits de 5\,s             & Événements & 2\,000 & validation croisée, 5 folds \\
+    CaFE       & 12 acteurs francophones (6 H, 6 F)             & Émotions & 936    & test hors domaine \\
+    OpenSLR~57 & français à l'accent africain, 19,9\,h          & Transcription, locuteur & 16\,656 & test seulement \\
+    Équipe     & 4 voix camerounaises, téléphone et ordinateur  & Toutes   & ---    & test et démonstration \\
+    \bottomrule
+  \end{tabularx}
+  \caption{Jeux de données et rôle de chacun (P7, P10). ACE (voix africaines, émotions) était
+    prévu en test hors domaine ; l'accès n'a pas été obtenu.}
+  \label{tab:jeux}
+\end{table}
+
+\aRediger{Lynn}{Ligne « Équipe » : nombre d'extraits réel une fois les enregistrements faits
+  (T6), ou retirer la ligne. Statut final d'ACE.}
+
+\subsection{Manifestes}
+\label{sec:manifestes}
+
+Chaque jeu est décrit par un \emph{manifeste} : un fichier CSV, versionné dans
+\texttt{data/manifests/}, qui contient une ligne par fichier audio et aucun son. Ses colonnes
+sont le jeu, le chemin relatif du fichier, l'étiquette d'origine, le locuteur, son genre, la
+durée, le fold (ESC-50), le découpage officiel et le sous-corpus (OpenSLR~57), l'intensité
+jouée et la transcription brute.
+
+Les manifestes sont construits sur Kaggle, à partir des archives officielles, par les
+fonctions de \texttt{echolens.core.data} : les informations sont lues dans les \emph{noms} de
+fichiers (par exemple \texttt{01-C-1-1.wav} pour CaFE : acteur 01, colère, intensité faible,
+phrase 1), jamais dans les noms de dossiers, dont les accents peuvent être mal encodés.
+Chaque manifeste est ensuite contrôlé : un seul jeu, des chemins uniques, et un même
+enregistrement d'origine jamais réparti sur deux folds (P3). Les effectifs obtenus sont comparés
+à ceux attendus, et la construction s'arrête au moindre écart.
+
+Le manifeste garde l'étiquette d'origine (P9) ; la correspondance vers les classes communes se
+fait ensuite dans le code. On peut ainsi la modifier sans reconstruire les manifestes.
+
+\subsection{Correspondance des émotions}
+\label{sec:correspondance}
+
+On garde six classes présentes dans tous les jeux : neutre, joie, tristesse, colère, peur et
+dégoût (P2). Le \emph{calme} de RAVDESS est exclu plutôt que fusionné avec le neutre : c'est une
+consigne de jeu à part, et la fusion triplerait les neutres de RAVDESS (de 96 à 288). La
+\emph{surprise} est exclue car CREMA-D, le jeu principal, n'en contient pas.
+
+\begin{table}[ht]
+  \centering
+  \small
+  \begin{tabular}{@{}lrrrrr@{}}
+    \toprule
+    Jeu & Fichiers & Exclus & Gardés & Neutre & Chacune des 5 autres \\
+    \midrule
+    CREMA-D & 7\,442 & 0   & 7\,442 & 1\,087 & 1\,271 \\
+    RAVDESS & 1\,440 & 384 & 1\,056 & 96     & 192 \\
+    CaFE    & 936    & 144 & 792    & 72     & 144 \\
+    \bottomrule
+  \end{tabular}
+  \caption{Effectifs après correspondance vers les six classes communes, vérifiés sur les
+    manifestes réels.}
+  \label{tab:emotions}
+\end{table}
+
+À l'entraînement, le neutre est un peu moins fréquent que les autres classes (1\,183 extraits
+contre 1\,463). C'est l'une des raisons du choix du F1 macro comme métrique principale (P4) :
+chaque classe y compte autant, quelle que soit sa fréquence.
+
+\subsection{Découpage des émotions par acteur}
+\label{sec:p1}
+
+Les \emph{acteurs}, et non les fichiers, sont répartis entre entraînement, validation et test
+(P1). Si un même acteur apparaissait dans l'entraînement et le test, le modèle pourrait
+reconnaître sa voix plutôt que l'émotion, et le score serait gonflé.
+
+Pour un jeu de $A$ acteurs, la validation et le test reçoivent chacun
+\begin{equation}
+  n = \operatorname{round}\!\left(\frac{0{,}15 \cdot A}{2}\right)
+\end{equation}
+acteurs de \emph{chaque} genre ; tous les autres vont à l'entraînement. Le tirage est fait une
+seule fois, avec une graine fixe (42), et le résultat est versionné dans
+\texttt{data/splits/emotion\_split.csv} : tous les modèles utilisent exactement les mêmes
+acteurs (tableau~\ref{tab:p1}).
+
+\begin{table}[ht]
+  \centering
+  \small
+  \begin{tabular}{@{}lllll@{}}
+    \toprule
+    Jeu & Acteurs & Entraînement & Validation & Test \\
+    \midrule
+    CREMA-D & 91 (48 H, 43 F) & 63 (34 H, 29 F) & 14 (7 H, 7 F) & 14 (7 H, 7 F) \\
+    RAVDESS & 24 (12 H, 12 F) & 16 (8 H, 8 F)   & 4 (2 H, 2 F)  & 4 (2 H, 2 F) \\
+    \bottomrule
+  \end{tabular}
+  \caption{Découpage par acteur (P1). Le test compte 1\,324 extraits et 18 acteurs, autant de
+    femmes que d'hommes, ce qui permet d'analyser les biais par genre (E4).}
+  \label{tab:p1}
+\end{table}
+
+\subsection{ESC-50 : les folds officiels}
+\label{sec:p3}
+
+Les 2\,000 extraits d'ESC-50 sont des fragments d'enregistrements plus longs, rangés par
+l'auteur du jeu dans cinq folds de 400 extraits. On garde ces folds tels quels (P3) : les
+remélanger placerait deux fragments du même enregistrement en entraînement et en test. Ces
+folds sont aussi ceux de la littérature, ce qui rend nos scores comparables. Quatre
+enregistrements (9 extraits) sont, dans le jeu officiel, répartis sur deux folds ; ils sont
+listés dans le code, et toute autre source à cheval sur deux folds est refusée.
+
+Au tour $k$ ($k = 1, \dots, 5$), le fold $k$ sert de test. Les réglages (nombre d'époques,
+hyperparamètres) sont choisis en entraînant sur trois folds et en validant sur le fold
+\begin{equation}
+  v = (k \bmod 5) + 1 ,
+\end{equation}
+puis le modèle est réentraîné sur les quatre folds hors test et évalué une seule fois sur le
+fold $k$. On rapporte la moyenne et l'écart-type sur les cinq tours.
+
+\subsection{Standardisation sur l'entraînement seul}
+\label{sec:r4}
+
+Chaque bande Mel est centrée et réduite avec des statistiques calculées sur l'entraînement
+seulement (R4). Pour la bande $b$,
+\begin{equation}
+  \mu_b = \frac{1}{N T} \sum_{n=1}^{N} \sum_{t=1}^{T} X_{n,b,t} , \qquad
+  \sigma_b = \sqrt{\frac{1}{N T} \sum_{n=1}^{N} \sum_{t=1}^{T} \left(X_{n,b,t} - \mu_b\right)^2} , \qquad
+  \tilde{X}_{n,b,t} = \frac{X_{n,b,t} - \mu_b}{\sigma_b} ,
+\end{equation}
+où $X_{n,b,t}$ est le log-Mel (en dB) de l'extrait $n$ de l'entraînement, à la bande $b$ et à
+la trame $t$, $N$ le nombre d'extraits d'entraînement et $T$ le nombre de trames. Les mêmes
+$\mu_b$ et $\sigma_b$ sont ensuite appliqués à la validation, au test et à l'application.
+Calculer ces statistiques sur le test serait une fuite : le modèle bénéficierait d'une
+information sur les données qui servent à l'évaluer. De même, l'augmentation de données (P6)
+n'est appliquée qu'après le découpage, et à l'entraînement seul.
+
+\subsection{Identification du locuteur}
+\label{sec:p11}
+
+Pour reconnaître une voix, il faut l'avoir entendue : on ne sépare donc pas les locuteurs,
+mais leurs \emph{phrases} (P11). Sur OpenSLR~57, un locuteur est identifié par son sous-corpus
+et son dossier ; 225 locuteurs sur 233 ont au moins dix phrases et sont gardés. Pour chacun,
+cinq phrases tirées au hasard (graine 42) servent à enregistrer sa voix, les autres servent au
+test.
+
+Les locuteurs sont ensuite répartis en deux groupes, un sur deux dans chaque sous-corpus : un
+groupe de \emph{calibration} (113 locuteurs), qui sert à choisir le seuil « locuteur inconnu »,
+et un groupe d'\emph{évaluation} (112 locuteurs, 8\,016 phrases de test), qui sert à mesurer
+les scores. Choisir le seuil sur les voix évaluées gonflerait le résultat. Le découpage est
+versionné dans \texttt{data/splits/openslr57\_speakers.csv}.
+
+\subsection{Transcription}
+\label{sec:p12}
+
+Le taux d'erreur sur les mots (WER) est mesuré sur le test officiel d'OpenSLR~57 (515 phrases)
+et sur le sous-corpus de Yaoundé (8\,397 phrases), dont toutes les transcriptions sont
+disponibles (P10). Référence et transcription sont normalisées de la même façon avant la
+mesure (P12) : minuscules, ponctuation retirée sauf l'apostrophe et le trait d'union dans un
+mot, apostrophes unifiées, nombres écrits en lettres, espaces multiples réduits.
+
+\aRediger{Lynn}{Après C17 : nombre de phrases réellement évaluées et éventuelles exclusions.}
+
+\subsection{Tests de fuite}
+\label{sec:tests-fuite}
+
+Chaque règle de cette section est vérifiée par un test automatique, lancé à chaque
+modification du code : aucun acteur dans deux découpages d'émotions ; chaque fichier gardé dans
+un seul découpage ; toutes les étiquettes dans les six classes après correspondance ; effectifs
+par découpage et par genre conformes au tableau~\ref{tab:p1} ; découpage identique quand on le
+régénère ; 400 extraits par fold d'ESC-50 ; aucune phrase d'un locuteur à la fois en
+enregistrement et en test.
+
+\subsection{Limites des données}
+\label{sec:limites-donnees}
+
+\begin{itemize}
+  \item \textbf{Phrases communes.} CREMA-D utilise les mêmes 12 phrases pour tous les acteurs,
+        RAVDESS les mêmes 2 : le texte est commun à l'entraînement et au test. CaFE et les voix
+        de l'équipe apportent des phrases nouvelles.
+  \item \textbf{Intensités déséquilibrées dans CREMA-D.} 6\,077 extraits en intensité non
+        précisée contre 455 pour chacune des trois autres : une analyse par intensité ne porte
+        que sur la seule phrase jouée aux trois niveaux.
+  \item \textbf{Repères humains.} Sur l'audio seul de CREMA-D, des auditeurs humains reconnaissent
+        l'émotion voulue dans 40,9\,\% des cas ; sur ESC-50, 81,3\,\%. Le hasard vaut
+        16,7\,\% pour six émotions et 2\,\% pour cinquante sons.
+  \item \textbf{16\,kHz.} Tout ce qui dépasse 8\,kHz est perdu, ce qui pénalise certains sons.
+  \item \textbf{Genre dans OpenSLR~57.} Il n'est connu que pour les 12 locuteurs du test
+        officiel ; l'analyse des biais par genre y est donc très limitée.
+  \item \textbf{Transcriptions incomplètes.} Une partie du sous-corpus \texttt{ca16} n'a pas de
+        transcription dans l'archive (devtest 481 sur 761, entraînement 3\,063 sur 5\,997) ; ces
+        phrases ne servent pas au WER.
+  \item \textbf{Voix de l'équipe.} Quatre locuteurs non acteurs, enregistrés chacun de son
+        côté : les résultats sur ces voix sont illustratifs, pas statistiquement concluants.
+\end{itemize}

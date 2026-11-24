@@ -1,0 +1,87 @@
+% Porteurs : Nicole (comparaison des familles), Steve (métriques), Lynn (locuteur, WER,
+% analyse d'erreurs). Règle E8 : chaque chiffre vient d'un fichier de training/results/, cité
+% en commentaire à côté de la table.
+\section{Expériences et résultats}
+\label{sec:resultats}
+
+\subsection{Métriques}
+\label{sec:metriques}
+
+\aRediger{Steve}{F1 macro (métrique principale, P4) et pourquoi plutôt que l'accuracy ;
+  matrice de confusion ; WER ; EER ; intervalles de confiance par bootstrap et test de McNemar
+  (E5) ; latence et RTF (E6).}
+
+\subsection{Émotions}
+\label{sec:res-emotions}
+
+\aRediger{Nicole}{F1 macro en domaine (test de 1\,324 extraits) pour la famille A (CNN, CRNN)
+  et la famille B, avec intervalles de confiance : \texttt{training/results/emotions\_family\_a\_cnn.json},
+  \texttt{emotions\_family\_a\_crnn.json}, \texttt{c11\_family\_b\_emotions.json},
+  \texttt{emotions\_comparisons.json}. Hors domaine (CaFE, 792 extraits) : \textbf{pas encore
+  évalué}. Verdict sur H1 et H2.}
+
+\subsection{Événements sonores (ESC-50)}
+\label{sec:res-esc50}
+
+\aRediger{Nicole}{Référence MFCC + SVM (F1 macro $0{,}403 \pm 0{,}040$ sur les 5 folds,
+  \texttt{esc50\_mfcc\_svm.json}), puis familles A et B (\texttt{esc50\_family\_a\_*.json},
+  \texttt{c11\_family\_b\_esc50.json}, \texttt{esc50\_comparisons.json}). Matrices en 5
+  catégories dans \texttt{figures/}. Verdict sur H3 et H4.}
+
+\subsection{Identification du locuteur}
+\label{sec:res-locuteur}
+
+% Chiffres : training/results/c15_speaker_openslr57.json (C15, GPU T4 de Kaggle).
+Deux encodeurs gelés sont comparés sur le groupe d'évaluation d'OpenSLR~57 (112 locuteurs,
+8\,016 phrases de test, section~\ref{sec:p11}) : ECAPA-TDNN, entraîné pour la vérification du
+locuteur sur VoxCeleb, et mHuBERT-147, entraîné pour représenter la parole. La voix enregistrée
+d'un locuteur est la moyenne de ses cinq vecteurs d'enregistrement, et le score d'une phrase
+est sa similarité cosinus avec chaque voix enregistrée. Le seuil « inconnu » est celui de
+l'EER sur le groupe de calibration ; pour mHuBERT, la couche gardée est aussi choisie sur ce
+groupe.
+
+\begin{table}[ht]
+  \centering
+  \small
+  \begin{tabular}{@{}lrrrr@{}}
+    \toprule
+    Encodeur & Accuracy & EER & Connus acceptés et justes & Inconnus rejetés \\
+    \midrule
+    ECAPA-TDNN          & \textbf{97,7\,\%} & \textbf{2,7\,\%} & 96,8\,\% & 27,7\,\% \\
+    mHuBERT-147 (couche 0) & 71,1\,\% & 10,2\,\% & 69,7\,\% & 11,0\,\% \\
+    \bottomrule
+  \end{tabular}
+  \caption{Identification du locuteur sur OpenSLR~57 (groupe d'évaluation). Accuracy en
+    ensemble fermé ; « inconnus » : phrases des locuteurs de calibration, absents des voix
+    enregistrées de l'évaluation.}
+  \label{tab:locuteur}
+\end{table}
+
+ECAPA-TDNN reconnaît la bonne personne dans 97,7\,\% des cas, avec peu d'écart entre
+sous-corpus (\texttt{ca16} 96,2\,\%, Niger 94,4\,\%, Yaoundé 99,4\,\%). mHuBERT est nettement
+moins bon, et son EER de calibration augmente de couche en couche (9,4\,\% à la couche 0,
+20,8\,\% à la couche 12) : ses couches profondes gardent ce qui est dit et oublient qui parle.
+
+En revanche, le rejet des voix inconnues est faible (27,7\,\% pour ECAPA). Le seuil est choisi
+à l'EER sur des paires (phrase, locuteur) prises une à une, alors que la décision compare au
+seuil le \emph{meilleur} des 112 scores, presque toujours plus élevé. Calibrer le seuil
+directement sur la décision en ensemble ouvert est une perspective
+(section~\ref{sec:conclusion}).
+
+\subsection{Transcription}
+\label{sec:res-wer}
+
+\aRediger{Lynn, après C17}{WER et CER de Whisper base et small (français forcé) sur le test
+  officiel d'OpenSLR~57 et sur Yaoundé, avec intervalles de confiance et RTF.}
+
+\subsection{Analyse des erreurs}
+\label{sec:res-erreurs}
+
+\aRediger{Lynn}{Robustesse au bruit (F1 selon le SNR, E3) ; biais par genre sur le test
+  équilibré des émotions (E4) ; exemples d'erreurs écoutés. \textbf{À produire.}}
+
+\subsection{Explicabilité et efficacité}
+\label{sec:res-explicabilite}
+
+\aRediger{Nicole}{Carte Grad-CAM et test de masquage (E7) ; calibration par température et
+  diagramme de fiabilité (E2) ; latence p50 et p95 et RTF (\texttt{latency\_cpu.json}).}
