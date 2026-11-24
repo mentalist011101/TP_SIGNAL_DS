@@ -31,42 +31,13 @@
 \subsection{Identification du locuteur}
 \label{sec:res-locuteur}
 
-% Chiffres : training/results/c15_speaker_openslr57.json (C15, GPU T4 de Kaggle).
-Deux encodeurs gelés sont comparés sur le groupe d'évaluation d'OpenSLR~57 (112 locuteurs,
-8\,016 phrases de test, section~\ref{sec:p11}) : ECAPA-TDNN, entraîné pour la vérification du
-locuteur sur VoxCeleb, et mHuBERT-147, entraîné pour représenter la parole. La voix enregistrée
-d'un locuteur est la moyenne de ses cinq vecteurs d'enregistrement, et le score d'une phrase
-est sa similarité cosinus avec chaque voix enregistrée. Le seuil « inconnu » est celui de
-l'EER sur le groupe de calibration ; pour mHuBERT, la couche gardée est aussi choisie sur ce
-groupe.
-
-\begin{table}[ht]
-  \centering
-  \small
-  \begin{tabular}{@{}lrrrr@{}}
-    \toprule
-    Encodeur & Accuracy & EER & Connus acceptés et justes & Inconnus rejetés \\
-    \midrule
-    ECAPA-TDNN          & \textbf{97,7\,\%} & \textbf{2,7\,\%} & 96,8\,\% & 27,7\,\% \\
-    mHuBERT-147 (couche 0) & 71,1\,\% & 10,2\,\% & 69,7\,\% & 11,0\,\% \\
-    \bottomrule
-  \end{tabular}
-  \caption{Identification du locuteur sur OpenSLR~57 (groupe d'évaluation). Accuracy en
-    ensemble fermé ; « inconnus » : phrases des locuteurs de calibration, absents des voix
-    enregistrées de l'évaluation.}
-  \label{tab:locuteur}
-\end{table}
-
-ECAPA-TDNN reconnaît la bonne personne dans 97,7\,\% des cas, avec peu d'écart entre
-sous-corpus (\texttt{ca16} 96,2\,\%, Niger 94,4\,\%, Yaoundé 99,4\,\%). mHuBERT est nettement
-moins bon, et son EER de calibration augmente de couche en couche (9,4\,\% à la couche 0,
-20,8\,\% à la couche 12) : ses couches profondes gardent ce qui est dit et oublient qui parle.
-
-En revanche, le rejet des voix inconnues est faible (27,7\,\% pour ECAPA). Le seuil est choisi
-à l'EER sur des paires (phrase, locuteur) prises une à une, alors que la décision compare au
-seuil le \emph{meilleur} des 112 scores, presque toujours plus élevé. Calibrer le seuil
-directement sur la décision en ensemble ouvert est une perspective
-(section~\ref{sec:conclusion}).
+\aRediger{Lynn, après le nouveau passage de C15 sur Kaggle}{Tableau ECAPA-TDNN contre
+  mHuBERT sur le groupe d'évaluation : accuracy en ensemble fermé et EER avec leurs intervalles
+  à 95\,\% (bootstrap sur les locuteurs, P8), voix connues acceptées et justes, imposteurs
+  rejetés au seuil de la calibration, accuracy par sous-corpus, couche choisie pour mHuBERT et
+  EER de calibration par couche. Source :
+  \texttt{training/results/c15\_speaker\_openslr57.json}. Le premier passage (seuil pris sur des
+  paires isolées) est abandonné : il acceptait à tort 72\,\% des inconnus.}
 
 \subsection{Transcription}
 \label{sec:res-wer}

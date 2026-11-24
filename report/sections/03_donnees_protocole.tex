@@ -28,16 +28,17 @@ l'entraînement (P7) : en domaine, hors domaine, et les voix de l'équipe
     ESC-50     & 50 classes de sons, extraits de 5\,s             & Événements & 2\,000 & validation croisée, 5 folds \\
     CaFE       & 12 acteurs francophones (6 H, 6 F)             & Émotions & 936    & test hors domaine \\
     OpenSLR~57 & français à l'accent africain, 19,9\,h          & Transcription, locuteur & 16\,656 & test seulement \\
-    Équipe     & 4 voix camerounaises, téléphone et ordinateur  & Toutes   & ---    & test et démonstration \\
+    Équipe (prévu) & 4 personnes, téléphone et ordinateur : 20 phrases lues, 2 phrases jouées avec les 6 émotions, 1 ou 2 sons & Toutes & --- & test et démonstration \\
     \bottomrule
   \end{tabularx}
-  \caption{Jeux de données et rôle de chacun (P7, P10). ACE (voix africaines, émotions) était
-    prévu en test hors domaine ; l'accès n'a pas été obtenu.}
+  \caption{Jeux de données et rôle de chacun (P7, P10). La ligne « Équipe » décrit ce que
+    prévoit le protocole d'enregistrement (P13) : ces voix ne sont pas encore enregistrées. ACE
+    (voix africaines, émotions) était prévu en test hors domaine ; l'accès n'a pas été obtenu.}
   \label{tab:jeux}
 \end{table}
 
-\aRediger{Lynn}{Ligne « Équipe » : nombre d'extraits réel une fois les enregistrements faits
-  (T6), ou retirer la ligne. Statut final d'ACE.}
+\aRediger{Lynn}{Ligne « Équipe » : remplacer la prévision par le nombre réel d'extraits une
+  fois les enregistrements faits (T6), ou retirer la ligne. Statut final d'ACE.}
 
 \subsection{Manifestes}
 \label{sec:manifestes}
@@ -84,9 +85,11 @@ consigne de jeu à part, et la fusion triplerait les neutres de RAVDESS (de 96 �
   \label{tab:emotions}
 \end{table}
 
-À l'entraînement, le neutre est un peu moins fréquent que les autres classes (1\,183 extraits
-contre 1\,463). C'est l'une des raisons du choix du F1 macro comme métrique principale (P4) :
-chaque classe y compte autant, quelle que soit sa fréquence.
+Le neutre est un peu moins fréquent que les autres classes : après le découpage par acteur
+(section~\ref{sec:p1}), l'entraînement compte 815 neutres contre 1\,007 pour chacune des cinq
+autres émotions, la validation et le test 184 contre 228. La métrique principale est le F1
+macro (P4), où chaque classe pèse autant quelle que soit sa fréquence ; l'accuracy est aussi
+rapportée, pour rester comparable aux articles.
 
 \subsection{Découpage des émotions par acteur}
 \label{sec:p1}
@@ -159,16 +162,40 @@ n'est appliquée qu'après le découpage, et à l'entraînement seul.
 \label{sec:p11}
 
 Pour reconnaître une voix, il faut l'avoir entendue : on ne sépare donc pas les locuteurs,
-mais leurs \emph{phrases} (P11). Sur OpenSLR~57, un locuteur est identifié par son sous-corpus
-et son dossier ; 225 locuteurs sur 233 ont au moins dix phrases et sont gardés. Pour chacun,
-cinq phrases tirées au hasard (graine 42) servent à enregistrer sa voix, les autres servent au
-test.
+mais leurs \emph{phrases} (P11). Les découpages officiels d'OpenSLR~57 ne conviennent pas, et
+ne séparent d'ailleurs pas tous les locuteurs : 14 dossiers du sous-corpus \texttt{ca16} sont
+à la fois dans \texttt{train} et dans \texttt{devtest}, avec le même préfixe de session. Un
+locuteur est donc identifié par son sous-corpus et son dossier ; 225 locuteurs sur 233 ont au
+moins dix phrases et sont gardés. Pour chacun, cinq phrases tirées au hasard (graine 42)
+servent à enregistrer sa voix, les autres servent au test.
 
-Les locuteurs sont ensuite répartis en deux groupes, un sur deux dans chaque sous-corpus : un
-groupe de \emph{calibration} (113 locuteurs), qui sert à choisir le seuil « locuteur inconnu »,
-et un groupe d'\emph{évaluation} (112 locuteurs, 8\,016 phrases de test), qui sert à mesurer
-les scores. Choisir le seuil sur les voix évaluées gonflerait le résultat. Le découpage est
-versionné dans \texttt{data/splits/openslr57\_speakers.csv}.
+Les locuteurs sont ensuite répartis en quatre groupes, un sur quatre dans chaque sous-corpus
+(tableau~\ref{tab:p11}). Le seuil « locuteur inconnu » est choisi sur le groupe de calibration
+et ses imposteurs, puis mesuré sur le groupe d'évaluation et d'autres imposteurs : aucune voix
+ne sert à la fois à choisir le seuil et à le mesurer. Comme dans l'application, la décision
+compare au seuil le \emph{meilleur} score d'une phrase parmi toutes les voix enregistrées.
+
+\begin{table}[ht]
+  \centering
+  \small
+  \begin{tabular}{@{}llrr@{}}
+    \toprule
+    Groupe & Rôle & Locuteurs & Phrases de test \\
+    \midrule
+    Calibration               & voix enregistrées, choix du seuil & 57 & 3\,570 \\
+    Imposteurs de calibration & voix inconnues, choix du seuil    & 56 & 3\,906 \\
+    Évaluation                & voix enregistrées, mesure         & 57 & 4\,246 \\
+    Imposteurs d'évaluation   & voix inconnues, mesure            & 55 & 3\,770 \\
+    \bottomrule
+  \end{tabular}
+  \caption{Groupes de locuteurs d'OpenSLR~57 (P11), versionnés dans
+    \texttt{data/splits/openslr57\_speakers.csv}.}
+  \label{tab:p11}
+\end{table}
+
+Rien ne garantit que deux dossiers différents correspondent à deux personnes différentes :
+OpenSLR~57 ne fournit pas d'identité. Si une même personne apparaissait sous deux dossiers, le
+score serait sous-estimé.
 
 \subsection{Transcription}
 \label{sec:p12}
@@ -189,7 +216,8 @@ modification du code : aucun acteur dans deux découpages d'émotions ; chaque f
 un seul découpage ; toutes les étiquettes dans les six classes après correspondance ; effectifs
 par découpage et par genre conformes au tableau~\ref{tab:p1} ; découpage identique quand on le
 régénère ; 400 extraits par fold d'ESC-50 ; aucune phrase d'un locuteur à la fois en
-enregistrement et en test.
+enregistrement et en test ; seuil du locuteur inchangé quand on modifie les imposteurs
+d'évaluation.
 
 \subsection{Limites des données}
 \label{sec:limites-donnees}
