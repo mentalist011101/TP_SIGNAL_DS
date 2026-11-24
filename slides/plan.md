@@ -138,6 +138,10 @@ conséquence. **Décision à prendre en équipe le 2 décembre**, à la remise.
 - [ ] Historique préchargé avec 3 ou 4 analyses déjà terminées.
 - [ ] Micro testé dans la salle ; la page tourne sur `localhost`, sinon le navigateur bloque le
       micro (il faut https).
+- [ ] Vrais modèles et préchargement activés : `ECHOLENS_INFERENCE_BACKEND=models` et
+      `ECHOLENS_PRELOAD_MODELS=true`. Sans préchargement, la première analyse attend le
+      téléchargement des modèles, et les autres attendent derrière elle (relecture de C13).
+      Vérifier qu'aucune carte n'affiche l'étiquette « Démo ».
 - [ ] Modèles préchauffés (une analyse lancée juste avant de passer), pour éviter une première
       réponse lente.
 - [ ] Navigateur en plein écran, zoom à 125 %, notifications coupées, onglets inutiles fermés.
