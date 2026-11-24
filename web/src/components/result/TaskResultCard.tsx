@@ -1,6 +1,12 @@
 import { useState } from 'react'
-import type { AnalysisTask, ClassProbability, TaskResult } from '../../api/client.ts'
+import {
+  useModels,
+  type AnalysisTask,
+  type ClassProbability,
+  type TaskResult,
+} from '../../api/client.ts'
 import { TASK_LABELS } from '../../labels.ts'
+import { findModel, formatCalibration, formatScore } from '../models/modelFormat.ts'
 import MainResultValue from './MainResultValue.tsx'
 import ProbabilityBars from './ProbabilityBars.tsx'
 import { isDemoResult } from './taskResult.ts'
@@ -55,8 +61,36 @@ function TaskBars({ task, result }: { task: AnalysisTask; result: TaskResult }) 
   return <ProbabilityBars probabilities={result.probabilities} />
 }
 
-// Modèle qui a produit le résultat, pour la traçabilité (ENF-06 : calibration).
+// Modèle qui a produit le résultat, pour la traçabilité : sa version, son F1 de test, sa
+// calibration (ENF-06) et la page de ses poids, lus dans le catalogue (GET /api/v1/models).
 function ModelLine({ result }: { result: TaskResult }) {
+  const models = useModels()
+  const catalog = models.data ?? []
+  const model = findModel(catalog, result.model_id)
+  if (model === null) {
+    return <BasicModelLine result={result} />
+  }
+  return (
+    <p className="text-xs text-ink-soft">
+      Modèle : <span className="font-mono">{model.id}</span>, version{' '}
+      <span className="font-mono">{result.model_version}</span> · F1 de test{' '}
+      <span className="font-mono">{formatScore(model.f1_macro)}</span> ·{' '}
+      <span className="font-mono whitespace-nowrap">{formatCalibration(model)}</span>
+      {model.huggingface_url !== null && (
+        <>
+          {' · '}
+          <a href={model.huggingface_url} className="text-accent-ink underline underline-offset-2">
+            page Hugging Face
+          </a>
+        </>
+      )}
+    </p>
+  )
+}
+
+// Ligne de secours quand le modèle n'est pas au catalogue (faux prédicteur, modèle retiré du
+// registre, catalogue pas encore chargé) : ce que dit le résultat lui-même.
+function BasicModelLine({ result }: { result: TaskResult }) {
   let calibrationText = 'probabilités non calibrées'
   if (result.calibrated === true) {
     calibrationText = 'probabilités calibrées'

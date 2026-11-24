@@ -2,7 +2,7 @@ import type { ComponentType } from 'react'
 import { Link, NavLink, Outlet } from 'react-router-dom'
 import { useHealth } from '../api/client.ts'
 import Brand from './Brand.tsx'
-import { HistoryIcon, PlusIcon, WaveIcon } from './icons.tsx'
+import { HistoryIcon, ModelsIcon, PlusIcon, WaveIcon } from './icons.tsx'
 import ThemeToggle from './ThemeToggle.tsx'
 
 interface NavItem {
@@ -11,11 +11,12 @@ interface NavItem {
   icon: ComponentType<{ className?: string }>
 }
 
-// Pages livrées. Les pages encore vides (Direct, Comparer, Locuteurs, Modèles) n'entrent au
-// menu qu'une fois livrées.
+// Pages livrées. Les pages encore vides (Direct, Comparer, Locuteurs) n'entrent au menu
+// qu'une fois livrées.
 const MAIN_ITEMS: NavItem[] = [
   { to: '/analyser', label: 'Analyser', icon: WaveIcon },
   { to: '/historique', label: 'Historique', icon: HistoryIcon },
+  { to: '/modeles', label: 'Modèles', icon: ModelsIcon },
 ]
 
 const NEW_ANALYSIS_CLASSES =
