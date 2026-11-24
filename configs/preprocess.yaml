@@ -17,7 +17,9 @@ vad:
   # installé ; sinon webrtcvad en secours. Choix automatique, écrit dans les journaux.
   silero_threshold: 0.40          # Silero : une tranche de 32 ms ouvre un segment si p ≥ 0,40
   silero_end_threshold: 0.25      # hystérésis : le segment continue tant que p ≥ 0,25
-                                  # (C24 : 7,2 % de faux positifs, 91,0 % de parole retrouvée)
+                                  # C24 : 7,2 % de faux positifs ; 91 % des extraits de
+                                  # parole reconnus comme parole sur au moins la moitié
+                                  # de leur durée
   aggressiveness: 2               # webrtcvad (secours) : 0 (tolérant) à 3 (strict)
   frame_ms: 30                    # webrtcvad (secours)
   # Nettoyage des segments, commun aux deux VAD (durées minimales mesurées en C24) :
