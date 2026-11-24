@@ -16,7 +16,7 @@ from typing import Any
 import numpy as np
 import soundfile as sf
 from sqlalchemy import select, update
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.orm import Session, contains_eager, defer, sessionmaker
 from werkzeug.datastructures import FileStorage
 from werkzeug.utils import secure_filename
 
@@ -33,10 +33,10 @@ from echolens.core.data.class_labels import load_class_labels
 from echolens.core.features import FeatureConfig, log_mel_spectrogram
 from echolens.core.inference import load_inference_config
 from echolens.services.predictor import make_predictor
-from echolens.services.results import ResultContext, build_results
+from echolens.services.results import ResultContext, build_results, summarize_results
 from echolens.services.spectrogram_image import save_spectrogram_png
 from echolens.services.speech_detection import make_speech_detector
-from echolens.services.storage import AnalysisRecord, AnalysisStatus
+from echolens.services.storage import AnalysisRecord, AnalysisStatus, AnalysisSummaryRecord
 
 # Format de l'audio conservé : WAV PCM 16 bits, mono 16 kHz (D2).
 CONVERTED_AUDIO_NAME = "audio.wav"
@@ -114,8 +114,18 @@ class AnalysisService:
         return record
 
     def list_analyses(self, limit: int, offset: int) -> list[AnalysisRecord]:
-        """Historique des analyses, les plus récentes d'abord (EF-08)."""
+        """Historique des analyses, les plus récentes d'abord (EF-08).
+
+        La colonne results n'est jamais lue : elle pèse des centaines de ko par analyse, et
+        l'historique n'a besoin que du résumé (table analysis_summaries).
+        """
+        # Étape 1 : chaque analyse avec sa ligne de résumé, s'il y en a une (jointure externe
+        # gauche : une analyse en cours ou en échec n'a pas de résumé mais reste listée).
         query = select(AnalysisRecord)
+        query = query.outerjoin(AnalysisRecord.summary_row)
+        query = query.options(contains_eager(AnalysisRecord.summary_row))
+        # Étape 2 : results hors du SELECT, puis tri et pagination.
+        query = query.options(defer(AnalysisRecord.results))
         query = query.order_by(AnalysisRecord.created_at.desc())
         query = query.limit(limit).offset(offset)
         with self.session_factory() as session:
@@ -191,13 +201,15 @@ class AnalysisService:
 
     def _process(self, analysis_id: str) -> None:
         # Traitement d'une analyse : conversion, spectrogramme, puis résultats des tâches
-        # demandées. Les résultats ne sont enregistrés qu'avec le statut done : results reste
-        # null pendant le traitement et en cas d'échec.
+        # demandées et leur résumé pour l'historique. Les deux ne sont enregistrés qu'avec le
+        # statut done : results reste null, et le résumé absent, pendant le traitement et en cas
+        # d'échec.
         self._update(analysis_id, status=AnalysisStatus.PROCESSING)
         try:
             duration_s = self._convert_audio(analysis_id)
             self._save_spectrogram(analysis_id)
             results = self._compute_results(analysis_id)
+            summary = summarize_results(results)
         except Exception as error:
             # Frontière du thread : toute erreur doit finir en statut failed, sinon elle
             # serait perdue dans le pool et l'analyse resterait « processing » pour toujours.
@@ -205,7 +217,11 @@ class AnalysisService:
             self._update(analysis_id, status=AnalysisStatus.FAILED, error_message=message)
             return
         self._update(
-            analysis_id, status=AnalysisStatus.DONE, duration_s=duration_s, results=results
+            analysis_id,
+            status=AnalysisStatus.DONE,
+            duration_s=duration_s,
+            results=results,
+            summary=summary,
         )
 
     def _convert_audio(self, analysis_id: str) -> float:
@@ -253,6 +269,7 @@ class AnalysisService:
         error_message: str | None = None,
         duration_s: float | None = None,
         results: dict[str, Any] | None = None,
+        summary: dict[str, Any] | None = None,
     ) -> None:
         with self.session_factory() as session:
             record = session.get(AnalysisRecord, analysis_id)
@@ -265,6 +282,10 @@ class AnalysisService:
                 record.duration_s = duration_s
             if results is not None:
                 record.results = results
+            # Résumé pour l'historique : une ligne de analysis_summaries, enregistrée par le
+            # même commit que results (une seule transaction, les deux restent cohérents).
+            if summary is not None:
+                record.summary_row = AnalysisSummaryRecord(analysis_id=analysis_id, summary=summary)
             session.commit()
 
 
