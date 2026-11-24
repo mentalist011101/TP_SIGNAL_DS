@@ -1,4 +1,5 @@
-"""Routes des analyses (S4) : import, statut, historique, audio, spectrogramme, suppression.
+"""Routes des analyses (S4) : import, statut, historique, audio, spectrogramme, export,
+suppression.
 
 Les routes ne font que traduire HTTP ↔ service : toute la logique vit dans AnalysisService.
 
@@ -11,11 +12,14 @@ Format des erreurs (identique pour toutes les routes, voir echolens.api.errors) 
   paramètre invalide, « message » reprend la première erreur trouvée et « errors » donne le
   détail complet, par exemple {"form": {"tasks": {"1": ["Tâche inconnue : « danse »…"]}}}.
 - 404 : analyse inconnue, ou audio ou spectrogramme pas encore disponible.
+- 409 : export demandé pour une analyse qui n'est pas terminée.
 - 413 : fichier plus gros que max_upload_mb.
+- 422 : format d'export inconnu.
 """
 
 from __future__ import annotations
 
+import io
 from datetime import UTC
 from typing import Any
 
@@ -36,6 +40,7 @@ from echolens.services.analysis_service import (
     AnalysisRejectedError,
     AnalysisService,
 )
+from echolens.services.export import EXPORT_FORMATS, AnalysisNotDoneError, build_export
 from echolens.services.spectrogram_image import colormap_stops
 from echolens.services.storage import AnalysisRecord, AnalysisStatus
 
@@ -51,6 +56,8 @@ DEFAULT_PAGE_SIZE = 20
 MAX_PAGE_SIZE = 100
 # Les erreurs de validation des paramètres renvoient 400, comme les contrôles du fichier.
 VALIDATION_ERROR_STATUS = 400
+# Format d'export inconnu : 422, comme le demande le contrat de l'export (C26).
+EXPORT_FORMAT_ERROR_STATUS = 422
 
 
 class FrequencyTickSchema(Schema):
@@ -291,6 +298,22 @@ class AnalysisFileSchema(Schema):
     )
 
 
+class ExportQuerySchema(Schema):
+    """Format du fichier d'export (EF-09)."""
+
+    format = fields.String(
+        required=True,
+        validate=validate.OneOf(
+            EXPORT_FORMATS, error="Format inconnu : « {input} ». Formats possibles : {choices}."
+        ),
+        error_messages={"required": "Choisissez un format d'export : json, csv ou pdf."},
+        metadata={
+            "description": "json : le détail de l'analyse ; csv : une ligne par probabilité "
+            "(globale et par segment) ; pdf : rapport en français avec le spectrogramme."
+        },
+    )
+
+
 class HistoryQuerySchema(Schema):
     """Pagination de l'historique."""
 
@@ -374,6 +397,38 @@ class AnalysisAudio(MethodView):
         if not path.is_file():
             abort(404, message="Audio pas encore disponible : l'analyse n'est pas terminée.")
         return send_file(path, mimetype="audio/wav")
+
+
+@blp.route("/<analysis_id>/export")
+class AnalysisExport(MethodView):
+    @blp.arguments(
+        ExportQuerySchema, location="query", error_status_code=EXPORT_FORMAT_ERROR_STATUS
+    )
+    @blp.response(200, description="Fichier à télécharger (JSON, CSV ou PDF), en pièce jointe.")
+    @blp.alt_response(404, description="Analyse introuvable.")
+    @blp.alt_response(409, description="Analyse pas encore terminée : rien à exporter.")
+    @blp.alt_response(422, description="Format d'export inconnu.")
+    def get(self, query: dict[str, str], analysis_id: str) -> Response:
+        """Exporte les résultats d'une analyse terminée en JSON, CSV ou PDF (EF-09).
+
+        Nom du fichier : echolens_<nom d'origine>_<AAAA-MM-JJ>.<format>.
+        """
+        service = _service()
+        try:
+            record = service.get_analysis(analysis_id)
+        except AnalysisNotFoundError as error:
+            abort(404, message=str(error))
+        # Le JSON exporté est le détail de l'analyse, exactement comme GET /analyses/{id}.
+        detail = AnalysisSchema().dump(record)
+        spectrogram_path = service.spectrogram_path(analysis_id)
+        try:
+            export = build_export(record, query["format"], detail, spectrogram_path)
+        except AnalysisNotDoneError as error:
+            abort(409, message=str(error))
+        content = io.BytesIO(export.content)
+        return send_file(
+            content, mimetype=export.mimetype, as_attachment=True, download_name=export.filename
+        )
 
 
 @blp.route("/<analysis_id>/spectrogram")
