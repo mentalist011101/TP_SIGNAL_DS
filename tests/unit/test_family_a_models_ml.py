@@ -216,3 +216,52 @@ def test_production_weights_round_trip_through_safetensors(tmp_path: Path) -> No
         expected = network(inputs).logits
         actual = reloaded(inputs).logits
     torch.testing.assert_close(actual, expected, rtol=0, atol=0)
+
+
+def test_emotion_run_tunes_once_then_keeps_each_seed_best_epoch() -> None:
+    from echolens.training.family_a_emotions_training import EmotionParts, run_emotion_architecture
+    from echolens.training.family_a_report import choose_trial
+
+    base = tiny_config()
+    emotions = load_family_a_config().emotions
+    assert emotions is not None
+    small_emotions = emotions.model_copy(
+        update={"max_epochs": 4, "learning_rates": [1e-2, 3e-3], "seeds": [42, 43]}
+    )
+    config = base.model_copy(update={"emotions": small_emotions})
+    # Train : extraits plus longs que la fenêtre (80 trames stockées, 50 à 80 vraies), la
+    # fenêtre de 64 trames est tirée au hasard à chaque lot ; validation et test déjà à 64.
+    generator = np.random.default_rng(0)
+    train_clips = separable_spectrograms(clips_per_class=8, seed=0)
+    stored = np.full((len(train_clips.labels), SMALL_BANDS, 80), -100.0, dtype=np.float32)
+    lengths = generator.integers(50, 81, size=len(train_clips.labels))
+    for index, length in enumerate(lengths):
+        long_clip = np.concatenate([train_clips.log_mels[index]] * 2, axis=1)
+        stored[index, :, :length] = long_clip[:, :length]
+    train = LabeledSpectrograms(
+        log_mels=stored,
+        labels=train_clips.labels,
+        lengths=lengths,
+        window_frames=SMALL_FRAMES,
+        silence_db=-100.0,
+    )
+    validation = separable_spectrograms(clips_per_class=4, seed=1)
+    test = separable_spectrograms(clips_per_class=4, seed=2)
+    parts = EmotionParts(
+        train=train,
+        validation=validation,
+        test=test,
+        validation_indices=np.arange(len(validation.labels)),
+        test_indices=np.arange(len(test.labels)),
+    )
+    run = run_emotion_architecture("cnn", parts, SMALL_CLASSES, config, CPU)
+    assert [trial.learning_rate for trial in run.trials] == [1e-2, 3e-3]
+    assert run.chosen_learning_rate in (1e-2, 3e-3)
+    assert [seed_run.seed for seed_run in run.runs] == [42, 43]
+    chosen = run.trials[choose_trial(run.trials)]
+    # Graine de réglage : même entraînement que l'essai retenu, réutilisé tel quel.
+    assert run.runs[0].best_epoch == chosen.best_epoch
+    assert run.runs[0].validation_f1_history == chosen.validation_f1_history
+    for seed_run in run.runs:
+        assert len(seed_run.validation_f1_history) == 4
+        assert seed_run.test.probabilities.shape == (len(test.labels), SMALL_CLASSES)
