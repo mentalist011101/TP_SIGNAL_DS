@@ -1,4 +1,4 @@
-import { isAnalysisRunning, type Analysis } from '../../api/client.ts'
+import { isAnalysisRunning, type AnalysisSummary } from '../../api/client.ts'
 
 // Filtre par statut : « en cours » regroupe pending et processing, que l'utilisateur ne
 // distingue pas.
@@ -19,7 +19,7 @@ const WEEK_DAYS = 7
 const MONTH_DAYS = 30
 
 // Vrai si le statut de l'analyse correspond au filtre choisi.
-function matchesStatus(analysis: Analysis, filter: StatusFilter): boolean {
+function matchesStatus(analysis: AnalysisSummary, filter: StatusFilter): boolean {
   if (filter === 'all') {
     return true
   }
@@ -45,7 +45,7 @@ function periodStart(filter: DateFilter, now: Date): Date {
 }
 
 // Vrai si l'analyse a été créée dans la période choisie.
-function matchesDate(analysis: Analysis, filter: DateFilter, now: Date): boolean {
+function matchesDate(analysis: AnalysisSummary, filter: DateFilter, now: Date): boolean {
   if (filter === 'all') {
     return true
   }
@@ -55,7 +55,7 @@ function matchesDate(analysis: Analysis, filter: DateFilter, now: Date): boolean
 }
 
 // Vrai si le nom du fichier contient le texte cherché, sans tenir compte des majuscules.
-function matchesQuery(analysis: Analysis, query: string): boolean {
+function matchesQuery(analysis: AnalysisSummary, query: string): boolean {
   const searched = query.trim().toLowerCase()
   if (searched === '') {
     return true
@@ -66,11 +66,11 @@ function matchesQuery(analysis: Analysis, query: string): boolean {
 
 // Garde les analyses qui passent les trois filtres, dans l'ordre reçu (les plus récentes d'abord).
 export function filterAnalyses(
-  analyses: Analysis[],
+  analyses: AnalysisSummary[],
   filters: HistoryFilterValues,
   now: Date,
-): Analysis[] {
-  const kept: Analysis[] = []
+): AnalysisSummary[] {
+  const kept: AnalysisSummary[] = []
   for (const analysis of analyses) {
     const statusOk = matchesStatus(analysis, filters.status)
     const dateOk = matchesDate(analysis, filters.date, now)

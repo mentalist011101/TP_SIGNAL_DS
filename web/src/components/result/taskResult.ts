@@ -1,4 +1,10 @@
-import type { Analysis, ClassProbability, TaskResult } from '../../api/client.ts'
+import type {
+  Analysis,
+  AnalysisSummary,
+  ClassProbability,
+  TaskResult,
+  TaskResultSummary,
+} from '../../api/client.ts'
 
 // Identifiant du faux prédicteur dans le contrat de l'API (C13).
 const DEMO_MODEL_ID = 'demo'
@@ -26,8 +32,8 @@ export function mainProbability(result: TaskResult): number | null {
 }
 
 // Vrai si ce résultat affiche des probabilités du faux prédicteur : seulement en done, car
-// no_speech et unavailable n'affichent aucun chiffre.
-export function isDemoResult(result: TaskResult): boolean {
+// no_speech et unavailable n'affichent aucun chiffre. Sert à la page Résultat et à l'historique.
+export function isDemoResult(result: TaskResult | TaskResultSummary): boolean {
   if (result.status !== 'done') {
     return false
   }
@@ -35,7 +41,7 @@ export function isDemoResult(result: TaskResult): boolean {
 }
 
 // Vrai si au moins une tâche de l'analyse affiche des probabilités de démonstration.
-export function hasDemoResult(analysis: Analysis): boolean {
+export function hasDemoResult(analysis: Analysis | AnalysisSummary): boolean {
   if (analysis.results === null) {
     return false
   }
