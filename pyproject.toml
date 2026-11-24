@@ -32,6 +32,7 @@ ml = [
     "speechbrain>=1.0",
     "faster-whisper>=1.0",
     "scikit-learn>=1.4",
+    "silero-vad>=5.1",
 ]
 # Outils d'expérimentation : uniquement pour l'entraînement et l'évaluation.
 training = [
@@ -103,10 +104,14 @@ module = [
 ]
 disallow_subclassing_any = false
 
-# transformers n'annote pas from_pretrained : l'appel est accepté dans les modules qui
-# chargent un encodeur (et transformers est absent de la CI, où tout y est de type Any).
+# transformers et silero-vad n'annotent pas leurs chargeurs : l'appel est accepté dans les
+# modules qui chargent un modèle (absents de la CI, où tout y est de type Any).
 [[tool.mypy.overrides]]
-module = ["echolens.training.encoders", "echolens.core.models.whisper_encoder"]
+module = [
+    "echolens.training.encoders",
+    "echolens.core.models.whisper_encoder",
+    "echolens.core.models.silero_vad",
+]
 disallow_untyped_calls = false
 
 [tool.pytest.ini_options]

@@ -1,0 +1,27 @@
+# C24 — la VAD (D5) prend-elle du bruit pour de la parole ? Paramètres de la mesure.
+# Toutes les options passent par le même nettoyage des segments que l'application
+# (configs/preprocess.yaml, vad : fusion, segments minimum, marge).
+
+# ESC-50 : on garde les classes sans voix humaine. Ces 6 classes sont des sons du corps
+# humain, proches de la parole : une VAD a le droit d'y réagir.
+excluded_esc50_classes: [crying_baby, sneezing, coughing, laughing, breathing, snoring]
+false_speech_min_s: 0.5         # un extrait ESC-50 est un faux positif dès 0,5 s de « parole »
+
+# CREMA-D : tirage fixe de 200 extraits, toute la base de parole n'est pas nécessaire.
+cremad_sample_size: 200
+seed: 42
+speech_share_min: 0.5           # parole retrouvée si au moins 50 % de la durée est « parole »
+
+# Contrôle d'énergie : une trame n'est gardée que si la bande téléphonique (300–3 400 Hz,
+# celle qui porte l'intelligibilité de la parole) contient au moins cette part de sa puissance.
+band_low_hz: 300.0
+band_high_hz: 3400.0
+band_share_thresholds: [0.5, 0.6, 0.7, 0.8]
+
+# Silero VAD : une tranche de 32 ms est « parole » si sa probabilité atteint ce seuil
+# (valeur par défaut du modèle).
+silero_threshold: 0.5
+
+# Critères de choix (C24) : on garde l'option la plus simple qui respecte les deux.
+max_false_positive_rate: 0.10   # au plus 10 % de faux positifs sur ESC-50
+min_speech_recall: 0.95         # au moins 95 % de la parole retrouvée sur CREMA-D
