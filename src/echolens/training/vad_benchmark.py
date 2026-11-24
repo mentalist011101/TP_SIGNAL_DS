@@ -4,7 +4,8 @@ Options comparées, de la plus simple à la plus lourde :
 1. webrtcvad seul, agressivité 0 à 3 ;
 2. webrtcvad plus un contrôle d'énergie : une trame n'est gardée que si la bande 300–3 400 Hz
    contient au moins une part donnée de sa puissance ;
-3. Silero VAD (réseau de neurones, torch).
+3. Silero VAD (réseau de neurones, torch), à plusieurs seuils, avec ou sans l'hystérésis de
+   Silero (un segment commence à p ≥ seuil et continue tant que p ≥ seuil − 0,15).
 
 Les décisions brutes de chaque extrait (trames webrtcvad, parts d'énergie, probabilités
 Silero) sont calculées une fois, puis chaque option les combine et passe par le même
@@ -51,7 +52,9 @@ class VadBenchmarkConfig(BaseModel):
     band_low_hz: float = Field(ge=0)
     band_high_hz: float = Field(gt=0)
     band_share_thresholds: list[float] = Field(min_length=1)
-    silero_threshold: float = Field(gt=0, lt=1)
+    silero_thresholds: list[float] = Field(min_length=1)
+    silero_hysteresis_gap: float = Field(gt=0, lt=1)
+    silero_min_end_threshold: float = Field(gt=0, lt=1)
     max_false_positive_rate: float = Field(ge=0, le=1)
     min_speech_recall: float = Field(ge=0, le=1)
 
@@ -73,12 +76,15 @@ class ClipDecisions:
 
 @dataclass(frozen=True)
 class VadOption:
-    """Une option mesurée : méthode, agressivité de webrtcvad, seuil de part d'énergie."""
+    """Une option mesurée. Les champs inutiles à la méthode valent None."""
 
     name: str
     method: Method
-    aggressiveness: int | None
-    band_threshold: float | None
+    aggressiveness: int | None = None
+    band_threshold: float | None = None
+    silero_threshold: float | None = None
+    # Seuil de fin de l'hystérésis de Silero ; None : un seul seuil, sans hystérésis.
+    silero_end_threshold: float | None = None
 
 
 @dataclass(frozen=True)
@@ -162,13 +168,46 @@ def benchmark_options(config: VadBenchmarkConfig) -> list[VadOption]:
     """Toutes les options mesurées, dans l'ordre de simplicité."""
     options: list[VadOption] = []
     for level in WEBRTCVAD_LEVELS:
-        options.append(VadOption(f"webrtcvad {level}", "webrtcvad", level, None))
+        options.append(VadOption(f"webrtcvad {level}", "webrtcvad", aggressiveness=level))
     for level in WEBRTCVAD_LEVELS:
         for threshold in config.band_share_thresholds:
             name = f"webrtcvad {level} + bande ≥ {threshold:.2f}"
-            options.append(VadOption(name, "webrtcvad_band", level, threshold))
-    options.append(VadOption(f"Silero ≥ {config.silero_threshold:.2f}", "silero", None, None))
+            option = VadOption(
+                name, "webrtcvad_band", aggressiveness=level, band_threshold=threshold
+            )
+            options.append(option)
+    for threshold in config.silero_thresholds:
+        name = f"Silero ≥ {threshold:.2f}"
+        options.append(VadOption(name, "silero", silero_threshold=threshold))
+    for threshold in config.silero_thresholds:
+        end_threshold = silero_end_threshold(threshold, config)
+        name = f"Silero ≥ {threshold:.2f}, fin < {end_threshold:.2f}"
+        option = VadOption(
+            name, "silero", silero_threshold=threshold, silero_end_threshold=end_threshold
+        )
+        options.append(option)
     return options
+
+
+def silero_end_threshold(threshold: float, config: VadBenchmarkConfig) -> float:
+    """Seuil de fin de l'hystérésis, comme get_speech_timestamps de Silero : seuil − 0,15,
+    sans descendre sous 0,01."""
+    end_threshold = threshold - config.silero_hysteresis_gap
+    return max(end_threshold, config.silero_min_end_threshold)
+
+
+def hysteresis_flags(probabilities: list[float], start: float, end: float) -> list[bool]:
+    """Parole dès que p ≥ start, et jusqu'à ce que p < end : un creux bref au milieu d'un mot
+    ne coupe pas le segment, mais un son faible ne peut pas en commencer un."""
+    flags: list[bool] = []
+    speaking = False
+    for probability in probabilities:
+        if not speaking and probability >= start:
+            speaking = True
+        elif speaking and probability < end:
+            speaking = False
+        flags.append(speaking)
+    return flags
 
 
 def option_flags(
@@ -176,8 +215,7 @@ def option_flags(
 ) -> tuple[list[bool], float]:
     """Décisions par trame d'une option, et durée d'une trame en secondes."""
     if option.method == "silero":
-        flags = _flags_above(decisions.silero_probabilities, config.silero_threshold)
-        return flags, decisions.silero_frame_s
+        return _silero_flags(decisions, option), decisions.silero_frame_s
     if option.aggressiveness is None:
         raise ValueError(f"Option sans agressivité : {option.name}")
     level_flags = decisions.webrtcvad_flags[option.aggressiveness]
@@ -201,6 +239,20 @@ def speech_seconds(
     for segment in segments:
         total_s += segment.duration_s
     return total_s
+
+
+def speech_shares(
+    clips: list[ClipDecisions],
+    option: VadOption,
+    vad_config: VadConfig,
+    config: VadBenchmarkConfig,
+) -> list[float]:
+    """Part de la durée de chaque extrait détectée comme « parole »."""
+    shares: list[float] = []
+    for clip in clips:
+        seconds = speech_seconds(clip, option, vad_config, config)
+        shares.append(seconds / clip.duration_s)
+    return shares
 
 
 def false_positive_rate(
@@ -237,9 +289,7 @@ def speech_recall(
 ) -> float:
     """Part des extraits de parole dont au moins speech_share_min de la durée est « parole »."""
     found = 0
-    for clip in clips:
-        seconds = speech_seconds(clip, option, vad_config, config)
-        share = seconds / clip.duration_s
+    for share in speech_shares(clips, option, vad_config, config):
         if share >= config.speech_share_min:
             found += 1
     return found / len(clips)
@@ -301,6 +351,15 @@ def _is_better(candidate: OptionScore, best: OptionScore) -> bool:
     if candidate.speech_recall != best.speech_recall:
         return candidate.speech_recall > best.speech_recall
     return candidate.false_positive_rate < best.false_positive_rate
+
+
+def _silero_flags(decisions: ClipDecisions, option: VadOption) -> list[bool]:
+    if option.silero_threshold is None:
+        raise ValueError(f"Option sans seuil Silero : {option.name}")
+    probabilities = decisions.silero_probabilities
+    if option.silero_end_threshold is None:
+        return _flags_above(probabilities, option.silero_threshold)
+    return hysteresis_flags(probabilities, option.silero_threshold, option.silero_end_threshold)
 
 
 def _flags_above(values: list[float], threshold: float) -> list[bool]:

@@ -13,6 +13,7 @@ from echolens.training.vad_benchmark import (
     benchmark_options,
     clip_decisions,
     false_positive_rate,
+    hysteresis_flags,
     load_clip_decisions,
     load_vad_benchmark_config,
     non_vocal_esc50_rows,
@@ -20,14 +21,17 @@ from echolens.training.vad_benchmark import (
     sample_rows,
     save_clip_decisions,
     select_option,
+    silero_end_threshold,
     speech_recall,
     speech_seconds,
 )
 
 SAMPLE_RATE = 16_000
-WEBRTC_OPTION = VadOption("webrtcvad 2", "webrtcvad", 2, None)
-BAND_OPTION = VadOption("webrtcvad 2 + bande ≥ 0.60", "webrtcvad_band", 2, 0.6)
-SILERO_OPTION = VadOption("Silero ≥ 0.50", "silero", None, None)
+WEBRTC_OPTION = VadOption("webrtcvad 2", "webrtcvad", aggressiveness=2)
+BAND_OPTION = VadOption(
+    "webrtcvad 2 + bande ≥ 0.60", "webrtcvad_band", aggressiveness=2, band_threshold=0.6
+)
+SILERO_OPTION = VadOption("Silero ≥ 0.50", "silero", silero_threshold=0.5)
 
 
 def config() -> VadBenchmarkConfig:
@@ -77,7 +81,8 @@ def test_sample_is_reproducible_and_without_duplicates() -> None:
 def test_options_are_listed_from_simplest_to_heaviest() -> None:
     options = benchmark_options(config())
     thresholds = len(config().band_share_thresholds)
-    assert len(options) == 4 + 4 * thresholds + 1
+    silero_count = 2 * len(config().silero_thresholds)
+    assert len(options) == 4 + 4 * thresholds + silero_count
     assert options[0].method == "webrtcvad"
     assert options[-1].method == "silero"
 
@@ -142,3 +147,15 @@ def test_decisions_survive_a_json_round_trip(tmp_path: Path) -> None:
     path = tmp_path / "decisions.json"
     save_clip_decisions(clips, path)
     assert load_clip_decisions(path) == clips
+
+
+def test_hysteresis_keeps_a_brief_dip_but_needs_the_start_threshold() -> None:
+    # Un creux à 0,4 ne coupe pas un segment ouvert à 0,5 ; un son à 0,4 n'en ouvre aucun.
+    probabilities = [0.1, 0.4, 0.6, 0.4, 0.6, 0.2, 0.4]
+    flags = hysteresis_flags(probabilities, start=0.5, end=0.35)
+    assert flags == [False, False, True, True, True, False, False]
+
+
+def test_silero_end_threshold_never_goes_below_the_floor() -> None:
+    assert silero_end_threshold(0.5, config()) == pytest.approx(0.35)
+    assert silero_end_threshold(0.1, config()) == pytest.approx(0.01)

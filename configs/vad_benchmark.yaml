@@ -18,9 +18,12 @@ band_low_hz: 300.0
 band_high_hz: 3400.0
 band_share_thresholds: [0.5, 0.6, 0.7, 0.8]
 
-# Silero VAD : une tranche de 32 ms est « parole » si sa probabilité atteint ce seuil
-# (valeur par défaut du modèle).
-silero_threshold: 0.5
+# Silero VAD : une tranche de 32 ms est « parole » si sa probabilité atteint le seuil
+# (0,5 par défaut). Chaque seuil est mesuré seul, puis avec l'hystérésis de
+# get_speech_timestamps (Silero) : le segment continue tant que p ≥ seuil − 0,15 (0,01 au moins).
+silero_thresholds: [0.5, 0.4, 0.3, 0.2, 0.1]
+silero_hysteresis_gap: 0.15
+silero_min_end_threshold: 0.01
 
 # Critères de choix (C24) : on garde l'option la plus simple qui respecte les deux.
 max_false_positive_rate: 0.10   # au plus 10 % de faux positifs sur ESC-50
