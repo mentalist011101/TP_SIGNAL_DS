@@ -106,6 +106,39 @@ def test_tone_gives_sound_events_but_no_speech(context: ResultContext) -> None:
     assert emotion["segments"] == []
 
 
+def pure_sine(seconds: float, frequency_hz: float) -> np.ndarray:
+    times = np.arange(int(seconds * SAMPLE_RATE)) / SAMPLE_RATE
+    signal = 0.3 * np.sin(2 * np.pi * frequency_hz * times)
+    return signal.astype(np.float32)
+
+
+def white_noise(seconds: float) -> np.ndarray:
+    generator = np.random.default_rng(42)
+    signal = generator.normal(0.0, 0.05, size=int(seconds * SAMPLE_RATE))
+    return signal.astype(np.float32)
+
+
+# Limite connue de webrtcvad, conservé faute d'option qui tienne les deux critères de C24
+# (D5) : sur Kaggle, 3 s de « parole » sur 3 s pour ces deux signaux, à toutes les
+# agressivités. strict=True : si la VAD change et que le test passe, pytest le signale.
+@pytest.mark.xfail(strict=True, reason="webrtcvad prend une sinusoïde pure pour de la parole")
+def test_pure_sine_gives_no_speech(context: ResultContext) -> None:
+    emotion = build_results(pure_sine(3.0, 1000.0), ["emotion"], "quality", context)["emotion"]
+    assert emotion["status"] == "no_speech"
+
+
+@pytest.mark.xfail(strict=True, reason="webrtcvad prend le bruit blanc pour de la parole")
+def test_white_noise_gives_no_speech(context: ResultContext) -> None:
+    emotion = build_results(white_noise(3.0), ["emotion"], "quality", context)["emotion"]
+    assert emotion["status"] == "no_speech"
+
+
+def test_voiced_speech_is_still_detected(context: ResultContext) -> None:
+    emotion = build_results(voiced_speech(12.0), ["emotion"], "quality", context)["emotion"]
+    assert emotion["status"] == "done"
+    assert len(emotion["segments"]) >= 1
+
+
 def test_emotion_global_is_the_duration_weighted_mean_of_segments(
     context: ResultContext,
 ) -> None:
