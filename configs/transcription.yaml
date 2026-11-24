@@ -1,0 +1,49 @@
+# C17a — évaluation de la transcription (EF-10, E1, P10, P12). Évaluation seulement : le
+# choix du modèle de l'application (registre) sera fait en C17b.
+# Lu par echolens.training.transcription_eval.TranscriptionEvalConfig.
+
+# Modèles faster-whisper (CTranslate2), à une révision figée du Hub (hash de commit), pour que
+# la mesure soit refaite sur exactement les mêmes poids.
+models:
+  - id: base
+    repo_id: Systran/faster-whisper-base
+    revision: ebe41f70d5b6dfa9166e2c581c45c9c0cfc57b66
+  - id: small
+    repo_id: Systran/faster-whisper-small
+    revision: 536b0662742c02347bc0e980a01041f333bce120
+
+# Décodage, identique pour tous les modèles et tous les calculs.
+language: fr                          # langue imposée : pas de détection automatique
+beam_size: 5
+vad_filter: false                     # chaque phrase est déjà découpée ; pas de VAD en plus
+condition_on_previous_text: false     # chaque phrase est transcrite seule
+# Températures de repli de faster-whisper (ses valeurs par défaut, écrites explicitement) :
+# 0 d'abord (décodage déterministe) ; si le texte obtenu est jugé mauvais (trop répétitif ou
+# trop peu probable), nouvel essai à 0,2, puis 0,4… Le tirage est alors fixé par la graine.
+temperature: [0.0, 0.2, 0.4, 0.6, 0.8, 1.0]
+cpu_threads: 4                        # fils de calcul en int8 sur CPU (Kaggle et ce PC)
+
+# Corpus (P10) : test officiel d'OpenSLR 57 et sous-corpus de Yaoundé (rangé dans train).
+corpora:
+  - id: test
+    official_split: test
+  - id: yaounde
+    subset: yaounde
+
+# Intervalles à 95 % : bootstrap par locuteur (on tire des locuteurs avec remise, puis toutes
+# leurs phrases), car les phrases d'un même locuteur ne sont pas indépendantes.
+seed: 42
+bootstrap_draws: 1000
+confidence_level: 0.95
+
+# Vérification sur CPU en int8 : phrases tirées au hasard (graine 42) parmi les deux
+# sous-corpus, pour mesurer l'écart de WER entre float16 (GPU) et int8 (CPU).
+cpu_check_sentences: 100
+
+# Pires phrases gardées dans les résultats (plus grand nombre d'erreurs de mots).
+worst_sentence_count: 20
+
+# Latence sur la machine de référence (CPU seul, int8) : phrases de Yaoundé mises bout à bout
+# jusqu'à 30 s, médiane de 3 essais, RTF = temps de calcul / durée de l'audio.
+latency_audio_s: 30.0
+latency_runs: 3
