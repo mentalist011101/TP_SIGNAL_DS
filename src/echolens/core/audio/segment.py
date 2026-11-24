@@ -1,4 +1,8 @@
-"""Segmentation (décisions D5, D8) : zones de parole avec webrtcvad, et fenêtres glissantes."""
+"""Segmentation (décisions D5, D8) : zones de parole et fenêtres glissantes, sans torch.
+
+webrtcvad (VAD de secours sans torch), hystérésis sur les probabilités de Silero (VAD de
+production, calculées dans core.models.silero_vad) et nettoyage commun des segments.
+"""
 
 from __future__ import annotations
 

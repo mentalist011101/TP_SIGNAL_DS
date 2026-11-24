@@ -1,7 +1,9 @@
-"""Silero VAD avec torch : probabilité de parole par tranche de 32 ms (C24, comparaison D5).
+"""Silero VAD avec torch : la détection de parole de production (D5, C24).
 
-Code ml : seuls echolens.training et les notebooks l'importent, jamais le reste de core, pour
-que la VAD de l'application reste utilisable sans torch.
+Code ml : seuls echolens.services.silero_detector, echolens.training et les notebooks
+l'importent, jamais le reste de core, pour que l'application tourne aussi sans torch
+(webrtcvad en secours). Le modèle est le fichier TorchScript livré dans le paquet silero-vad
+(version figée dans l'extra [ml]) : aucun téléchargement, l'application marche hors ligne.
 """
 
 from __future__ import annotations
@@ -14,9 +16,11 @@ import torch
 from silero_vad import load_silero_vad
 
 from echolens.core.audio.io import TARGET_SAMPLE_RATE
+from echolens.core.audio.preprocess_config import VadConfig
+from echolens.core.audio.segment import Segment, flags_to_segments, hysteresis_flags
 
 FloatArray = npt.NDArray[np.float32]
-# Silero VAD (version 5) n'accepte à 16 kHz que des tranches de 512 échantillons (32 ms).
+# Silero VAD (versions 5 et 6) n'accepte à 16 kHz que des tranches de 512 échantillons (32 ms).
 SILERO_CHUNK_SAMPLES = 512
 
 
@@ -46,3 +50,16 @@ def silero_speech_probabilities(model: Any, signal: FloatArray) -> list[float]:
             output = model(chunk_tensor, TARGET_SAMPLE_RATE)
             probabilities.append(float(output.item()))
     return probabilities
+
+
+def silero_speech_segments(model: Any, signal: FloatArray, config: VadConfig) -> list[Segment]:
+    """Zones de parole d'un signal mono 16 kHz avec Silero (D5) ; liste vide si aucune.
+
+    Probabilité par tranche de 32 ms, décisions avec hystérésis (silero_threshold pour ouvrir,
+    silero_end_threshold pour fermer), puis le même nettoyage des segments que webrtcvad.
+    """
+    probabilities = silero_speech_probabilities(model, signal)
+    flags = hysteresis_flags(probabilities, config.silero_threshold, config.silero_end_threshold)
+    chunk_s = SILERO_CHUNK_SAMPLES / TARGET_SAMPLE_RATE
+    duration_s = len(signal) / TARGET_SAMPLE_RATE
+    return flags_to_segments(flags, chunk_s, config, duration_s)

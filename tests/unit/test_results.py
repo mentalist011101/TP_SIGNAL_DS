@@ -19,6 +19,7 @@ from echolens.services.results import (
     ResultContext,
     build_results,
 )
+from echolens.services.speech_detection import WebrtcvadDetector
 from echolens.services.storage import create_session_factory
 
 SAMPLE_RATE = 16_000
@@ -31,7 +32,8 @@ def context() -> ResultContext:
         predictor=DemoPredictor(class_counts(labels)),
         labels=labels,
         inference_config=load_inference_config(),
-        vad_config=load_preprocess_config().vad,
+        # webrtcvad explicitement : ces tests tournent sans torch (CI), comme le mode demo.
+        speech_detector=WebrtcvadDetector(load_preprocess_config().vad),
     )
 
 
@@ -118,9 +120,10 @@ def white_noise(seconds: float) -> np.ndarray:
     return signal.astype(np.float32)
 
 
-# Limite connue de webrtcvad, conservé faute d'option qui tienne les deux critères de C24
-# (D5) : sur Kaggle, 3 s de « parole » sur 3 s pour ces deux signaux, à toutes les
-# agressivités. strict=True : si la VAD change et que le test passe, pytest le signale.
+# Limite connue de webrtcvad, VAD de secours sans torch (D5, C24) : sur Kaggle, 3 s de
+# « parole » sur 3 s pour ces deux signaux. Avec Silero (production), les mêmes signaux donnent
+# bien no_speech : tests/unit/test_silero_vad_ml.py. strict=True : si webrtcvad change de
+# comportement, pytest le signale.
 @pytest.mark.xfail(strict=True, reason="webrtcvad prend une sinusoïde pure pour de la parole")
 def test_pure_sine_gives_no_speech(context: ResultContext) -> None:
     emotion = build_results(pure_sine(3.0, 1000.0), ["emotion"], "quality", context)["emotion"]

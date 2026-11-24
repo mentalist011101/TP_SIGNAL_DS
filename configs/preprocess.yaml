@@ -13,8 +13,14 @@ denoise:
   freq_mask_smooth_hz: 500
   time_mask_smooth_ms: 50
 vad:
-  aggressiveness: 2               # webrtcvad : 0 (tolérant) à 3 (strict)
-  frame_ms: 30
+  # D5 (C24) : Silero VAD en production dès que l'extra [ml] (torch, silero-vad) est
+  # installé ; sinon webrtcvad en secours. Choix automatique, écrit dans les journaux.
+  silero_threshold: 0.40          # Silero : une tranche de 32 ms ouvre un segment si p ≥ 0,40
+  silero_end_threshold: 0.25      # hystérésis : le segment continue tant que p ≥ 0,25
+                                  # (C24 : 7,2 % de faux positifs, 91,0 % de parole retrouvée)
+  aggressiveness: 2               # webrtcvad (secours) : 0 (tolérant) à 3 (strict)
+  frame_ms: 30                    # webrtcvad (secours)
+  # Nettoyage des segments, commun aux deux VAD (durées minimales mesurées en C24) :
   merge_gap_ms: 300               # deux zones de parole séparées de moins de 300 ms
                                   # sont réunies
   min_segment_ms: 100             # D5 : segments d'au moins 100 ms
