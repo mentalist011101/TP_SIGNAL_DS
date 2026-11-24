@@ -231,6 +231,10 @@ export default function ToolsBento() {
           </ToolCard>
         </Reveal>
       </div>
+      <p className="text-sm text-ink-soft">
+        Les visuels de ces cartes sont des illustrations ; les vrais résultats sont dans l’exemple
+        en haut de la page.
+      </p>
     </section>
   )
 }

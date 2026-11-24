@@ -81,15 +81,3 @@ export function followSystemTheme(): void {
     }
   })
 }
-
-// Palette magma des données, du silence (0) au plus fort (1) : les mêmes six couleurs que le
-// spectrogramme calculé par le serveur (colormap_stops). Sert à l'illustration animée de la
-// page d'accueil, qui ne montre pas un vrai audio.
-export const MAGMA_STOPS: readonly [number, number, number][] = [
-  [0, 0, 4],
-  [59, 15, 112],
-  [140, 41, 129],
-  [222, 73, 104],
-  [254, 159, 109],
-  [252, 253, 191],
-]
