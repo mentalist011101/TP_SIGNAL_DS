@@ -1,0 +1,60 @@
+# C17a — évaluation de la transcription (EF-10, E1, P10, P12). Évaluation seulement : le
+# choix du modèle de l'application (registre) sera fait en C17b.
+# Lu par echolens.training.transcription_eval.TranscriptionEvalConfig.
+
+# Modèles faster-whisper (CTranslate2), à une révision figée du Hub (hash de commit), pour que
+# la mesure soit refaite sur exactement les mêmes poids.
+models:
+  - id: base
+    repo_id: Systran/faster-whisper-base
+    revision: ebe41f70d5b6dfa9166e2c581c45c9c0cfc57b66
+  - id: small
+    repo_id: Systran/faster-whisper-small
+    revision: 536b0662742c02347bc0e980a01041f333bce120
+
+# Décodage, identique pour tous les modèles et tous les calculs.
+language: fr                          # langue imposée : pas de détection automatique
+beam_size: 5
+vad_filter: false                     # chaque phrase est déjà découpée ; pas de VAD en plus
+condition_on_previous_text: false     # chaque phrase est transcrite seule
+# Températures de repli de faster-whisper (ses valeurs par défaut, écrites explicitement) :
+# 0 d'abord (décodage déterministe) ; si le texte obtenu est jugé mauvais (trop répétitif ou
+# trop peu probable), nouvel essai à 0,2, puis 0,4… Le tirage est alors fixé par la graine.
+temperature: [0.0, 0.2, 0.4, 0.6, 0.8, 1.0]
+cpu_threads: 4                        # fils de calcul en int8 sur CPU (Kaggle et ce PC)
+
+# Corpus (P10) : test officiel d'OpenSLR 57 et partie lue (read/) du sous-corpus de Yaoundé
+# (rangé dans train).
+corpora:
+  - id: test
+    official_split: test
+  # Seulement yaounde/read (6 299 phrases, 8,53 h). yaounde/answers (2 098 phrases, 2,05 h) est
+  # exclu : sa transcription dans le manifeste est la QUESTION posée, pas la réponse enregistrée
+  # (référence « est-ce que vous avez votre carte d'identité », audio « oui comme tout bon
+  # citoyen je dois me promener avec ma carte d'identité… »). Son WER serait faux.
+  - id: yaounde_read
+    subset: yaounde
+    folder: read
+
+# Intervalles à 95 % : bootstrap par locuteur (on tire des locuteurs avec remise, puis toutes
+# leurs phrases), car les phrases d'un même locuteur ne sont pas indépendantes.
+seed: 42
+bootstrap_draws: 1000
+confidence_level: 0.95
+
+# Vérification sur CPU en int8 : phrases tirées au hasard (graine 42) parmi les deux corpus
+# (test et yaounde/read), pour mesurer l'écart de WER entre float16 (GPU) et int8 (CPU).
+cpu_check_sentences: 100
+
+# Pires phrases gardées dans les résultats (plus grand nombre d'erreurs de mots).
+worst_sentence_count: 20
+
+# Références suspectes du test officiel : phrases où base ET small ont un WER de phrase ≥ 100 %.
+# Listées pour être écoutées, jamais retirées du calcul.
+suspect_min_wer: 1.0
+
+# Latence sur la machine de référence (CPU seul, int8) : phrases de Yaoundé mises bout à bout
+# jusqu'à 30 s, médiane de 3 essais, RTF = temps de calcul / durée de l'audio. Seule la durée
+# du calcul compte ici, pas la référence : le tirage se fait dans tout Yaoundé (answers compris).
+latency_audio_s: 30.0
+latency_runs: 3

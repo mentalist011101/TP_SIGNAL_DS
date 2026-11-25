@@ -21,6 +21,7 @@ dependencies = [
     "matplotlib>=3.11.2",
     "noisereduce>=3.0.3",
     "webrtcvad-wheels>=2.0.14.post1",
+    "num2words>=0.5.14",
     "reportlab>=4.2",
 ]
 
@@ -42,6 +43,7 @@ training = [
     "matplotlib>=3.8",
     "seaborn>=0.13",
     "pandas>=2.2",
+    "jiwer>=4.0.0",
 ]
 
 [dependency-groups]
@@ -53,6 +55,7 @@ dev = [
     "pre-commit>=3.7",
     "types-pyyaml>=6.0",
     "scikit-learn>=1.9.1",
+    "jiwer>=4.0.0",
 ]
 
 [build-system]

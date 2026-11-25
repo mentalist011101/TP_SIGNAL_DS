@@ -51,6 +51,8 @@ cycler==0.12.1
     # via matplotlib
 decorator==5.3.1
     # via librosa
+docopt==0.6.2
+    # via num2words
 faster-whisper==1.2.1
     # via echolens
 filelock==4.2.7
@@ -153,6 +155,8 @@ networkx==3.6.1 ; python_full_version < '3.12'
 networkx==3.7 ; python_full_version >= '3.12'
     # via torch
 noisereduce==3.0.3
+    # via echolens
+num2words==0.5.14
     # via echolens
 numba==0.68.1
     # via librosa
