@@ -53,7 +53,8 @@ worst_sentence_count: 20
 # Listées pour être écoutées, jamais retirées du calcul.
 suspect_min_wer: 1.0
 
-# Latence sur la machine de référence (CPU seul, int8) : phrases de yaounde/read mises bout à bout
-# jusqu'à 30 s, médiane de 3 essais, RTF = temps de calcul / durée de l'audio.
+# Latence sur la machine de référence (CPU seul, int8) : phrases de Yaoundé mises bout à bout
+# jusqu'à 30 s, médiane de 3 essais, RTF = temps de calcul / durée de l'audio. Seule la durée
+# du calcul compte ici, pas la référence : le tirage se fait dans tout Yaoundé (answers compris).
 latency_audio_s: 30.0
 latency_runs: 3
