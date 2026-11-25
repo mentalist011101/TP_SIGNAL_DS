@@ -344,3 +344,75 @@ export function useModels() {
     staleTime: Infinity,
   })
 }
+
+// Page Comparer : tableaux lus par le serveur dans training/results (GET /api/v1/comparisons).
+
+// Scores de test d'un modèle sur une tâche de classification.
+export interface ModelScore {
+  model: string
+  label: string
+  family: 'baseline' | 'A' | 'B'
+  f1_macro_mean: number
+  f1_macro_std: number
+  accuracy_mean: number
+  accuracy_std: number
+  f1_macro_ci: number[] | null
+}
+
+// Test de McNemar entre deux modèles, sur les mêmes extraits de test (P8).
+export interface McNemarTest {
+  model_a: string
+  model_b: string
+  f1_macro_a: number
+  f1_macro_b: number
+  only_a_right: number
+  only_b_right: number
+  p_value: number
+  p_value_holm: number | null
+  significant: boolean
+}
+
+// Tableau d'une tâche : ses modèles et ses tests.
+export interface TaskTable {
+  task: 'sound_event' | 'emotion'
+  protocol: string
+  models: ModelScore[]
+  tests: McNemarTest[]
+}
+
+// WER et CER d'un modèle Whisper sur un corpus.
+export interface TranscriptionScore {
+  model: string
+  corpus: string
+  wer: number
+  wer_ci: number[]
+  cer: number
+  rtf_cpu: number
+}
+
+// Taille et vitesse d'un modèle de production sur CPU.
+export interface LatencyRow {
+  model: string
+  task: 'sound_event' | 'emotion'
+  f1_macro: number
+  parameters: number
+  p95_2s: number
+  rtf_p95_2s: number
+  p95_5s: number
+  realtime: boolean
+}
+
+export interface Comparisons {
+  classification: TaskTable[]
+  transcription: TranscriptionScore[]
+  latency: LatencyRow[]
+}
+
+// Les résultats ne changent qu'avec un nouveau déploiement : une seule lecture suffit.
+export function useComparisons() {
+  return useQuery({
+    queryKey: ['comparisons'],
+    queryFn: () => apiGet<Comparisons>('/comparisons'),
+    staleTime: Infinity,
+  })
+}

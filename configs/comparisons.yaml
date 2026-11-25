@@ -1,0 +1,17 @@
+# Page Comparer : nom affiché et famille de chaque modèle tel qu'il est nommé dans les fichiers
+# de training/results/, et seuil des tests de McNemar (P8). Lu par
+# echolens.services.result_tables.
+
+# Seuil de significativité : un écart est jugé significatif si p < 0,05 (après correction de
+# Holm quand le fichier la donne).
+significance_level: 0.05
+
+models:
+  mfcc_svm: {label: "MFCC + SVM", family: baseline}
+  cnn: {label: "CNN", family: A}
+  crnn: {label: "CRNN", family: A}
+  wav2vec2-base: {label: "wav2vec 2.0 base", family: B}
+  mhubert-147: {label: "mHuBERT-147", family: B}
+  whisper-base: {label: "Whisper base", family: B}
+  # Ablation : moyenne sur les 30 s de l'encodeur, trames de remplissage comprises.
+  whisper-base-padded: {label: "Whisper base, remplissage compris", family: B}

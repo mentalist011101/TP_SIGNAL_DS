@@ -24,6 +24,8 @@ COPY src/ src/
 RUN uv sync --frozen --no-dev --extra ml
 
 COPY configs/ configs/
+# Résultats des expériences (JSON légers, sans données ni poids), lus par la page Comparer.
+COPY training/results/ training/results/
 COPY --from=web /app/web/dist web/dist
 
 EXPOSE 5000

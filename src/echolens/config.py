@@ -36,6 +36,8 @@ class AppSettings(BaseModel):
     web_dist_dir: Path = REPO_ROOT / "web" / "dist"
     registry_path: Path = CONFIG_DIR / "registry.yaml"
     features_path: Path = CONFIG_DIR / "features.yaml"
+    # Résultats des expériences (JSON écrits par les notebooks Kaggle), lus par la page Comparer.
+    results_dir: Path = REPO_ROOT / "training" / "results"
     # Prédicteur des analyses (C13) : « demo » (faux prédicteur, sans torch) ou « models »
     # (vrais modèles du registre, extra [ml]).
     inference_backend: Literal["demo", "models"] = "demo"
