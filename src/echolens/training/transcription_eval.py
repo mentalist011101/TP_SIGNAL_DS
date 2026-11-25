@@ -18,7 +18,7 @@ caractères (substitutions + suppressions + insertions).
 from __future__ import annotations
 
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 import jiwer
 import numpy as np
@@ -40,11 +40,13 @@ class TranscriptionModel(BaseModel):
 
 
 class CorpusSelection(BaseModel):
-    """Un sous-corpus d'OpenSLR 57 : par découpage officiel ou par sous-corpus (P10)."""
+    """Un sous-corpus d'OpenSLR 57 : par découpage officiel, sous-corpus et dossier (P10)."""
 
     id: str
     official_split: str | None = None
     subset: str | None = None
+    # Dossier qui doit figurer dans le chemin du fichier (ex. « read » pour yaounde/read).
+    folder: str | None = None
 
 
 class TranscriptionEvalConfig(BaseModel):
@@ -63,6 +65,7 @@ class TranscriptionEvalConfig(BaseModel):
     confidence_level: float = Field(gt=0, lt=1)
     cpu_check_sentences: int = Field(gt=0)
     worst_sentence_count: int = Field(gt=0)
+    suspect_min_wer: float = Field(gt=0)
     latency_audio_s: float = Field(gt=0)
     latency_runs: int = Field(gt=0)
 
@@ -114,6 +117,8 @@ def corpus_rows(rows: list[ManifestRow], selection: CorpusSelection) -> list[Man
         if selection.official_split is not None and row.official_split != selection.official_split:
             continue
         if selection.subset is not None and row.subset != selection.subset:
+            continue
+        if selection.folder is not None and not _in_folder(row.path, selection.folder):
             continue
         selected.append(row)
     return selected
@@ -206,6 +211,35 @@ def worst_sentences(scores: list[SentenceScore], count: int) -> list[SentenceSco
     """Les count phrases au plus grand nombre d'erreurs de mots (à égalité, par chemin)."""
     ordered = sorted(scores, key=_worst_first)
     return ordered[:count]
+
+
+def suspect_sentences(
+    first: list[SentenceScore], second: list[SentenceScore], min_wer: float
+) -> list[tuple[SentenceScore, SentenceScore]]:
+    """Phrases où les deux systèmes ont un WER de phrase ≥ min_wer : référence à vérifier.
+
+    Deux modèles différents qui se trompent autant sur la même phrase pointent plutôt vers la
+    référence (texte qui ne correspond pas à l'audio) que vers la reconnaissance.
+    """
+    _check_same_sentences(first, second)
+    suspects: list[tuple[SentenceScore, SentenceScore]] = []
+    for first_score, second_score in zip(first, second, strict=True):
+        first_failed = _sentence_wer_at_least(first_score, min_wer)
+        second_failed = _sentence_wer_at_least(second_score, min_wer)
+        if first_failed and second_failed:
+            suspects.append((first_score, second_score))
+    return suspects
+
+
+def _in_folder(path: str, folder: str) -> bool:
+    # Le chemin du manifeste s'écrit avec des « / » (ex. speech/train/yaounde/read/…).
+    parts = PurePosixPath(path).parts
+    return folder in parts
+
+
+def _sentence_wer_at_least(score: SentenceScore, min_wer: float) -> bool:
+    # Comparaison sans division : une référence vide (0 mot) ne fait pas planter le calcul.
+    return score.word_errors >= min_wer * score.word_count
 
 
 def _worst_first(score: SentenceScore) -> tuple[int, str]:

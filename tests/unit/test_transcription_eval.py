@@ -15,6 +15,7 @@ from echolens.training.transcription_eval import (
     paired_wer_difference,
     sample_rows,
     score_sentence,
+    suspect_sentences,
     worst_sentences,
 )
 
@@ -153,6 +154,51 @@ def test_corpus_rows_by_official_split_or_subset() -> None:
     yaounde_rows = corpus_rows(rows, CorpusSelection(id="yaounde", subset="yaounde"))
     assert [row.path for row in test_rows] == ["t1.wav"]
     assert [row.path for row in yaounde_rows] == ["y1.wav"]
+
+
+def test_yaounde_read_excludes_answers() -> None:
+    # Dans answers/, la référence est la question posée, pas la réponse enregistrée.
+    rows = [
+        make_row("speech/train/yaounde/read/ctell1-01/ctell1-01-001.wav", "train", "yaounde"),
+        make_row("speech/train/yaounde/answers/ctell1-01/ctell1-01-002.wav", "train", "yaounde"),
+        make_row("speech/test/ca16/gabon_m_060/gabon_m_060_001.wav", "test", "ca16"),
+    ]
+    selection = CorpusSelection(id="yaounde_read", subset="yaounde", folder="read")
+    selected = corpus_rows(rows, selection)
+    expected = ["speech/train/yaounde/read/ctell1-01/ctell1-01-001.wav"]
+    assert [row.path for row in selected] == expected
+
+
+def test_configuration_keeps_only_yaounde_read() -> None:
+    config = load_transcription_eval_config()
+    selections = {selection.id: selection for selection in config.corpora}
+    assert sorted(selections) == ["test", "yaounde_read"]
+    assert selections["yaounde_read"].subset == "yaounde"
+    assert selections["yaounde_read"].folder == "read"
+
+
+def test_suspect_when_both_models_reach_100_percent() -> None:
+    base = [
+        make_score("a", "A", 4, 4),
+        make_score("b", "A", 5, 4),
+        make_score("c", "B", 1, 4),
+        make_score("d", "B", 6, 3),
+    ]
+    small = [
+        make_score("a", "A", 4, 4),
+        make_score("b", "A", 2, 4),
+        make_score("c", "B", 4, 4),
+        make_score("d", "B", 3, 3),
+    ]
+    suspects = suspect_sentences(base, small, 1.0)
+    assert [pair[0].path for pair in suspects] == ["a", "d"]
+
+
+def test_empty_reference_is_suspect() -> None:
+    base = [make_score("a", "A", 2, 0)]
+    small = [make_score("a", "A", 0, 0)]
+    suspects = suspect_sentences(base, small, 1.0)
+    assert [pair[0].path for pair in suspects] == ["a"]
 
 
 def test_sample_is_reproducible_and_without_duplicates() -> None:
