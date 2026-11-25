@@ -58,8 +58,10 @@ manifeste garde l'étiquette d'origine ; la correspondance s'applique ensuite, d
 | RAVDESS | 1 440 | 384 | 1 056 | 96 | 192 |
 | CaFE (C16) | 936 | 144 | 792 | 72 | 144 |
 
-Sur l'entraînement (CREMA-D + RAVDESS), neutral est un peu moins fréquent (1 183 contre 1 463
-pour chacune des autres classes). Le F1 macro (P4) en tient compte.
+Sur CREMA-D et RAVDESS réunis, neutral est un peu moins fréquent (1 183 contre 1 463 pour
+chacune des autres classes). Après le découpage par acteur (section 3), l'entraînement compte
+815 neutres contre 1 007 pour chacune des autres classes ; la validation et le test, 184 contre
+228 chacun (1 324 extraits).
 
 ## 3. Découpage des émotions par acteur (P1)
 
