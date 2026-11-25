@@ -7,6 +7,7 @@ Diagrammes dessinés avec **draw.io**. Pour chacun :
 
 | Diagramme | Source | Image | Notation | Statut |
 | --- | --- | --- | --- | --- |
+| **Architecture IA** (données → prétraitement → représentations → modèles → sortie, et entraînement) | `architecture-ia.drawio` | `images/architecture-ia.png` | Schéma de flux | Conforme au code et aux résultats du 25 novembre |
 | Composants (web, api, services, core, stockage) | `composants.drawio` | `images/composants.png` | UML, composants | Conforme au code du 24 novembre (après C13 et la PR #28) |
 | Déploiement (Docker, Gunicorn, Kaggle, Hugging Face Hub) | `deploiement.drawio` | `images/deploiement.png` | UML, déploiement | Conforme au code du 24 novembre ; signale le risque du cache des modèles |
 | Séquence du flux micro (navigateur → WebSocket → tampon → inférence → frise) | `sequence-flux-micro.drawio` | `images/sequence-flux-micro.png` | UML, séquence | Proposition : le flux n'est pas encore codé |
