@@ -1,0 +1,3 @@
+# Types générés par « npm run gen:api » (openapi-typescript) : ne pas reformater, pour qu'une
+# nouvelle génération redonne exactement le même fichier.
+src/api/schema.d.ts

@@ -22,6 +22,7 @@ dependencies = [
     "noisereduce>=3.0.3",
     "webrtcvad-wheels>=2.0.14.post1",
     "num2words>=0.5.14",
+    "reportlab>=4.2",
 ]
 
 [project.optional-dependencies]
