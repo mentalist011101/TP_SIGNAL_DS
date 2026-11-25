@@ -10,6 +10,9 @@ Pour chaque fenêtre, la chaîne est exactement celle de l'entraînement (R5) :
 - CRNN : log-Mel de echolens.core.features → standardisation par bande (R4) → réseau → scores.
 Puis probabilités calibrées : softmax(scores / T) (E2, ENF-06). Tout se fait en mode eval et
 sous torch.no_grad().
+
+La transcription (EF-10, C17b) passe par faster-whisper (services.whisper_transcriber),
+importé seulement à la première transcription ou au préchargement.
 """
 
 from __future__ import annotations
@@ -17,6 +20,7 @@ from __future__ import annotations
 import threading
 from dataclasses import dataclass
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import numpy as np
 import torch
@@ -25,7 +29,7 @@ from huggingface_hub import hf_hub_download
 from echolens.core.data.class_labels import ClassLabels
 from echolens.core.features import FeatureConfig, log_mel_spectrogram
 from echolens.core.frame_windows import centered_start, frame_window, window_frame_count
-from echolens.core.inference import FloatArray, ProbabilityArray
+from echolens.core.inference import FloatArray, ProbabilityArray, TranscriptionSettings
 from echolens.core.models.family_a import SpectrogramCnn, SpectrogramCrnn
 from echolens.core.models.heads import LayerWeightedHead
 from echolens.core.models.production_config import (
@@ -44,6 +48,9 @@ from echolens.core.models.whisper_encoder import (
     whisper_useful_layer_means,
 )
 from echolens.services.predictor import ModelInfo
+
+if TYPE_CHECKING:
+    from echolens.services.whisper_transcriber import WhisperTranscriber
 
 HF_PREFIX = "hf://"
 # Réseaux de la famille A, qui lisent le log-Mel (les têtes lisent l'encodeur Whisper).
@@ -78,6 +85,7 @@ class ModelPredictor:
         feature_config: FeatureConfig,
         features_path: Path,
         models_dir: Path | None,
+        transcription_settings: TranscriptionSettings,
     ) -> None:
         self.registry = registry
         self.labels = labels
@@ -90,15 +98,20 @@ class ModelPredictor:
         self._encoders: dict[tuple[str, str], WhisperEncoder] = {}
         # Deux analyses en parallèle (S2) ne doivent pas charger le même modèle deux fois.
         self._lock = threading.Lock()
+        # Transcription : réglages du décodage, et transcripteur créé à la première utilisation.
+        self.transcription_settings = transcription_settings
+        self._whisper: WhisperTranscriber | None = None
 
     def supports(self, task: Task, profile: Profile) -> bool:
         """Vrai si le registre a un modèle pour cette tâche dans ce profil."""
         return self.registry.model_for(task, profile) is not None
 
     def model_info(self, task: Task, profile: Profile) -> ModelInfo:
-        """Identifiant et version du registre ; probabilités calibrées par la température."""
+        """Identifiant et version du registre ; probabilités calibrées par la température
+        (la transcription n'a pas de probabilités : calibrated vaut faux)."""
         entry = self._entry(task, profile)
-        return ModelInfo(model_id=entry.id, model_version=entry.version, calibrated=True)
+        calibrated = task != Task.TRANSCRIPTION
+        return ModelInfo(model_id=entry.id, model_version=entry.version, calibrated=calibrated)
 
     def predict(
         self, task: Task, profile: Profile, windows: list[FloatArray]
@@ -121,11 +134,29 @@ class ModelPredictor:
             probabilities.append(window_probabilities)
         return probabilities
 
+    def transcribe(self, profile: Profile, windows: list[FloatArray]) -> list[str]:
+        """Un texte par morceau de parole, avec le modèle de transcription de ce profil."""
+        entry = self._entry(Task.TRANSCRIPTION, profile)
+        whisper = self._whisper_transcriber()
+        return whisper.transcribe(entry, windows)
+
     def preload(self) -> None:
-        """Charge tous les modèles de classification du registre (préchauffage, S1)."""
+        """Charge tous les modèles du registre : classification et transcription (S1)."""
         for entry in self.registry.models:
             if entry.task in (Task.EMOTION, Task.SOUND_EVENT):
                 self.load(entry)
+            if entry.task == Task.TRANSCRIPTION:
+                whisper = self._whisper_transcriber()
+                whisper.load(entry)
+
+    def _whisper_transcriber(self) -> WhisperTranscriber:
+        # faster-whisper n'est importé qu'ici : les modèles de classification n'en dépendent pas.
+        from echolens.services.whisper_transcriber import WhisperTranscriber
+
+        with self._lock:
+            if self._whisper is None:
+                self._whisper = WhisperTranscriber(self.transcription_settings, self.models_dir)
+            return self._whisper
 
     def _entry(self, task: Task, profile: Profile) -> ModelEntry:
         entry = self.registry.model_for(task, profile)

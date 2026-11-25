@@ -1,4 +1,5 @@
-"""Prédicteurs : ce qui transforme des fenêtres de signal en probabilités par classe (Brique 6).
+"""Prédicteurs : ce qui transforme des fenêtres de signal en probabilités par classe, ou en
+texte pour la transcription (Brique 6).
 
 Le reste de l'application ne connaît que l'interface Predictor. Le prédicteur utilisé est
 choisi dans configs/app.yaml (inference_backend), jamais en dur :
@@ -17,13 +18,15 @@ import numpy as np
 from echolens.config import AppSettings
 from echolens.core.data.class_labels import ClassLabels
 from echolens.core.features import FeatureConfig
-from echolens.core.inference import FloatArray, ProbabilityArray
+from echolens.core.inference import FloatArray, ProbabilityArray, load_inference_config
 from echolens.core.models.registry import ModelRegistry, Profile, Task
 
 DEMO_MODEL_ID = "demo"
 DEMO_MODEL_VERSION = "0"
 # Écart-type des scores tirés au hasard : plus il est grand, plus une classe domine.
 DEMO_SCORE_SCALE = 2.0
+# Texte factice de chaque segment de parole en mode demo (aucun modèle de transcription).
+DEMO_TRANSCRIPTION = "Transcription de démonstration"
 
 
 @dataclass(frozen=True)
@@ -32,7 +35,8 @@ class ModelInfo:
 
     model_id: str
     model_version: str
-    # Vrai si les probabilités ont été calibrées (temperature scaling, ENF-06).
+    # Vrai si les probabilités ont été calibrées (temperature scaling, ENF-06) ; toujours faux
+    # pour la transcription, qui ne donne pas de probabilités.
     calibrated: bool
 
 
@@ -53,6 +57,10 @@ class Predictor(Protocol):
         """Une distribution de probabilités (somme 1) par fenêtre de signal mono 16 kHz."""
         ...
 
+    def transcribe(self, profile: Profile, windows: list[FloatArray]) -> list[str]:
+        """Un texte par morceau de parole mono 16 kHz, dans le même ordre (EF-10)."""
+        ...
+
 
 class DemoPredictor:
     """Faux prédicteur : probabilités au hasard, mais toujours les mêmes pour le même audio.
@@ -67,7 +75,9 @@ class DemoPredictor:
         self.class_counts = class_counts
 
     def supports(self, task: Task, profile: Profile) -> bool:
-        """Le faux prédicteur gère les tâches de classification, dans les deux profils."""
+        """Le faux prédicteur gère la classification et la transcription, dans les deux profils."""
+        if task == Task.TRANSCRIPTION:
+            return True
         return task in self.class_counts
 
     def model_info(self, task: Task, profile: Profile) -> ModelInfo:
@@ -85,6 +95,15 @@ class DemoPredictor:
             probabilities.append(window_probabilities)
         return probabilities
 
+    def transcribe(self, profile: Profile, windows: list[FloatArray]) -> list[str]:
+        """Le même texte factice pour chaque morceau, sans modèle : le front et la CI ont un
+        texte à montrer sans torch ni faster-whisper. model_id « demo » dit qu'il ne veut rien
+        dire."""
+        texts: list[str] = []
+        for _ in windows:
+            texts.append(DEMO_TRANSCRIPTION)
+        return texts
+
 
 def make_predictor(settings: AppSettings, labels: ClassLabels) -> Predictor:
     """Crée le prédicteur choisi par inference_backend (configs/app.yaml).
@@ -98,8 +117,14 @@ def make_predictor(settings: AppSettings, labels: ClassLabels) -> Predictor:
 
     registry = ModelRegistry.from_yaml(settings.registry_path)
     feature_config = FeatureConfig.from_yaml(settings.features_path)
+    transcription_settings = load_inference_config().transcription
     predictor = ModelPredictor(
-        registry, labels, feature_config, settings.features_path, settings.models_dir
+        registry,
+        labels,
+        feature_config,
+        settings.features_path,
+        settings.models_dir,
+        transcription_settings,
     )
     # Préchauffage pour la démo : les modèles sont chargés au démarrage, pas à la 1re analyse.
     if settings.preload_models:
