@@ -18,8 +18,8 @@ export default function SegmentDetails({ analysis, selected }: SegmentDetailsPro
   if (selected === null || segment === null) {
     return (
       <p className="text-sm text-ink-soft">
-        Cliquez sur un segment de la frise : la lecture part de son début et ses probabilités
-        s’affichent ici.
+        Cliquez sur un segment de la frise : la lecture part de son début et ses probabilités (ou
+        son texte) s’affichent ici.
       </p>
     )
   }
@@ -30,6 +30,20 @@ export default function SegmentDetails({ analysis, selected }: SegmentDetailsPro
   const taskLabel = TASK_LABELS[selected.task]
   const start = formatSeconds(segment.start_s)
   const end = formatSeconds(segment.end_s)
+  // Transcription : le texte du segment, à la place des probabilités (il n'y en a pas).
+  if (selected.task === 'transcription') {
+    return (
+      <div className="space-y-2 rounded-xl border border-rule bg-paper p-4" aria-live="polite">
+        <p className="flex flex-wrap items-baseline gap-x-3">
+          <span className="label-mono text-ink-faint">{taskLabel}</span>
+          <span className="font-mono text-sm text-ink-soft">
+            {start} – {end}
+          </span>
+        </p>
+        <p>{segment.text}</p>
+      </div>
+    )
+  }
   return (
     <div className="space-y-3 rounded-xl border border-rule bg-paper p-4" aria-live="polite">
       <p className="flex flex-wrap items-baseline gap-x-3">

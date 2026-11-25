@@ -215,7 +215,7 @@ export default function ToolsBento() {
             icon={<TranscriptIcon className="h-5 w-5" />}
             title="Transcription"
             text="Le texte de ce qui est dit, horodaté, pensé pour le français et ses accents."
-            isSoon={true}
+            isSoon={false}
           >
             <TypingTranscript />
           </ToolCard>
