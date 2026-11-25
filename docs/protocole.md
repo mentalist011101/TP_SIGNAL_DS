@@ -142,9 +142,10 @@ phrases.
 
 ## 7. Normalisation du WER (P10, P12)
 
-Le WER est mesuré sur le test officiel d'OpenSLR 57 et sur le sous-corpus `yaounde` (rangé dans
-`train`, mais Whisper n'est pas entraîné sur OpenSLR). Référence et transcription sont
-normalisées de la même façon avant la première mesure :
+Le WER est mesuré sur le test officiel d'OpenSLR 57 et sur la partie lue `yaounde/read` du
+sous-corpus de Yaoundé (rangé dans `train`, mais Whisper n'est pas entraîné sur OpenSLR). La
+partie `yaounde/answers` est exclue : sa référence est la question posée, pas la réponse.
+Référence et transcription sont normalisées de la même façon avant la première mesure :
 
 1. tout en minuscules ;
 2. ponctuation retirée, sauf l'apostrophe et le trait d'union à l'intérieur d'un mot ;
