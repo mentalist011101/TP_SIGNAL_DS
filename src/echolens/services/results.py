@@ -45,6 +45,8 @@ NO_SPEECH_MESSAGE = "Aucune parole détectée"
 UNAVAILABLE_MESSAGE = "Disponible prochainement"
 # Bornes des segments arrondies à la milliseconde : 11,559999999 s devient 11,56 s.
 TIME_DECIMALS = 3
+# Tâches qui lisent les zones de parole de la VAD (D5).
+SPEECH_TASKS = (Task.EMOTION, Task.TRANSCRIPTION)
 
 
 @dataclass(frozen=True)
@@ -63,27 +65,48 @@ def build_results(
 ) -> dict[str, Any]:
     """Un objet par tâche demandée, prêt à être stocké en JSON et renvoyé par l'API.
 
-    Le profil (EF-07) choisit le modèle de chaque tâche : qualité ou temps réel.
+    Le profil (EF-07) choisit le modèle de chaque tâche : qualité ou temps réel. La VAD ne
+    tourne qu'une fois par analyse : l'émotion et la transcription lisent les mêmes zones de
+    parole.
     """
+    requested = [Task(task_name) for task_name in tasks]
+    # Étape 1 : zones de parole, une seule fois, si une tâche en a besoin (D5).
+    speech_segments: list[Segment] = []
+    if needs_speech_segments(requested):
+        speech_segments = context.speech_detector.detect(signal)
+    # Étape 2 : un résultat par tâche demandée.
     results: dict[str, Any] = {}
-    for task_name in tasks:
-        task = Task(task_name)
-        results[task.value] = task_result(signal, task, Profile(profile), context)
+    for task in requested:
+        result = task_result(signal, speech_segments, task, Profile(profile), context)
+        results[task.value] = result
     return results
 
 
+def needs_speech_segments(tasks: list[Task]) -> bool:
+    """Vrai si l'émotion ou la transcription est demandée : il faut alors la VAD."""
+    speech_tasks = [task for task in tasks if task in SPEECH_TASKS]
+    return len(speech_tasks) > 0
+
+
 def task_result(
-    signal: FloatArray, task: Task, profile: Profile, context: ResultContext
+    signal: FloatArray,
+    speech_segments: list[Segment],
+    task: Task,
+    profile: Profile,
+    context: ResultContext,
 ) -> dict[str, Any]:
-    """Résultat d'une tâche : calculé, « aucune parole » ou « disponible prochainement »."""
+    """Résultat d'une tâche : calculé, « aucune parole » ou « disponible prochainement ».
+
+    speech_segments : zones de parole de la VAD, calculées une fois par build_results.
+    """
     if not context.predictor.supports(task, profile):
         return unavailable_result()
     if task == Task.SOUND_EVENT:
         return sound_event_result(signal, profile, context)
     if task == Task.EMOTION:
-        return emotion_result(signal, profile, context)
+        return emotion_result(signal, speech_segments, profile, context)
     if task == Task.TRANSCRIPTION:
-        return transcription_result(signal, profile, context)
+        return transcription_result(signal, speech_segments, profile, context)
     return unavailable_result()
 
 
@@ -107,11 +130,12 @@ def sound_event_result(
     return done_result(windows, probabilities, overall, classes, info)
 
 
-def emotion_result(signal: FloatArray, profile: Profile, context: ResultContext) -> dict[str, Any]:
+def emotion_result(
+    signal: FloatArray, speech_segments: list[Segment], profile: Profile, context: ResultContext
+) -> dict[str, Any]:
     """Émotions : segments de parole de la VAD, 5 s au plus, global pondéré par la durée (D5)."""
     info = context.predictor.model_info(Task.EMOTION, profile)
     # Étape 1 : zones de parole, coupées en morceaux de 5 s au plus.
-    speech_segments = context.speech_detector.detect(signal)
     windows = emotion_windows(speech_segments, context.inference_config)
     # Étape 2 : pas de parole, pas d'émotion. On le dit au lieu d'inventer une prédiction.
     if not windows:
@@ -129,7 +153,7 @@ def emotion_result(signal: FloatArray, profile: Profile, context: ResultContext)
 
 
 def transcription_result(
-    signal: FloatArray, profile: Profile, context: ResultContext
+    signal: FloatArray, speech_segments: list[Segment], profile: Profile, context: ResultContext
 ) -> dict[str, Any]:
     """Transcription : segments de parole de la VAD, 30 s au plus, un texte par segment (EF-10).
 
@@ -137,7 +161,6 @@ def transcription_result(
     """
     info = context.predictor.model_info(Task.TRANSCRIPTION, profile)
     # Étape 1 : zones de parole, coupées en morceaux égaux de 30 s au plus.
-    speech_segments = context.speech_detector.detect(signal)
     windows = transcription_windows(speech_segments, context.inference_config)
     # Étape 2 : pas de parole, pas de texte inventé.
     if not windows:

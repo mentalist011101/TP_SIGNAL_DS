@@ -17,7 +17,7 @@ from echolens.core.data.class_labels import load_class_labels
 from echolens.core.inference import load_inference_config
 from echolens.core.models.registry import ModelRegistry, Profile, Task
 from echolens.services.predictor import make_predictor
-from echolens.services.results import ResultContext, transcription_result
+from echolens.services.results import ResultContext, build_results
 from echolens.services.speech_detection import make_speech_detector
 from echolens.services.whisper_transcriber import WhisperTranscriber
 
@@ -50,7 +50,8 @@ def test_silence_gives_no_speech_with_the_real_models() -> None:
     )
     silence = np.zeros(5 * SAMPLE_RATE, dtype=np.float32)
 
-    result = transcription_result(silence, Profile.REALTIME, context)
+    results = build_results(silence, ["transcription"], "realtime", context)
+    result = results["transcription"]
 
     assert context.speech_detector.name == "silero"
     assert result["status"] == "no_speech"

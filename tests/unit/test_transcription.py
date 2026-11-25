@@ -12,12 +12,12 @@ from echolens.core.inference import (
     transcription_windows,
 )
 from echolens.core.models.registry import Profile, Task
-from echolens.services.predictor import ModelInfo
+from echolens.services.predictor import DemoPredictor, ModelInfo, class_counts
 from echolens.services.results import (
     NO_SPEECH_MESSAGE,
     ResultContext,
+    build_results,
     join_texts,
-    transcription_result,
 )
 
 SAMPLE_RATE = 16_000
@@ -25,14 +25,16 @@ MAX_WINDOW_S = 30.0
 
 
 class FixedDetector:
-    """VAD de test : renvoie toujours les mêmes zones de parole."""
+    """VAD de test : renvoie toujours les mêmes zones de parole, et compte ses appels."""
 
     name = "fixe"
 
     def __init__(self, segments: list[Segment]) -> None:
         self.segments = segments
+        self.call_count = 0
 
     def detect(self, signal: FloatArray) -> list[Segment]:
+        self.call_count += 1
         return self.segments
 
 
@@ -109,7 +111,7 @@ def test_no_speech_segment_gives_no_speech() -> None:
     transcriber = FakeTranscriber()
     context = make_context([], transcriber)
 
-    result = transcription_result(silence(5.0), Profile.QUALITY, context)
+    result = build_results(silence(5.0), ["transcription"], "quality", context)["transcription"]
 
     assert result["status"] == "no_speech"
     assert result["message"] == NO_SPEECH_MESSAGE
@@ -125,7 +127,7 @@ def test_text_is_joined_and_timestamps_are_segment_bounds() -> None:
     transcriber = FakeTranscriber()
     context = make_context(speech, transcriber)
 
-    result = transcription_result(silence(8.0), Profile.REALTIME, context)
+    result = build_results(silence(8.0), ["transcription"], "realtime", context)["transcription"]
 
     assert result["status"] == "done"
     assert result["text"] == "mot 1 mot 2"
@@ -142,7 +144,7 @@ def test_text_is_joined_and_timestamps_are_segment_bounds() -> None:
 def test_transcription_has_no_class_and_no_probabilities() -> None:
     context = make_context([Segment(start_s=0.0, end_s=2.0)], FakeTranscriber())
 
-    result = transcription_result(silence(3.0), Profile.QUALITY, context)
+    result = build_results(silence(3.0), ["transcription"], "quality", context)["transcription"]
 
     assert result["label"] is None
     assert result["label_fr"] is None
@@ -157,7 +159,7 @@ def test_long_speech_is_sent_in_pieces_of_at_most_30_s() -> None:
     transcriber = FakeTranscriber()
     context = make_context([Segment(start_s=0.0, end_s=65.0)], transcriber)
 
-    result = transcription_result(silence(65.0), Profile.QUALITY, context)
+    result = build_results(silence(65.0), ["transcription"], "quality", context)["transcription"]
 
     assert len(result["segments"]) == 3
     for duration_s in transcriber.received_durations_s:
@@ -168,3 +170,37 @@ def test_long_speech_is_sent_in_pieces_of_at_most_30_s() -> None:
 def test_empty_texts_are_skipped_when_joining() -> None:
     assert join_texts(["Bonjour", "", "à tous"]) == "Bonjour à tous"
     assert join_texts(["", ""]) == ""
+
+
+def demo_context(detector: FixedDetector) -> ResultContext:
+    """Faux prédicteur de l'application (émotion et transcription), VAD de test."""
+    labels = load_class_labels()
+    return ResultContext(
+        predictor=DemoPredictor(class_counts(labels)),
+        labels=labels,
+        inference_config=load_inference_config(),
+        speech_detector=detector,
+    )
+
+
+def test_vad_runs_once_for_emotion_and_transcription() -> None:
+    detector = FixedDetector([Segment(start_s=0.5, end_s=3.0)])
+    context = demo_context(detector)
+
+    results = build_results(silence(4.0), ["emotion", "transcription"], "quality", context)
+
+    assert detector.call_count == 1
+    # Les deux tâches lisent les mêmes zones de parole.
+    emotion_segment = results["emotion"]["segments"][0]
+    text_segment = results["transcription"]["segments"][0]
+    assert (emotion_segment["start_s"], emotion_segment["end_s"]) == (0.5, 3.0)
+    assert (text_segment["start_s"], text_segment["end_s"]) == (0.5, 3.0)
+
+
+def test_vad_does_not_run_without_a_speech_task() -> None:
+    detector = FixedDetector([Segment(start_s=0.5, end_s=3.0)])
+    context = demo_context(detector)
+
+    build_results(silence(4.0), ["sound_event", "speaker"], "quality", context)
+
+    assert detector.call_count == 0
