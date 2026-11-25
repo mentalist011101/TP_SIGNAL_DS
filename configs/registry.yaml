@@ -70,7 +70,7 @@ models:
     revision: 536b0662742c02347bc0e980a01041f333bce120
     compute_type: int8
     cpu_threads: 4
-    description: Whisper small (OpenAI), converti pour faster-whisper (CTranslate2), int8 sur CPU, français imposé ; WER en attente de C17a (#47)
+    description: Whisper small (OpenAI), converti pour faster-whisper (CTranslate2), int8 sur CPU, français imposé ; WER 0,144 [0,114 ; 0,171] sur le test d'OpenSLR 57 et 0,345 [0,329 ; 0,361] sur yaounde/read, CER 0,067 et 0,163 (C17a), écart int8/float16 non significatif
   - id: echolens-transcription-whisper-base
     task: transcription
     family: pretrained
@@ -81,4 +81,4 @@ models:
     revision: ebe41f70d5b6dfa9166e2c581c45c9c0cfc57b66
     compute_type: int8
     cpu_threads: 4
-    description: Whisper base (OpenAI), converti pour faster-whisper (CTranslate2), int8 sur CPU, français imposé ; WER en attente de C17a (#47)
+    description: Whisper base (OpenAI), converti pour faster-whisper (CTranslate2), int8 sur CPU, français imposé ; WER 0,279 [0,235 ; 0,320] sur le test d'OpenSLR 57 et 0,505 [0,487 ; 0,523] sur yaounde/read, CER 0,133 et 0,253 (C17a), écart int8/float16 non significatif

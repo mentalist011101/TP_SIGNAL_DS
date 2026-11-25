@@ -39,31 +39,49 @@ Ces réglages sont ceux de l'évaluation C17a (#47) : l'application transcrit co
 été mesuré. Le modèle est chargé une seule fois, à la première transcription, ou au démarrage
 avec `ECHOLENS_PRELOAD_MODELS=true`.
 
-## Métriques
+## Métriques (C17a, #47)
 
-| Métrique | Valeur |
-| --- | --- |
-| WER, test officiel d'OpenSLR 57 | en attente de C17a (#47) |
-| WER, sous-corpus de Yaoundé | en attente de C17a (#47) |
-| Écart de WER float16 (GPU) / int8 (CPU) | en attente de C17a (#47) |
+Mesurées par l'évaluation C17a (`training/results/c17_transcription.json`), avec les mêmes
+réglages de décodage que l'application, en float16 sur GPU (Kaggle). Corpus OpenSLR 57 (P10),
+qui ne sert qu'à l'évaluation : test officiel (515 phrases, 12 locuteurs, 0,31 h) et partie
+lue du sous-corpus de Yaoundé, `yaounde/read` (6 299 phrases, 84 locuteurs, 8,53 h, accent
+camerounais). Intervalles à 95 % par bootstrap sur les locuteurs (1 000 tirages, graine 42) :
+les phrases d'un même locuteur ne sont pas indépendantes.
+
+| Corpus | WER [IC 95 %] | CER [IC 95 %] |
+| --- | --- | --- |
+| Test officiel | 0,279 [0,235 ; 0,320] | 0,133 [0,110 ; 0,157] |
+| `yaounde/read` | 0,505 [0,487 ; 0,523] | 0,253 [0,240 ; 0,264] |
+
+- Contre whisper-small, écart de WER small − base : −0,135 [−0,165 ; −0,105] sur le test et
+  −0,160 [−0,169 ; −0,151] sur `yaounde/read` : base fait significativement plus d'erreurs.
+  C'est le prix de la vitesse du profil temps réel.
+- int8 sur CPU (l'application) contre float16 sur GPU (l'évaluation), sur 100 phrases tirées
+  au hasard (graine 42) dans les deux corpus : WER 0,484 en float16, 0,488 en int8 ; écart
+  +0,004 [−0,030 ; +0,043], **non significatif**. Les chiffres du tableau valent donc pour
+  l'application.
 
 ## Latence (E6, ENF-01)
 
-Machine CPU de référence : Intel Core i5-6200U (2,30 GHz, 4 cœurs logiques), Windows 10, int8,
-4 fils. Protocole de C17a : phrases de Yaoundé mises bout à bout jusqu'à 30 s, médiane de
-3 essais, RTF = temps de calcul / durée de l'audio.
+Machine CPU de référence : Intel Core i5-6200U (2,30 GHz, 2 cœurs, 4 fils, 8 Go), int8,
+4 fils de calcul. Protocole de C17a : phrases de Yaoundé mises bout à bout jusqu'à 30 s,
+médiane de 3 essais, RTF = temps de calcul / durée de l'audio.
 
-| Audio | RTF |
-| --- | --- |
-| 30 s | 0,165 |
+| Audio | Médiane (3 essais : 4,87 ; 4,96 ; 5,10 s) | RTF |
+| --- | --- | --- |
+| 30 s | 4,96 s | 0,165 |
 
 Sous la limite du flux (RTF < 0,25, ENF-01) : modèle du profil temps réel. Un audio de 5 min
 demanderait environ 50 s de calcul (RTF extrapolé).
 
 ## Limites
 
-- WER non encore mesuré sur le français d'Afrique centrale : voir C17a (#47). Plus petit que
-  small, base fait en général plus d'erreurs ; l'écart sera chiffré par C17a.
+- L'accent camerounais coûte cher : le WER passe de 0,279 sur le test officiel à 0,505 sur
+  `yaounde/read` : un mot sur deux est faux. La partie `yaounde/answers` (parole spontanée)
+  n'est pas mesurée : sa référence est la question posée, pas la réponse (P10).
+- Quelques références du test officiel semblent fausses (9 phrases où base et small se
+  trompent sur tous les mots, listées dans `suspect_references`) : le WER du test est un peu
+  pessimiste.
 - Whisper est entraîné sur des données du web peu documentées : biais d'accent et de vocabulaire
   possibles, non mesurés ici.
 - Un segment de parole très court (moins d'une seconde) ou couvert par du bruit peut donner un
