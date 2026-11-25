@@ -5,7 +5,9 @@ modèle donne des probabilités par fenêtre, puis on en déduit le résultat gl
 - événements sonores : fenêtres fixes de 5 s avec 50 % de recouvrement ; global = moyenne
   simple des fenêtres (elles ont toutes la même durée) ;
 - émotions : segments de parole de la VAD, coupés en morceaux de 5 s au plus ; global =
-  moyenne pondérée par la durée, pour qu'un morceau de 0,5 s pèse dix fois moins qu'un de 5 s.
+  moyenne pondérée par la durée, pour qu'un morceau de 0,5 s pèse dix fois moins qu'un de 5 s ;
+- transcription : segments de parole de la VAD, coupés en morceaux de 30 s au plus ; un texte
+  par morceau, sans probabilités.
 Une moyenne de distributions de probabilité somme encore à 1 (combinaison convexe).
 """
 
@@ -41,11 +43,23 @@ class EmotionWindows(BaseModel):
     max_window_s: float = Field(gt=0)
 
 
+class TranscriptionSettings(BaseModel):
+    """Découpage de la parole et réglages du décodage de la transcription (EF-10, C17b)."""
+
+    max_window_s: float = Field(gt=0)
+    language: str
+    beam_size: int = Field(gt=0)
+    vad_filter: bool
+    condition_on_previous_text: bool
+    temperature: list[float] = Field(min_length=1)
+
+
 class InferenceConfig(BaseModel):
     """Contenu de configs/inference.yaml."""
 
     sound_event: SoundEventWindows
     emotion: EmotionWindows
+    transcription: TranscriptionSettings
 
 
 class RankedProbability(BaseModel):
@@ -103,6 +117,19 @@ def emotion_windows(speech_segments: list[Segment], config: InferenceConfig) -> 
     windows: list[Segment] = []
     for segment in speech_segments:
         pieces = split_long_segment(segment, config.emotion.max_window_s)
+        windows.extend(pieces)
+    return windows
+
+
+def transcription_windows(speech_segments: list[Segment], config: InferenceConfig) -> list[Segment]:
+    """Morceaux de parole envoyés au transcripteur, dans l'ordre du temps (EF-10).
+
+    Un segment de parole = une transcription ; un segment plus long que 30 s est coupé en
+    morceaux égaux. Liste vide si la VAD n'a trouvé aucune parole.
+    """
+    windows: list[Segment] = []
+    for segment in speech_segments:
+        pieces = split_long_segment(segment, config.transcription.max_window_s)
         windows.extend(pieces)
     return windows
 

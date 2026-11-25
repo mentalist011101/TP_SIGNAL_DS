@@ -57,6 +57,11 @@ class ModelEntry(BaseModel):
     # Température de la calibration (ENF-06), copie de calibration.temperature dans le
     # config.json du dépôt, pour l'affichage ; None si le modèle n'est pas calibré.
     temperature: float | None = Field(default=None, gt=0)
+    # Transcription seulement (C17b) : moteur d'inférence (« faster-whisper »), précision des
+    # calculs (« int8 » sur CPU) et nombre de fils de calcul.
+    engine: str = ""
+    compute_type: str = ""
+    cpu_threads: int | None = Field(default=None, gt=0)
     description: str = ""
 
 

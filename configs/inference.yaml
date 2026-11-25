@@ -16,3 +16,18 @@ sound_event:
 # pondérée par la durée de chaque morceau. Aucune parole : statut no_speech, rien d'inventé.
 emotion:
   max_window_s: 5.0
+
+# Transcription (EF-10, C17b) : segments de parole de la VAD (D5, le même détecteur que pour les
+# émotions). Un segment = une transcription ; un segment plus long que max_window_s est coupé en
+# morceaux égaux de max_window_s au plus (30 s : la fenêtre que Whisper lit d'un seul coup).
+# Aucune parole : statut no_speech. Réglages du décodage repris de l'évaluation C17a (#47,
+# configs/transcription.yaml de exp/c17-transcription) : mêmes valeurs, pour que l'application
+# transcrive comme le modèle a été mesuré. Les seuils anti-hallucination de faster-whisper
+# (no_speech_threshold, log_prob_threshold) gardent leurs valeurs par défaut.
+transcription:
+  max_window_s: 30.0
+  language: fr                          # langue imposée : pas de détection automatique
+  beam_size: 5
+  vad_filter: false                     # la VAD de l'application a déjà découpé la parole
+  condition_on_previous_text: false     # chaque segment est transcrit seul
+  temperature: [0.0, 0.2, 0.4, 0.6, 0.8, 1.0]   # replis de faster-whisper, écrits explicitement
