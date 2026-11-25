@@ -108,7 +108,8 @@ officiel ; le chemin du manifeste garde le nom réel du fichier dans la copie.
 Transcriptions d'OpenSLR 57 : le test officiel (515), le dev niger (986) et yaounde (8 397) sont
 complets. Il en manque dans ca16 : 481 sur 761 en devtest, 3 063 sur 5 997 en train. Ces
 extraits n'ont pas de ligne dans les fichiers de transcription de l'archive ; leur `transcript`
-reste vide. Le WER se calcule donc sur le test officiel et sur yaounde (P10).
+reste vide. Le WER se calcule donc sur le test officiel et sur yaounde/read (P10) : dans
+yaounde/answers, la transcription est la question posée et non la réponse enregistrée.
 
 ## Fichiers défectueux
 
