@@ -11,7 +11,7 @@ apispec==6.10.0
     # via flask-smorest
 audioread==3.1.0 ; python_full_version < '3.12'
     # via librosa
-av==18.1.0 ; python_full_version < '3.12'
+av==18.1.1 ; python_full_version < '3.12'
     # via faster-whisper
 av==19.0.2 ; python_full_version >= '3.12'
     # via faster-whisper
