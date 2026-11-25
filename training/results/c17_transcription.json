@@ -1,0 +1,943 @@
+{
+  "branch": "exp/c17-transcription",
+  "faster_whisper": "1.2.1",
+  "ctranslate2": "4.8.5",
+  "cuda_libraries": {
+    "nvidia-cublas-cu12": "12.9.3.13",
+    "nvidia-cudnn-cu12": "9.28.1.4"
+  },
+  "python": "3.13.16",
+  "models": [
+    {
+      "id": "base",
+      "repo_id": "Systran/faster-whisper-base",
+      "revision": "ebe41f70d5b6dfa9166e2c581c45c9c0cfc57b66"
+    },
+    {
+      "id": "small",
+      "repo_id": "Systran/faster-whisper-small",
+      "revision": "536b0662742c02347bc0e980a01041f333bce120"
+    }
+  ],
+  "decoding": {
+    "language": "fr",
+    "beam_size": 5,
+    "temperature": [
+      0.0,
+      0.2,
+      0.4,
+      0.6,
+      0.8,
+      1.0
+    ],
+    "vad_filter": false,
+    "condition_on_previous_text": false
+  },
+  "bootstrap": {
+    "draws": 1000,
+    "seed": 42,
+    "unit": "speaker",
+    "confidence_level": 0.95
+  },
+  "corpora": {
+    "test": {
+      "sentences": 515,
+      "speakers": 12,
+      "hours": 0.31
+    },
+    "yaounde": {
+      "sentences": 8397,
+      "speakers": 84,
+      "hours": 10.59
+    }
+  },
+  "gpu_float16": {
+    "base": {
+      "test": {
+        "wer": {
+          "value": 0.2792,
+          "low": 0.2354,
+          "high": 0.3202
+        },
+        "cer": {
+          "value": 0.1332,
+          "low": 0.1095,
+          "high": 0.1572
+        }
+      },
+      "yaounde": {
+        "wer": {
+          "value": 0.6158,
+          "low": 0.5991,
+          "high": 0.6315
+        },
+        "cer": {
+          "value": 0.3651,
+          "low": 0.3535,
+          "high": 0.376
+        }
+      }
+    },
+    "small": {
+      "test": {
+        "wer": {
+          "value": 0.1438,
+          "low": 0.1136,
+          "high": 0.1707
+        },
+        "cer": {
+          "value": 0.0672,
+          "low": 0.0503,
+          "high": 0.0851
+        }
+      },
+      "yaounde": {
+        "wer": {
+          "value": 0.4805,
+          "low": 0.4664,
+          "high": 0.4955
+        },
+        "cer": {
+          "value": 0.2908,
+          "low": 0.2809,
+          "high": 0.3001
+        }
+      }
+    }
+  },
+  "small_minus_base": {
+    "test": {
+      "value": -0.1353,
+      "low": -0.1651,
+      "high": -0.105,
+      "significant": true
+    },
+    "yaounde": {
+      "value": -0.1353,
+      "low": -0.1429,
+      "high": -0.1272,
+      "significant": true
+    }
+  },
+  "int8_minus_float16": {
+    "sentences": 100,
+    "paths": [
+      "speech/test/ca16/gabon_m_060/gabon_m_060_064.wav",
+      "speech/train/yaounde/answers/ctell1-02/ctell1-02-052.wav",
+      "speech/train/yaounde/answers/ctell1-04/ctell1-04-089.wav",
+      "speech/train/yaounde/answers/ctell1-07/ctell1-07-166.wav",
+      "speech/train/yaounde/answers/ctell1-10/ctell1-10-245.wav",
+      "speech/train/yaounde/answers/ctell1-11/ctell1-11-274.wav",
+      "speech/train/yaounde/answers/ctell1-13/ctell1-13-002.wav",
+      "speech/train/yaounde/answers/ctell1-13/ctell1-13-018.wav",
+      "speech/train/yaounde/answers/ctell1-15/ctell1-15-053.wav",
+      "speech/train/yaounde/answers/ctell2-25/ctell2-25-169.wav",
+      "speech/train/yaounde/answers/ctell2-26/ctell2-26-192.wav",
+      "speech/train/yaounde/answers/ctell2-30/ctell2-30-283.wav",
+      "speech/train/yaounde/answers/ctell2-35/ctell2-35-106.wav",
+      "speech/train/yaounde/answers/ctell3-37/ctell3-37-042.wav",
+      "speech/train/yaounde/answers/ctell3-38/ctell3-38-075.wav",
+      "speech/train/yaounde/answers/ctell3-44/ctell3-44-225.wav",
+      "speech/train/yaounde/answers/ctell3-47/ctell3-47-296.wav",
+      "speech/train/yaounde/answers/ctell3-49/ctell3-49-038.wav",
+      "speech/train/yaounde/answers/ctell3-51/ctell3-51-090.wav",
+      "speech/train/yaounde/answers/ctell4-60/ctell4-60-222.wav",
+      "speech/train/yaounde/answers/ctell4-61/ctell4-61-230.wav",
+      "speech/train/yaounde/answers/ctell4-65/ctell4-65-047.wav",
+      "speech/train/yaounde/answers/ctell5-78/ctell5-78-262.wav",
+      "speech/train/yaounde/answers/ctell5-83/ctell5-83-081.wav",
+      "speech/train/yaounde/read/ctell1-03/ctell1-03-0168.wav",
+      "speech/train/yaounde/read/ctell1-04/ctell1-04-0280.wav",
+      "speech/train/yaounde/read/ctell1-05/ctell1-05-0323.wav",
+      "speech/train/yaounde/read/ctell1-08/ctell1-08-0527.wav",
+      "speech/train/yaounde/read/ctell1-09/ctell1-09-0614.wav",
+      "speech/train/yaounde/read/ctell1-09/ctell1-09-0641.wav",
+      "speech/train/yaounde/read/ctell1-09/ctell1-09-0663.wav",
+      "speech/train/yaounde/read/ctell1-10/ctell1-10-0677.wav",
+      "speech/train/yaounde/read/ctell1-12/ctell1-12-0838.wav",
+      "speech/train/yaounde/read/ctell1-13/ctell1-13-0944.wav",
+      "speech/train/yaounde/read/ctell1-14/ctell1-14-1035.wav",
+      "speech/train/yaounde/read/ctell1-17/ctell1-17-1205.wav",
+      "speech/train/yaounde/read/ctell1-17/ctell1-17-1257.wav",
+      "speech/train/yaounde/read/ctell1-17/ctell1-17-1262.wav",
+      "speech/train/yaounde/read/ctell1-18/ctell1-18-1276.wav",
+      "speech/train/yaounde/read/ctell1-18/ctell1-18-1308.wav",
+      "speech/train/yaounde/read/ctell1-18/ctell1-18-1336.wav",
+      "speech/train/yaounde/read/ctell2-19/ctell2-19-0015.wav",
+      "speech/train/yaounde/read/ctell2-19/ctell2-19-0021.wav",
+      "speech/train/yaounde/read/ctell2-21/ctell2-21-0151.wav",
+      "speech/train/yaounde/read/ctell2-21/ctell2-21-0175.wav",
+      "speech/train/yaounde/read/ctell2-21/ctell2-21-0208.wav",
+      "speech/train/yaounde/read/ctell2-22/ctell2-22-0266.wav",
+      "speech/train/yaounde/read/ctell2-25/ctell2-25-0451.wav",
+      "speech/train/yaounde/read/ctell2-25/ctell2-25-0457.wav",
+      "speech/train/yaounde/read/ctell2-26/ctell2-26-0569.wav",
+      "speech/train/yaounde/read/ctell2-28/ctell2-28-0683.wav",
+      "speech/train/yaounde/read/ctell2-30/ctell2-30-0860.wav",
+      "speech/train/yaounde/read/ctell2-30/ctell2-30-0885.wav",
+      "speech/train/yaounde/read/ctell2-31/ctell2-31-0943.wav",
+      "speech/train/yaounde/read/ctell2-33/ctell2-33-1056.wav",
+      "speech/train/yaounde/read/ctell3-40/ctell3-40-0354.wav",
+      "speech/train/yaounde/read/ctell3-40/ctell3-40-0366.wav",
+      "speech/train/yaounde/read/ctell3-41/ctell3-41-0437.wav",
+      "speech/train/yaounde/read/ctell3-42/ctell3-42-0453.wav",
+      "speech/train/yaounde/read/ctell3-43/ctell3-43-0533.wav",
+      "speech/train/yaounde/read/ctell3-45/ctell3-45-0718.wav",
+      "speech/train/yaounde/read/ctell3-46/ctell3-46-0770.wav",
+      "speech/train/yaounde/read/ctell3-46/ctell3-46-0823.wav",
+      "speech/train/yaounde/read/ctell3-47/ctell3-47-0844.wav",
+      "speech/train/yaounde/read/ctell3-47/ctell3-47-0863.wav",
+      "speech/train/yaounde/read/ctell3-48/ctell3-48-0913.wav",
+      "speech/train/yaounde/read/ctell3-48/ctell3-48-0966.wav",
+      "speech/train/yaounde/read/ctell3-49/ctell3-49-0993.wav",
+      "speech/train/yaounde/read/ctell3-50/ctell3-50-1096.wav",
+      "speech/train/yaounde/read/ctell4-52/ctell4-52-0056.wav",
+      "speech/train/yaounde/read/ctell4-54/ctell4-54-0157.wav",
+      "speech/train/yaounde/read/ctell4-54/ctell4-54-0172.wav",
+      "speech/train/yaounde/read/ctell4-55/ctell4-55-0275.wav",
+      "speech/train/yaounde/read/ctell4-55/ctell4-55-0280.wav",
+      "speech/train/yaounde/read/ctell4-55/ctell4-55-0297.wav",
+      "speech/train/yaounde/read/ctell4-57/ctell4-57-0384.wav",
+      "speech/train/yaounde/read/ctell4-57/ctell4-57-0397.wav",
+      "speech/train/yaounde/read/ctell4-58/ctell4-58-0461.wav",
+      "speech/train/yaounde/read/ctell4-58/ctell4-58-0469.wav",
+      "speech/train/yaounde/read/ctell4-58/ctell4-58-0502.wav",
+      "speech/train/yaounde/read/ctell4-60/ctell4-60-0631.wav",
+      "speech/train/yaounde/read/ctell4-61/ctell4-61-0728.wav",
+      "speech/train/yaounde/read/ctell4-63/ctell4-63-0836.wav",
+      "speech/train/yaounde/read/ctell4-63/ctell4-63-0887.wav",
+      "speech/train/yaounde/read/ctell4-64/ctell4-64-0970.wav",
+      "speech/train/yaounde/read/ctell4-64/ctell4-64-0971.wav",
+      "speech/train/yaounde/read/ctell4-65/ctell4-65-0978.wav",
+      "speech/train/yaounde/read/ctell4-66/ctell4-66-1058.wav",
+      "speech/train/yaounde/read/ctell4-67/ctell4-67-1134.wav",
+      "speech/train/yaounde/read/ctell4-67/ctell4-67-1158.wav",
+      "speech/train/yaounde/read/ctell5-70/ctell5-70-0219.wav",
+      "speech/train/yaounde/read/ctell5-71/ctell5-71-0277.wav",
+      "speech/train/yaounde/read/ctell5-72/ctell5-72-0363.wav",
+      "speech/train/yaounde/read/ctell5-73/ctell5-73-0404.wav",
+      "speech/train/yaounde/read/ctell5-75/ctell5-75-0549.wav",
+      "speech/train/yaounde/read/ctell5-75/ctell5-75-0552.wav",
+      "speech/train/yaounde/read/ctell5-77/ctell5-77-0726.wav",
+      "speech/train/yaounde/read/ctell5-80/ctell5-80-0951.wav",
+      "speech/train/yaounde/read/ctell5-80/ctell5-80-0962.wav",
+      "speech/train/yaounde/read/ctell5-80/ctell5-80-0972.wav"
+    ],
+    "models": {
+      "base": {
+        "value": 0.0272,
+        "low": -0.0154,
+        "high": 0.0818,
+        "significant": false,
+        "float16_wer": 0.6501,
+        "int8_wer": 0.6773,
+        "cpu_seconds": 243.5
+      },
+      "small": {
+        "value": 0.0189,
+        "low": -0.0076,
+        "high": 0.0444,
+        "significant": false,
+        "float16_wer": 0.4775,
+        "int8_wer": 0.4965,
+        "cpu_seconds": 508.1
+      }
+    }
+  },
+  "worst_sentences": {
+    "base": {
+      "test": [
+        {
+          "path": "speech/test/ca16/chad_m_001/chad_m_001_012.wav",
+          "speaker": "chad_m_001",
+          "word_errors": 10,
+          "word_count": 7,
+          "reference": "bonjour officier pourquoi avez-vous arrêté mon véhicule",
+          "hypothesis": "moi j'ai eu l'office ici pour qu'à avevouer un témo véhicule"
+        },
+        {
+          "path": "speech/test/ca16/gabon_f_026/gabon_f_026_062.wav",
+          "speaker": "gabon_f_026",
+          "word_errors": 10,
+          "word_count": 6,
+          "reference": "mes camarades arriveront jeudi vers midi",
+          "hypothesis": "mais comme a râne à arriver à un jeu d'hiver midi"
+        },
+        {
+          "path": "speech/test/ca16/cameroon_m_012/cameroon_m_012_010.wav",
+          "speaker": "cameroon_m_012",
+          "word_errors": 9,
+          "word_count": 3,
+          "reference": "avez-vous un véhicule",
+          "hypothesis": "a b b o m v k i l"
+        },
+        {
+          "path": "speech/test/ca16/cameroon_m_012/cameroon_m_012_016.wav",
+          "speaker": "cameroon_m_012",
+          "word_errors": 9,
+          "word_count": 9,
+          "reference": "une pharmacie un kilomètre plus loin sur cette route",
+          "hypothesis": "il y a une informe à cent km de pli loin sur cette route"
+        },
+        {
+          "path": "speech/test/ca16/gabon_m_058/gabon_m_058_031.wav",
+          "speaker": "gabon_m_058",
+          "word_errors": 8,
+          "word_count": 6,
+          "reference": "mes camarades arriveront jeudi vers midi",
+          "hypothesis": "mais comme un rade arrivera un jeu d'hiver midi"
+        },
+        {
+          "path": "speech/test/ca16/gabon_m_060/gabon_m_060_060.wav",
+          "speaker": "gabon_m_060",
+          "word_errors": 8,
+          "word_count": 5,
+          "reference": "prenez de l'eau tiède seule",
+          "hypothesis": "bon on est en dehors de tiens c'est sûr"
+        },
+        {
+          "path": "speech/test/ca16/gabon_m_074/gabon_m_074_031.wav",
+          "speaker": "gabon_m_074",
+          "word_errors": 8,
+          "word_count": 8,
+          "reference": "essayez d'uriner toutes les trois ou quatre heures",
+          "hypothesis": "et c'est duriné tout le trou à quatre"
+        },
+        {
+          "path": "speech/test/ca16/cameroon_m_099/cameroon_m_099_006.wav",
+          "speaker": "cameroon_m_099",
+          "word_errors": 7,
+          "word_count": 4,
+          "reference": "fièvre depuis trente-six heures",
+          "hypothesis": "il y avait de plus de transciseur"
+        },
+        {
+          "path": "speech/test/ca16/gabon_f_026/gabon_f_026_017.wav",
+          "speaker": "gabon_f_026",
+          "word_errors": 7,
+          "word_count": 8,
+          "reference": "alors vous partirez à la fin de mois",
+          "hypothesis": "vous allez rester ici une semaine"
+        },
+        {
+          "path": "speech/test/ca16/gabon_m_060/gabon_m_060_023.wav",
+          "speaker": "gabon_m_060",
+          "word_errors": 7,
+          "word_count": 6,
+          "reference": "huit civiles et quatorze militaires alors",
+          "hypothesis": "n'est-ce qu'il y a quatorze mètres à l'eau"
+        },
+        {
+          "path": "speech/test/ca16/gabon_m_060/gabon_m_060_039.wav",
+          "speaker": "gabon_m_060",
+          "word_errors": 7,
+          "word_count": 4,
+          "reference": "demandez l'aide d'un médecin",
+          "hypothesis": "le monde est l'air de mettre ça"
+        },
+        {
+          "path": "speech/test/ca16/gabon_m_060/gabon_m_060_045.wav",
+          "speaker": "gabon_m_060",
+          "word_errors": 7,
+          "word_count": 7,
+          "reference": "il peut y avoir de la fièvre",
+          "hypothesis": "et puis la water à pierre"
+        },
+        {
+          "path": "speech/test/ca16/gabon_m_074/gabon_m_074_040.wav",
+          "speaker": "gabon_m_074",
+          "word_errors": 7,
+          "word_count": 6,
+          "reference": "le drainage postural pourrait aussi aider",
+          "hypothesis": "l'ordrenage postera le puré oc et d"
+        },
+        {
+          "path": "speech/test/ca16/gabon_m_074/gabon_m_074_050.wav",
+          "speaker": "gabon_m_074",
+          "word_errors": 7,
+          "word_count": 8,
+          "reference": "utilisez des moustiquaires aux fenêtres et aux portes",
+          "hypothesis": "utilisez le musiqueur au fenêtre de l'oporte"
+        },
+        {
+          "path": "speech/test/ca16/gabon_m_074/gabon_m_074_055.wav",
+          "speaker": "gabon_m_074",
+          "word_errors": 7,
+          "word_count": 10,
+          "reference": "prendre un litre et demi par jour en trois prises",
+          "hypothesis": "prends un lit tradémie par jour entreprise"
+        },
+        {
+          "path": "speech/test/ca16/gabon_m_074/gabon_m_074_061.wav",
+          "speaker": "gabon_m_074",
+          "word_errors": 7,
+          "word_count": 8,
+          "reference": "une autre personne boit de l'eau du trou",
+          "hypothesis": "vous n'aurez pas d'autres personnes voire de l'eau du troup"
+        },
+        {
+          "path": "speech/test/ca16/cameroon_m_012/cameroon_m_012_007.wav",
+          "speaker": "cameroon_m_012",
+          "word_errors": 6,
+          "word_count": 5,
+          "reference": "quand votre ami est malade",
+          "hypothesis": "qu'on voudra m'y aimer à l'aide"
+        },
+        {
+          "path": "speech/test/ca16/cameroon_m_012/cameroon_m_012_014.wav",
+          "speaker": "cameroon_m_012",
+          "word_errors": 6,
+          "word_count": 7,
+          "reference": "alors vous devrez aller par l'église là-bas",
+          "hypothesis": "vous devriez aller par les blis là bas"
+        },
+        {
+          "path": "speech/test/ca16/cameroon_m_012/cameroon_m_012_015.wav",
+          "speaker": "cameroon_m_012",
+          "word_errors": 6,
+          "word_count": 7,
+          "reference": "est-ce que le médecin est loin d'ici",
+          "hypothesis": "est-ce que je vais le laisser en lui-même ici"
+        },
+        {
+          "path": "speech/test/ca16/cameroon_m_099/cameroon_m_099_005.wav",
+          "speaker": "cameroon_m_099",
+          "word_errors": 6,
+          "word_count": 6,
+          "reference": "depuis quand votre ami est-il malade",
+          "hypothesis": "plus qu'un beau tramit et chill malade"
+        }
+      ],
+      "yaounde": [
+        {
+          "path": "speech/train/yaounde/read/ctell4-54/ctell4-54-0153.wav",
+          "speaker": "ctell4-54",
+          "word_errors": 55,
+          "word_count": 3,
+          "reference": "qui bâtit ment",
+          "hypothesis": "je vais durer ça je suis palmé la fin du silence ca va être pour vrai je sais que c'est un bon ère et voilà je suis désolé pour toi je suis très petit ici je suis très intéressé et je ne sais plus si ça a été oublié et c'est vrai c'est mon secret"
+        },
+        {
+          "path": "speech/train/yaounde/answers/ctell2-20/ctell2-20-043.wav",
+          "speaker": "ctell2-20",
+          "word_errors": 29,
+          "word_count": 7,
+          "reference": "quelle est la distance à votre destination",
+          "hypothesis": "la distance à ma destination je n'ai aucune idée plus de ce que je vous ai dit que je ne savais pas là où j'y pâtais c'est pâté pour une aventure"
+        },
+        {
+          "path": "speech/train/yaounde/answers/ctell2-20/ctell2-20-035.wav",
+          "speaker": "ctell2-20",
+          "word_errors": 27,
+          "word_count": 7,
+          "reference": "est-ce que vous avez votre carte d'identité",
+          "hypothesis": "oui comme tout bon citoyen je dois me promener avec ma carrière d'identité c'est tout que l'autre que j'ai vu me travailler passer d'un pays à un autre"
+        },
+        {
+          "path": "speech/train/yaounde/answers/ctell2-20/ctell2-20-037.wav",
+          "speaker": "ctell2-20",
+          "word_errors": 27,
+          "word_count": 9,
+          "reference": "et votre passager est-ce qu'il a sa carte d'identité",
+          "hypothesis": "c'est tellement qu'il doit l'en avoir parce que tout bon c'est toi comme je vous n'ai de vous le dire il doit se promener vers sa carte de identité"
+        },
+        {
+          "path": "speech/train/yaounde/read/ctell3-39/ctell3-39-0276.wav",
+          "speaker": "ctell3-39",
+          "word_errors": 24,
+          "word_count": 17,
+          "reference": "cheval de foin cheval de rien cheval d'avoine cheval de peine cheval de paille cheval de bataille",
+          "hypothesis": "si vous avez des faim si vous avez des rien si vous avez des faim si vous avez des pailles si vous avez des batailles"
+        },
+        {
+          "path": "speech/train/yaounde/answers/ctell5-70/ctell5-70-069.wav",
+          "speaker": "ctell5-70",
+          "word_errors": 22,
+          "word_count": 9,
+          "reference": "est-ce que vous avez vu ce qui est arrivé",
+          "hypothesis": "oui il y a une collusion entre deux véhicules à chauffer des taxis à convier un autre puis s'agé de la route"
+        },
+        {
+          "path": "speech/train/yaounde/read/ctell4-58/ctell4-58-0496.wav",
+          "speaker": "ctell4-58",
+          "word_errors": 22,
+          "word_count": 8,
+          "reference": "l'écurie use plus le cheval que la course",
+          "hypothesis": "il y a du rythme et il y a du boulot il y a du boulot et il y a du boulot"
+        },
+        {
+          "path": "speech/train/yaounde/answers/ctell1-04/ctell1-04-096.wav",
+          "speaker": "ctell1-04",
+          "word_errors": 20,
+          "word_count": 8,
+          "reference": "pourriez vous me dire son numéro de téléphone",
+          "hypothesis": "sans le mur de téléphone il y a neuf virgule sept cent dix-huit car à neuf virgule cinq c'est inconsigné"
+        },
+        {
+          "path": "speech/train/yaounde/answers/ctell2-20/ctell2-20-032.wav",
+          "speaker": "ctell2-20",
+          "word_errors": 20,
+          "word_count": 12,
+          "reference": "est-ce que vous avez des drogues ou des armes dans ce véhicule",
+          "hypothesis": "non sinon il n'y a ni drug dans mon véhicule parce que je suis pas porteur du drug ni d'armes"
+        },
+        {
+          "path": "speech/train/yaounde/answers/ctell2-21/ctell2-21-075.wav",
+          "speaker": "ctell2-21",
+          "word_errors": 20,
+          "word_count": 8,
+          "reference": "est-ce que vous pourriez identifier cette personne encore",
+          "hypothesis": "et tant au podium on ne peut pas déjà déterminer la personne mais si c'est avec le visage normal et oui"
+        },
+        {
+          "path": "speech/train/yaounde/answers/ctell5-79/ctell5-79-287.wav",
+          "speaker": "ctell5-79",
+          "word_errors": 20,
+          "word_count": 5,
+          "reference": "votre enfant a-t-il uriné aujourd'hui",
+          "hypothesis": "pour les urunes je ne suis pas tellement certain parce que je ne suis pas là mais on a valué"
+        },
+        {
+          "path": "speech/train/yaounde/read/ctell1-10/ctell1-10-0702.wav",
+          "speaker": "ctell1-10",
+          "word_errors": 20,
+          "word_count": 6,
+          "reference": "qui ne hasarde rien n'a rien",
+          "hypothesis": "c'est un peu plus tard je mets le dessus ici et donc je vais y donner pour le plus tard"
+        },
+        {
+          "path": "speech/train/yaounde/read/ctell3-37/ctell3-37-0146.wav",
+          "speaker": "ctell3-37",
+          "word_errors": 20,
+          "word_count": 36,
+          "reference": "n'aille au banquet qui ne veut pas manger ni sur la mer qui a peur du danger ni à la cour qui dit tout ce qu'il pense non plus au bal qui n'aime pas la danse",
+          "hypothesis": "n'alopanque à qui nous vaut pas manger nous zulamet qui a peur du danger ni à la côte qui dit tous les coupants non plus obales qu'il n'aime"
+        },
+        {
+          "path": "speech/train/yaounde/answers/ctell2-20/ctell2-20-042.wav",
+          "speaker": "ctell2-20",
+          "word_errors": 19,
+          "word_count": 9,
+          "reference": "est-ce que vous avez votre certificat d'immatriculation du véhicule",
+          "hypothesis": "c'est tellement que oui puis c'est une voiture ne peut pas se promener sans pièce justifiative donc j'ai ma carte"
+        },
+        {
+          "path": "speech/train/yaounde/answers/ctell5-72/ctell5-72-102.wav",
+          "speaker": "ctell5-72",
+          "word_errors": 19,
+          "word_count": 8,
+          "reference": "est-ce que la personne sait parler d'autres langues",
+          "hypothesis": "n'est pas le français et qu'on peut en anglais un peu de l'ingala peut-être que c'est un peu d'espagnol"
+        },
+        {
+          "path": "speech/train/yaounde/read/ctell1-02/ctell1-02-0140.wav",
+          "speaker": "ctell1-02",
+          "word_errors": 19,
+          "word_count": 17,
+          "reference": "imprudence babil sotte vanité et vaine curiosité ont ensemble étroit parentage ce sont enfant tous d'un lignage",
+          "hypothesis": "en plus d'en babile sortes vanités et vaines cuillusités en ensemble et troites par entager se sont en fond tous d'une même ligne"
+        },
+        {
+          "path": "speech/train/yaounde/read/ctell3-45/ctell3-45-0696.wav",
+          "speaker": "ctell3-45",
+          "word_errors": 19,
+          "word_count": 24,
+          "reference": "quand le guignon malchance est à nos trousses on se noie dans un crachat il est bon d'être habile mais non de le paraître",
+          "hypothesis": "il est bon d'être à billes menons de l'eau paraît"
+        },
+        {
+          "path": "speech/train/yaounde/read/ctell3-45/ctell3-45-0750.wav",
+          "speaker": "ctell3-45",
+          "word_errors": 19,
+          "word_count": 12,
+          "reference": "si jeunesse savait si vieillesse pouvait il faut que jeunesse se passe",
+          "hypothesis": "si je n'ai pas fait si je vous dis que je n'ai pas fait je vous dis que je n'ai pas fait"
+        },
+        {
+          "path": "speech/train/yaounde/answers/ctell2-23/ctell2-23-107.wav",
+          "speaker": "ctell2-23",
+          "word_errors": 18,
+          "word_count": 7,
+          "reference": "pendant quelle année ést-il né cette personne",
+          "hypothesis": "il n'y a rien à faire il n'y a rien à faire il n'y a rien à faire"
+        },
+        {
+          "path": "speech/train/yaounde/answers/ctell4-58/ctell4-58-168.wav",
+          "speaker": "ctell4-58",
+          "word_errors": 18,
+          "word_count": 8,
+          "reference": "combien de temps avez vous cessé de fumer",
+          "hypothesis": "c'est comme peut-être que tu m'as un voie chencher que de là j'ai pu fumer pour un vedo vous donner"
+        }
+      ]
+    },
+    "small": {
+      "test": [
+        {
+          "path": "speech/test/ca16/gabon_f_026/gabon_f_026_017.wav",
+          "speaker": "gabon_f_026",
+          "word_errors": 8,
+          "word_count": 8,
+          "reference": "alors vous partirez à la fin de mois",
+          "hypothesis": "très bien vous allez rester ici une semaine"
+        },
+        {
+          "path": "speech/test/ca16/gabon_f_026/gabon_f_026_068.wav",
+          "speaker": "gabon_f_026",
+          "word_errors": 6,
+          "word_count": 6,
+          "reference": "huit civiles et quatorze militaires alors",
+          "hypothesis": "oui civil il est quatorze mille terres alors"
+        },
+        {
+          "path": "speech/test/ca16/gabon_m_003/gabon_m_003_032.wav",
+          "speaker": "gabon_m_003",
+          "word_errors": 6,
+          "word_count": 6,
+          "reference": "oui il y en a une",
+          "hypothesis": "huit virgule un"
+        },
+        {
+          "path": "speech/test/ca16/gabon_m_060/gabon_m_060_032.wav",
+          "speaker": "gabon_m_060",
+          "word_errors": 6,
+          "word_count": 4,
+          "reference": "pourquoi timothy est-il mort",
+          "hypothesis": "pauquati mochi et c'est le mot"
+        },
+        {
+          "path": "speech/test/ca16/cameroon_m_012/cameroon_m_012_020.wav",
+          "speaker": "cameroon_m_012",
+          "word_errors": 5,
+          "word_count": 9,
+          "reference": "vous allez voir une croix verte sur la pharmacie",
+          "hypothesis": "vous allez voir il n'y a qu'un verre sur la pharmacie"
+        },
+        {
+          "path": "speech/test/ca16/cameroon_m_099/cameroon_m_099_014.wav",
+          "speaker": "cameroon_m_099",
+          "word_errors": 5,
+          "word_count": 8,
+          "reference": "qu'il y a un docteur ou une infirmière",
+          "hypothesis": "on va voir ce qu'il y a en docteur ou une infirmière"
+        },
+        {
+          "path": "speech/test/ca16/gabon_m_003/gabon_m_003_023.wav",
+          "speaker": "gabon_m_003",
+          "word_errors": 5,
+          "word_count": 5,
+          "reference": "voulez-vous voir le salon d'instruction",
+          "hypothesis": "vous voulez vous voir le salon de l'instruction"
+        },
+        {
+          "path": "speech/test/ca16/gabon_m_060/gabon_m_060_023.wav",
+          "speaker": "gabon_m_060",
+          "word_errors": 5,
+          "word_count": 6,
+          "reference": "huit civiles et quatorze militaires alors",
+          "hypothesis": "vite civil et catosmite à l'eau"
+        },
+        {
+          "path": "speech/test/ca16/gabon_m_060/gabon_m_060_048.wav",
+          "speaker": "gabon_m_060",
+          "word_errors": 5,
+          "word_count": 5,
+          "reference": "la chair morte et endommagée",
+          "hypothesis": "la chère monte et on est dommagés"
+        },
+        {
+          "path": "speech/test/ca16/gabon_m_072/gabon_m_072_024.wav",
+          "speaker": "gabon_m_072",
+          "word_errors": 5,
+          "word_count": 4,
+          "reference": "après le repas alors",
+          "hypothesis": "il n'y a pas de repas alors"
+        },
+        {
+          "path": "speech/test/ca16/gabon_m_074/gabon_m_074_047.wav",
+          "speaker": "gabon_m_074",
+          "word_errors": 5,
+          "word_count": 8,
+          "reference": "qu'est-ce qui a causé la mort de timothy",
+          "hypothesis": "qu'est ce qui a causé la mort des petits motifs"
+        },
+        {
+          "path": "speech/test/ca16/gabon_m_074/gabon_m_074_066.wav",
+          "speaker": "gabon_m_074",
+          "word_errors": 5,
+          "word_count": 7,
+          "reference": "attention trop de vitamine a est toxique",
+          "hypothesis": "attention tous les vitamines a sont toxiques"
+        },
+        {
+          "path": "speech/test/ca16/gabon_m_074/gabon_m_074_069.wav",
+          "speaker": "gabon_m_074",
+          "word_errors": 5,
+          "word_count": 8,
+          "reference": "cela aère l'eau et en améliore le goût",
+          "hypothesis": "c'est là air l'eau et un amélior le goût"
+        },
+        {
+          "path": "speech/test/ca16/cameroon_m_012/cameroon_m_012_001.wav",
+          "speaker": "cameroon_m_012",
+          "word_errors": 4,
+          "word_count": 5,
+          "reference": "s'il vous plaît monsieur l'agent",
+          "hypothesis": "si vous pleurez mais c'est l'agent"
+        },
+        {
+          "path": "speech/test/ca16/cameroon_m_012/cameroon_m_012_016.wav",
+          "speaker": "cameroon_m_012",
+          "word_errors": 4,
+          "word_count": 9,
+          "reference": "une pharmacie un kilomètre plus loin sur cette route",
+          "hypothesis": "il faut armasser un km plus loin sur cette route"
+        },
+        {
+          "path": "speech/test/ca16/cameroon_m_099/cameroon_m_099_004.wav",
+          "speaker": "cameroon_m_099",
+          "word_errors": 4,
+          "word_count": 3,
+          "reference": "nous sommes canadiens",
+          "hypothesis": "je suis au canada"
+        },
+        {
+          "path": "speech/test/ca16/chad_m_001/chad_m_001_015.wav",
+          "speaker": "chad_m_001",
+          "word_errors": 4,
+          "word_count": 22,
+          "reference": "cette femme a une mauvaise blessure au bra nous avons arête le saignement mais il peut reprendre elle a besoin d'un médecin",
+          "hypothesis": "cette femme a une mauvaise blessure au bras nous avons arrêté l'océanement mais il peut reprendre elle a besoin d'un médecin"
+        },
+        {
+          "path": "speech/test/ca16/gabon_f_026/gabon_f_026_062.wav",
+          "speaker": "gabon_f_026",
+          "word_errors": 4,
+          "word_count": 6,
+          "reference": "mes camarades arriveront jeudi vers midi",
+          "hypothesis": "mais camarade arrivera en jeudi vers midi"
+        },
+        {
+          "path": "speech/test/ca16/gabon_f_026/gabon_f_026_074.wav",
+          "speaker": "gabon_f_026",
+          "word_errors": 4,
+          "word_count": 6,
+          "reference": "le moteur a-t-il cessé de fonctionner",
+          "hypothesis": "le moteur a tissé c'est ça de fonctionner"
+        },
+        {
+          "path": "speech/test/ca16/gabon_f_026/gabon_f_026_087.wav",
+          "speaker": "gabon_f_026",
+          "word_errors": 4,
+          "word_count": 6,
+          "reference": "tu te trompes il fait beau",
+          "hypothesis": "je suis de trompe il fait beau"
+        }
+      ],
+      "yaounde": [
+        {
+          "path": "speech/train/yaounde/answers/ctell2-20/ctell2-20-043.wav",
+          "speaker": "ctell2-20",
+          "word_errors": 26,
+          "word_count": 7,
+          "reference": "quelle est la distance à votre destination",
+          "hypothesis": "la distance à ma destination je n'ai aucune idée plus je vous ai dit que je ne savais pas là où je patais je patais pour une aventure"
+        },
+        {
+          "path": "speech/train/yaounde/read/ctell3-39/ctell3-39-0276.wav",
+          "speaker": "ctell3-39",
+          "word_errors": 25,
+          "word_count": 17,
+          "reference": "cheval de foin cheval de rien cheval d'avoine cheval de peine cheval de paille cheval de bataille",
+          "hypothesis": "je vais à la joie je ne vais rien je vais à la joie je vais à la peine je vais à la paille je vais à la bataille"
+        },
+        {
+          "path": "speech/train/yaounde/answers/ctell2-20/ctell2-20-035.wav",
+          "speaker": "ctell2-20",
+          "word_errors": 24,
+          "word_count": 7,
+          "reference": "est-ce que vous avez votre carte d'identité",
+          "hypothesis": "oui comme tout bon citoyen je dois me promener avec ma carte d'identité surtout que lorsque je veux m'estraveter et passer d'un pays à un autre"
+        },
+        {
+          "path": "speech/train/yaounde/answers/ctell5-70/ctell5-70-069.wav",
+          "speaker": "ctell5-70",
+          "word_errors": 21,
+          "word_count": 9,
+          "reference": "est-ce que vous avez vu ce qui est arrivé",
+          "hypothesis": "oui il y a une collusion entre deux véhicules un chauffeur de taxi a apprigné un autre usager de la route"
+        },
+        {
+          "path": "speech/train/yaounde/answers/ctell2-20/ctell2-20-032.wav",
+          "speaker": "ctell2-20",
+          "word_errors": 20,
+          "word_count": 12,
+          "reference": "est-ce que vous avez des drogues ou des armes dans ce véhicule",
+          "hypothesis": "non je n'ai ni armes ni drogues dans mon véhicule parce que je ne suis pas porteux de drogue ni d'armes"
+        },
+        {
+          "path": "speech/train/yaounde/answers/ctell5-79/ctell5-79-287.wav",
+          "speaker": "ctell5-79",
+          "word_errors": 20,
+          "word_count": 5,
+          "reference": "votre enfant a-t-il uriné aujourd'hui",
+          "hypothesis": "pour les urines je ne suis pas tellement sétain parce que je ne suis pas à la maison à valuer"
+        },
+        {
+          "path": "speech/train/yaounde/answers/ctell2-20/ctell2-20-037.wav",
+          "speaker": "ctell2-20",
+          "word_errors": 19,
+          "word_count": 9,
+          "reference": "et votre passager est-ce qu'il a sa carte d'identité",
+          "hypothesis": "c'est tellement qu'il doit l'avoir parce que tout bon citoyen comme je vous le dis doit se promener avec sa carte d'identité"
+        },
+        {
+          "path": "speech/train/yaounde/answers/ctell2-21/ctell2-21-075.wav",
+          "speaker": "ctell2-21",
+          "word_errors": 18,
+          "word_count": 8,
+          "reference": "est-ce que vous pourriez identifier cette personne encore",
+          "hypothesis": "étant au podium on ne peut pas déjà déterminer la personne mais si c'est avec le visage normal oui"
+        },
+        {
+          "path": "speech/train/yaounde/answers/ctell4-53/ctell4-53-029.wav",
+          "speaker": "ctell4-53",
+          "word_errors": 18,
+          "word_count": 6,
+          "reference": "est-ce que vous avez mangé aujourd'hui",
+          "hypothesis": "il y a des manchots il y a des piscins parce qu'il y a un peu de faim"
+        },
+        {
+          "path": "speech/train/yaounde/answers/ctell5-72/ctell5-72-102.wav",
+          "speaker": "ctell5-72",
+          "word_errors": 18,
+          "word_count": 8,
+          "reference": "est-ce que la personne sait parler d'autres langues",
+          "hypothesis": "et pas le français et qu'on parle anglais un peu de linga là peut-être aussi un peu d'espagnol"
+        },
+        {
+          "path": "speech/train/yaounde/answers/ctell5-72/ctell5-72-103.wav",
+          "speaker": "ctell5-72",
+          "word_errors": 18,
+          "word_count": 6,
+          "reference": "à quel niveau parle-t-il ces langues",
+          "hypothesis": "elle parle très bien français elle s'exprime au mieux en anglais et quelques mots en lingue à l'art"
+        },
+        {
+          "path": "speech/train/yaounde/answers/ctell5-73/ctell5-73-142.wav",
+          "speaker": "ctell5-73",
+          "word_errors": 18,
+          "word_count": 4,
+          "reference": "de quelle couleur est-il",
+          "hypothesis": "a l'heure de la fin de l'année il y a beaucoup d'eux qui sont en train de se réunir"
+        },
+        {
+          "path": "speech/train/yaounde/answers/ctell1-13/ctell1-13-022.wav",
+          "speaker": "ctell1-13",
+          "word_errors": 17,
+          "word_count": 17,
+          "reference": "quelqu'un montre du doigt à votre adresse sur la pièce d'identité et demande est-ce que c'est correcte",
+          "hypothesis": "elle est très correcte je m'appelle ses entités je dirais"
+        },
+        {
+          "path": "speech/train/yaounde/answers/ctell2-20/ctell2-20-033.wav",
+          "speaker": "ctell2-20",
+          "word_errors": 17,
+          "word_count": 9,
+          "reference": "est-ce que vous connaissez l'endroit précis où vous allez",
+          "hypothesis": "pas du tout je suis nouveau là où je vais je ne connais ni là où je pars"
+        },
+        {
+          "path": "speech/train/yaounde/answers/ctell2-20/ctell2-20-042.wav",
+          "speaker": "ctell2-20",
+          "word_errors": 17,
+          "word_count": 9,
+          "reference": "est-ce que vous avez votre certificat d'immatriculation du véhicule",
+          "hypothesis": "c'est tellement que oui puisqu'une voiture ne peut pas se promener sans pièces justificatives donc j'ai ma carte"
+        },
+        {
+          "path": "speech/train/yaounde/answers/ctell2-20/ctell2-20-047.wav",
+          "speaker": "ctell2-20",
+          "word_errors": 17,
+          "word_count": 7,
+          "reference": "avec qui est-ce que vous restez là",
+          "hypothesis": "dès que j'arriverai je serai en amie je n'apprécie pas en amie je serai de l'autre côté"
+        },
+        {
+          "path": "speech/train/yaounde/answers/ctell2-20/ctell2-20-048.wav",
+          "speaker": "ctell2-20",
+          "word_errors": 17,
+          "word_count": 7,
+          "reference": "est-ce que vous restez là avec quelqu'un",
+          "hypothesis": "j'ai bien besoin de rester avec quelqu'un mais plus que je ne me connais pas je ne connais personne"
+        },
+        {
+          "path": "speech/train/yaounde/answers/ctell3-36/ctell3-36-022.wav",
+          "speaker": "ctell3-36",
+          "word_errors": 17,
+          "word_count": 17,
+          "reference": "quelqu'un montre du doigt à votre adresse sur la pièce d'identité et demande est-ce que c'est correcte",
+          "hypothesis": "non ce n'est pas correct"
+        },
+        {
+          "path": "speech/train/yaounde/answers/ctell3-48/ctell3-48-022.wav",
+          "speaker": "ctell3-48",
+          "word_errors": 17,
+          "word_count": 17,
+          "reference": "quelqu'un montre du doigt à votre adresse sur la pièce d'identité et demande est-ce que c'est correcte",
+          "hypothesis": "huit"
+        },
+        {
+          "path": "speech/train/yaounde/answers/ctell4-52/ctell4-52-022.wav",
+          "speaker": "ctell4-52",
+          "word_errors": 17,
+          "word_count": 17,
+          "reference": "quelqu'un montre du doigt à votre adresse sur la pièce d'identité et demande est-ce que c'est correcte",
+          "hypothesis": "non c'est pas correct"
+        }
+      ]
+    }
+  },
+  "gpu_seconds": {
+    "base": 1489.9,
+    "small": 1798.1
+  },
+  "latency_audio_paths": [
+    "speech/train/yaounde/answers/ctell2-22/ctell2-22-087.wav",
+    "speech/train/yaounde/answers/ctell2-23/ctell2-23-122.wav",
+    "speech/train/yaounde/answers/ctell2-29/ctell2-29-270.wav",
+    "speech/train/yaounde/answers/ctell2-30/ctell2-30-298.wav",
+    "speech/train/yaounde/answers/ctell2-31/ctell2-31-025.wav",
+    "speech/train/yaounde/answers/ctell2-32/ctell2-32-040.wav",
+    "speech/train/yaounde/answers/ctell3-43/ctell3-43-199.wav"
+  ],
+  "runtime_s": 7561,
+  "latency_cpu": {
+    "machine": "Intel Core i5-6200U 2,30 GHz (2 cœurs, 4 fils), 8 Go",
+    "device": "cpu",
+    "compute_type": "int8",
+    "cpu_threads": 4,
+    "audio_s": 30.0,
+    "runs": 3,
+    "models": {
+      "base": {
+        "runs_s": [
+          4.87,
+          4.96,
+          5.1
+        ],
+        "median_s": 4.96,
+        "rtf": 0.165
+      },
+      "small": {
+        "runs_s": [
+          15.67,
+          15.5,
+          15.47
+        ],
+        "median_s": 15.5,
+        "rtf": 0.517
+      }
+    }
+  }
+}
