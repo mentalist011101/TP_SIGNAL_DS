@@ -44,8 +44,8 @@ avec `ECHOLENS_PRELOAD_MODELS=true`.
 Mesurées par l'évaluation C17a (`training/results/c17_transcription.json`), avec les mêmes
 réglages de décodage que l'application, en float16 sur GPU (Kaggle). Corpus OpenSLR 57 (P10),
 qui ne sert qu'à l'évaluation : test officiel (515 phrases, 12 locuteurs, 0,31 h) et partie
-lue du sous-corpus de Yaoundé, `yaounde/read` (6 299 phrases, 84 locuteurs, 8,53 h, accent
-camerounais). Intervalles à 95 % par bootstrap sur les locuteurs (1 000 tirages, graine 42) :
+lue du sous-corpus de Yaoundé, `yaounde/read` (6 299 phrases, 84 locuteurs, 8,53 h).
+Intervalles à 95 % par bootstrap sur les locuteurs (1 000 tirages, graine 42) :
 les phrases d'un même locuteur ne sont pas indépendantes.
 
 | Corpus | WER [IC 95 %] | CER [IC 95 %] |
@@ -76,12 +76,15 @@ de fichiers. Un audio de 5 min demanderait environ 2 min 35 s de calcul (RTF ext
 
 ## Limites
 
-- L'accent camerounais coûte cher : le WER passe de 0,144 sur le test officiel à 0,345 sur
-  `yaounde/read`, plus du double. La partie `yaounde/answers` (parole spontanée) n'est pas
-  mesurée : sa référence est la question posée, pas la réponse (P10).
-- Quelques références du test officiel semblent fausses (9 phrases où base et small se
-  trompent sur tous les mots, listées dans `suspect_references`) : le WER du test est un peu
-  pessimiste.
+- Le WER est bien plus élevé sur la partie lue de Yaoundé (0,345) que sur le test officiel
+  (0,144). Les deux corpus diffèrent par le contenu, la longueur des phrases, l'enregistrement
+  et les locuteurs, et le test contient aussi des locuteurs camerounais : cette mesure ne
+  permet pas d'isoler l'effet de l'accent.
+- La partie `yaounde/answers` (réponses à des questions) n'est pas mesurée : sa référence est
+  la question posée, pas la réponse (P10).
+- 9 phrases du test où base et small se trompent sur tous les mots (`suspect_references`) :
+  après vérification, ce sont des erreurs de reconnaissance, dont 3 d'un même locuteur, et non
+  des références fausses.
 - Whisper est entraîné sur des données du web peu documentées : biais d'accent et de vocabulaire
   possibles, non mesurés ici.
 - Un segment de parole très court (moins d'une seconde) ou couvert par du bruit peut donner un
