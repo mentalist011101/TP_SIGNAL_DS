@@ -1,55 +1,87 @@
 # MCD MERISE — historique des analyses
 
 Décisions : S3 (SQLite via SQLAlchemy, fichiers sur disque), EF-08 (historique), EF-05, EF-06,
-EF-10, EF-11, EF-12 (résultats par segment), C13 (contrat des résultats).
+EF-10, EF-11, EF-12 (résultats par segment), C13 (contrat des résultats), S1 (registre des
+modèles).
 
-Source : la table `analyses` de `src/echolens/services/storage.py` (classe `AnalysisRecord`) et le
-contrat des résultats de `src/echolens/api/result_schemas.py`. **Une seule table existe** :
-tout ce qui concerne les résultats est rangé dans sa colonne JSON `results` (voir « Du MCD au
-code »). Seul le LOCUTEUR est encore une proposition.
+Sources : la table `analyses` de `src/echolens/services/storage.py` (classe `AnalysisRecord`), le
+contrat des résultats de `src/echolens/api/result_schemas.py`, `configs/labels.yaml` (classes) et
+`configs/registry.yaml` (modèles). Seul le LOCUTEUR est encore une proposition.
 
 ## Diagramme
 
-Légende : rectangle = entité (identifiant précédé de `#`), ellipse = association,
-`(min,max)` = cardinalité, lue du côté de l'entité. En **pointillés** : ce qui n'existe pas encore.
+Légende :
+- rectangle = entité, son identifiant précédé de `#` ;
+- ellipse = association, ses attributs écrits sous son nom ;
+- `1,n` = cardinalité, lue du côté de l'entité ;
+- `(1,1)` **entre parenthèses** = identification relative : l'entité est identifiée par l'entité
+  à laquelle elle se rattache ;
+- en gris pointillé : ce qui n'existe pas encore.
 
 ![MCD MERISE de l'historique des analyses](images/mcd-historique.png)
 
-Source modifiable : [`mcd-historique.drawio`](mcd-historique.drawio), à ouvrir dans draw.io (application ou app.diagrams.net). Après une modification, réexporter l'image : Fichier > Exporter en > PNG, zoom 200 %, dans `images/mcd-historique.png`.
+Source modifiable : [`mcd-historique.drawio`](mcd-historique.drawio), à ouvrir dans draw.io
+(application ou app.diagrams.net). Après une modification, réexporter l'image : Fichier > Exporter
+en > PNG, zoom 200 %, dans `images/mcd-historique.png`.
 
 ## Les entités
 
-| Entité | Ce qu'elle représente | Exemple |
-| --- | --- | --- |
-| ANALYSE | Un audio importé et son traitement | `entretien.wav`, terminée, 41,2 s, profil Qualité |
-| TÂCHE | Ce qu'on peut demander : émotion, événement sonore, transcription, locuteur | `emotion` / « Émotion » |
-| RÉSULTAT | La réponse pour **une** tâche demandée d'**une** analyse | émotion : `done`, « Colère » |
-| MODÈLE | Le modèle du registre qui a produit le résultat | `echolens-emotion-whisper-base` 1.0.0, calibré |
-| SEGMENT | Un morceau de l'audio et sa classe la plus probable, pour la frise (EF-12) | de 5,0 à 10,0 s : « Pluie » |
-| PROBABILITÉ | Une classe et sa probabilité | `angry`, « Colère », 0,58 |
-| LOCUTEUR *(proposé)* | Une personne enregistrée avec son consentement (EF-11, ENF-10) | p04 |
+| Entité | Identifiant | Ce qu'elle représente | Exemple |
+| --- | --- | --- | --- |
+| ANALYSE | `id_analyse` | Un audio importé et son traitement | `entretien.wav`, terminée, 41,2 s, profil Qualité |
+| TÂCHE | `code_tache` | Ce qu'on peut demander | `emotion` / « Émotion » |
+| RÉSULTAT | **relatif** : ANALYSE + TÂCHE | La réponse à **une** tâche demandée par **une** analyse | (analyse 12, `emotion`) : `done` |
+| CLASSE | `code_classe` | Une classe que peut prédire une tâche | `angry` / « Colère » |
+| SEGMENT | `id_segment` | Un morceau de l'audio, pour la frise (EF-12) | de 5,0 à 10,0 s |
+| MODÈLE | `id_modele` | Un modèle du registre | `echolens-sound-event-crnn`, famille A |
+| VERSION | **relatif** : MODÈLE + `numero_version` | Une version publiée de ce modèle | 1.0.0, révision Hugging Face, calibrée, T = 1,4 |
+| LOCUTEUR *(proposé)* | `code_locuteur` | Une personne enregistrée avec son consentement (EF-11, ENF-10) | p04 |
 
 ## Les associations et leurs cardinalités
 
-On lit chaque cardinalité du côté de l'entité : « une ANALYSE DEMANDE (1,n) TÂCHE » veut dire
-« une analyse demande au moins une, et au plus plusieurs tâches ».
+| Association | Côté gauche | Côté droit | Attribut | Ce que ça dit |
+| --- | --- | --- | --- | --- |
+| OBTENIR | ANALYSE `1,n` | RÉSULTAT `(1,1)` | | Une analyse a au moins un résultat, un par tâche demandée ; un résultat appartient à une seule analyse, qui fait partie de son identifiant |
+| PORTER SUR | TÂCHE `0,n` | RÉSULTAT `(1,1)` | | Un résultat porte sur une seule tâche, qui fait partie de son identifiant |
+| APPARTENIR | TÂCHE `0,n` | CLASSE `1,1` | | Une classe appartient à une tâche (6 émotions, 50 événements ; aucune pour la transcription) |
+| ESTIMER | RÉSULTAT `0,n` | CLASSE `0,n` | `probabilite` | Le résultat global : une probabilité par classe ; aucune si `no_speech` ou `unavailable` |
+| DÉCOUPER | RÉSULTAT `0,n` | SEGMENT `1,1` | | Aucun segment si `no_speech` ou `unavailable` ; sinon les fenêtres de 5 s ou les morceaux de parole |
+| DÉTAILLER | SEGMENT `1,n` | CLASSE `0,n` | `probabilite` | Les probabilités de chaque segment |
+| AVOIR | MODÈLE `1,n` | VERSION `(1,1)` | | Un modèle a une ou plusieurs versions ; une version n'existe que par son modèle |
+| PRODUIRE | VERSION `0,n` | RÉSULTAT `0,1` | | Un résultat vient d'au plus une version précise ; aucune si la tâche n'est pas branchée |
+| IDENTIFIER *(proposée)* | SEGMENT `0,1` | LOCUTEUR `0,n` | `similarite` | Un segment est attribué à au plus un locuteur ; aucun sous le seuil (« inconnu ») |
 
-| Association | Côté gauche | Côté droit | Ce que ça dit |
-| --- | --- | --- | --- |
-| DEMANDER | ANALYSE `(1,n)` | TÂCHE `(0,n)` | Une analyse demande au moins une tâche (l'API refuse une liste vide) ; une tâche peut n'être demandée par aucune analyse |
-| OBTENIR | ANALYSE `(0,n)` | RÉSULTAT `(1,1)` | Aucun résultat tant que l'analyse n'est pas terminée, puis un par tâche demandée ; un résultat appartient à une seule analyse |
-| PORTER SUR | RÉSULTAT `(1,1)` | TÂCHE `(0,n)` | Un résultat porte sur une seule tâche |
-| PRODUIRE | MODÈLE `(0,n)` | RÉSULTAT `(0,1)` | Un résultat vient d'au plus un modèle : aucun si la tâche n'est pas branchée (`unavailable`) |
-| DÉCOUPER | RÉSULTAT `(0,n)` | SEGMENT `(1,1)` | Aucun segment si `no_speech` ou `unavailable` ; sinon les fenêtres de 5 s (événements) ou les morceaux de parole (émotions) |
-| RÉSUMER | RÉSULTAT `(0,n)` | PROBABILITÉ `(0,1)` | Le résultat global : toutes les classes (6 émotions ou 50 événements), somme 1 |
-| DÉTAILLER | SEGMENT `(1,n)` | PROBABILITÉ `(0,1)` | Les probabilités de chaque segment |
-| IDENTIFIER *(proposée)* | SEGMENT `(0,1)` | LOCUTEUR `(0,n)` | Un segment est attribué à au plus un locuteur ; aucun si la similarité est sous le seuil (« inconnu ») |
+## Les choix de modélisation, et pourquoi
 
-**Contrainte d'exclusion** : une PROBABILITÉ appartient soit à un RÉSULTAT (le global), soit à un
-SEGMENT, jamais aux deux. C'est pourquoi chacune de ses deux pattes vaut `(0,1)` et non `(1,1)`.
+1. **Pas d'association DEMANDER à côté de RÉSULTAT.** Un résultat, c'est la réponse à une tâche
+   demandée par une analyse : c'est le même concept. Il devient une **entité identifiée
+   relativement** à ANALYSE et TÂCHE, plutôt qu'une association, pour deux raisons :
+   - SEGMENT, ESTIMER et PRODUIRE doivent s'y rattacher, et en MERISE une association ne peut pas
+     être reliée à une autre association ;
+   - son identifiant (analyse, tâche) garantit à lui seul qu'il n'y a **pas deux résultats pour la
+     même analyse et la même tâche**. Il garantit aussi qu'un résultat porte forcément sur une
+     tâche de son analyse, sans note à ajouter.
 
-**Contrainte de cohérence** : un RÉSULTAT ne peut PORTER SUR qu'une tâche que son ANALYSE a
-DEMANDÉE.
+   Le résultat existe dès la demande (`statut_resultat` « en attente »), puis prend `done`,
+   `no_speech` ou `unavailable` à la fin du traitement.
+2. **CLASSE est une entité (3e forme normale).** Le libellé « Colère » dépend de la classe
+   `angry`, pas de chaque probabilité. Le garder dans la probabilité créerait une dépendance
+   transitive (identifiant → classe → libellé), interdite en 3FN, et répéterait « Colère » à
+   chaque probabilité. La probabilité devient l'attribut des associations ESTIMER et DÉTAILLER,
+   qui relient un résultat (ou un segment) à une classe.
+3. **Pas de donnée calculable.** La classe la plus probable d'un résultat ou d'un segment se
+   retrouve à partir des probabilités (la plus forte) : elle n'apparaît pas dans le MCD.
+4. **VERSION est une entité.** Si la version était un simple attribut de MODÈLE, publier une v2
+   écraserait la v1, et on ne saurait plus quelle version a produit une analyse d'hier. Ici, la
+   v2 est une nouvelle VERSION du même MODÈLE, et chaque RÉSULTAT reste relié à la version exacte
+   qui l'a produit, avec sa révision Hugging Face, sa calibration et sa température.
+
+**Contrainte que les cardinalités ne peuvent pas exprimer.** Les probabilités d'un résultat
+(ESTIMER) et de ses segments (DÉTAILLER) ne doivent porter que sur des classes de **sa** tâche :
+pas de « Pluie » dans un résultat d'émotion. Cette condition relie deux chemins du modèle
+(RÉSULTAT → TÂCHE et RÉSULTAT → CLASSE → TÂCHE). C'est une contrainte d'intégrité à vérifier
+dans le code : au chargement, chaque modèle est comparé aux classes de `configs/labels.yaml` de
+sa tâche (`ModelPredictor._check_config`).
 
 ## Du MCD au code : une seule table
 
@@ -57,12 +89,23 @@ Le MCD décrit les **informations** ; le code choisit comment les **ranger**.
 
 | Partie du MCD | Rangement dans le code |
 | --- | --- |
-| ANALYSE | Une ligne de la table `analyses` (colonnes ci-dessous) |
-| DEMANDER (liste des tâches) | Colonne JSON `tasks`, par exemple `["emotion", "sound_event"]` |
-| RÉSULTAT, MODÈLE, SEGMENT, PROBABILITÉ, et leurs associations | Colonne JSON `results` : un objet par tâche demandée, qui contient son statut, son modèle, ses probabilités globales et ses segments (contrat de `result_schemas.py`) |
-| TÂCHE | Pas de table : les 4 tâches sont fixes, dans le code (`Task`) |
-| MODÈLE | Pas de table : le registre `configs/registry.yaml` reste la seule source (S1) ; le résultat ne garde que `model_id`, `model_version` et `calibrated` |
-| Fichiers audio et image | Sur disque, dans `var/analyses/<id_analyse>/` (`original.<ext>`, `audio.wav`, `spectrogram.png`) : la base ne garde que l'identifiant (S3) |
+| ANALYSE | Une ligne de la table `analyses` |
+| Les tâches demandées (côté TÂCHE de RÉSULTAT) | Colonne JSON `tasks`, par exemple `["emotion", "sound_event"]` |
+| RÉSULTAT, SEGMENT, ESTIMER, DÉTAILLER, PRODUIRE | Colonne JSON `results` : un objet par tâche demandée (contrat de `result_schemas.py`), écrit à la fin du traitement |
+| TÂCHE, CLASSE | Pas de table : les 4 tâches sont fixes dans le code (`Task`), les classes et leurs libellés dans `configs/labels.yaml` |
+| MODÈLE, VERSION | Pas de table : `configs/registry.yaml` (identifiant, version, révision Hugging Face figée) et le `config.json` publié avec chaque modèle (calibration) |
+| Fichiers audio et image | Sur disque, dans `var/analyses/<id_analyse>/` : la base ne garde que l'identifiant (S3) |
+
+**Écarts volontaires au niveau physique.** Le JSON `results` recopie le libellé français de
+chaque classe et la classe la plus probable (`label`, `label_fr`), ainsi que l'identifiant et la
+version du modèle. C'est de la **dénormalisation**, faite exprès :
+- le document est écrit en une fois et relu en une fois par la page Résultat, qui l'affiche tel
+  quel, sans jointure ni recalcul ;
+- recopier la version au moment de l'analyse fige l'information : une analyse d'hier garde
+  `1.0.0`, même après la publication d'une v2.
+
+Le MCD, lui, reste normalisé. Si un jour il faut chercher dans les résultats (« tous les segments
+où la colère dépasse 50 % »), il dit déjà quelles tables créer.
 
 | Attribut du MCD | Colonne de `analyses` | Type | Remarque |
 | --- | --- | --- | --- |
@@ -73,14 +116,8 @@ Le MCD décrit les **informations** ; le code choisit comment les **ranger**.
 | `message_erreur` | `error_message` | `String`, peut être vide | Rempli seulement si `failed` |
 | `duree_s` | `duration_s` | `float`, peut être vide | Connue à la fin |
 | `profil` | `profile` | `String(16)` | `quality` ou `realtime` |
-| *(DEMANDER)* | `tasks` | `JSON` | Liste des tâches |
-| *(OBTENIR et tout ce qui suit)* | `results` | `JSON`, vide tant que `status ≠ done` | Contrat C13 |
-
-**Pourquoi du JSON plutôt que quatre tables ?** Les résultats d'une analyse sont écrits **en une
-fois**, à la fin du traitement, et relus **en une fois**, par la page Résultat. On ne cherche
-jamais « tous les segments où la colère dépasse 50 % ». Une colonne JSON évite donc des jointures
-inutiles, et le JSON stocké est exactement celui que renvoie l'API. Si un jour il faut chercher
-dans les résultats, le MCD dit déjà quelles tables créer : RÉSULTAT, SEGMENT et PROBABILITÉ.
+| *(tâches demandées)* | `tasks` | `JSON` | Liste des tâches |
+| *(RÉSULTAT et ce qui en dépend)* | `results` | `JSON`, vide tant que `status ≠ done` | Contrat C13 |
 
 ## Points encore ouverts
 

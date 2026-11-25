@@ -53,19 +53,30 @@ d'avant.
 | --- | --- | --- |
 | **Entité** | Rectangle, avec son identifiant précédé de `#` | ANALYSE, `# id_analyse` |
 | **Attribut** | Ligne dans le rectangle | `duree_s` |
-| **Association** | Forme arrondie, avec un verbe | DEMANDER |
-| **Cardinalité** | `(min,max)` sur chaque patte | `(1,n)` |
+| **Association** | Ellipse, avec un verbe ; ses attributs sous le nom | ESTIMER, `probabilite` |
+| **Cardinalité** | `min,max` sur chaque patte | `1,n` |
+| **Identification relative** | Cardinalité entre parenthèses `(1,1)` | RÉSULTAT identifié par ANALYSE + TÂCHE |
 
 **Lire une cardinalité** : on part de l'entité, on traverse l'association, on arrive à l'autre
-entité. « Une ANALYSE DEMANDE **(1,n)** TÂCHE » se lit : *une* analyse demande *au moins une*
-(1) et *au plus plusieurs* (n) tâches.
+entité. « Une ANALYSE OBTIENT **1,n** RÉSULTAT » se lit : *une* analyse obtient *au moins un*
+(1) et *au plus plusieurs* (n) résultats.
 
 | Cardinalité | Se dit | Exemple |
 | --- | --- | --- |
-| `(0,1)` | zéro ou un | un résultat vient d'au plus un modèle |
-| `(1,1)` | exactement un | un résultat appartient à une seule analyse |
-| `(0,n)` | zéro ou plusieurs | une analyse en cours n'a encore aucun résultat |
-| `(1,n)` | au moins un | une analyse demande au moins une tâche |
+| `0,1` | zéro ou un | un résultat vient d'au plus une version de modèle |
+| `1,1` | exactement un | une classe appartient à une seule tâche |
+| `0,n` | zéro ou plusieurs | un résultat `no_speech` n'a aucune probabilité |
+| `1,n` | au moins un | une analyse obtient au moins un résultat |
+
+**Identification relative** : certaines entités n'ont pas d'identifiant à elles seules. Un
+RÉSULTAT se reconnaît à son couple (analyse, tâche) ; une VERSION à son couple (modèle,
+numéro). On le note en mettant la cardinalité `(1,1)` entre parenthèses.
+
+**Les trois formes normales, en une phrase chacune** (on les cite pour justifier le MCD) :
+- **1FN** : un attribut contient une seule valeur, jamais une liste ;
+- **2FN** : chaque attribut dépend de tout l'identifiant, pas d'une partie ;
+- **3FN** : chaque attribut dépend directement de l'identifiant, pas d'un autre attribut. Par
+  exemple, « Colère » dépend de la classe `angry`, d'où l'entité CLASSE.
 
 ## 3. Diagramme de composants — « comment est organisé notre code ? »
 
@@ -160,17 +171,19 @@ Fichier : `docs/uml/mcd-historique.md`.
 
 1. **ANALYSE** : un audio importé, avec son statut (`pending` → `processing` → `done` ou
    `failed`), sa durée et son profil.
-2. Elle **DEMANDE (1,n)** des **TÂCHES** : au moins une, parmi émotion, événement,
-   transcription, locuteur.
-3. Une fois terminée, elle **OBTIENT (0,n)** des **RÉSULTATS** : zéro tant qu'elle tourne, puis un
-   par tâche demandée. Chaque résultat **PORTE SUR (1,1)** une seule tâche.
-4. Un résultat est **PRODUIT (0,1)** par un **MODÈLE** : zéro si la tâche n'est pas encore
-   branchée (`unavailable`).
-5. Un résultat est **DÉCOUPÉ (0,n)** en **SEGMENTS**, les morceaux de la frise : aucun si personne
-   ne parle (`no_speech`).
-6. Les **PROBABILITÉS** (une classe, un nombre entre 0 et 1) décrivent soit le résultat global
-   (RÉSUMER), soit un segment (DÉTAILLER), jamais les deux : c'est une **contrainte
-   d'exclusion**.
+2. Elle **OBTIENT 1,n RÉSULTATS** : un par tâche demandée. Un RÉSULTAT **PORTE SUR** une seule
+   **TÂCHE**. Il est identifié par le couple (analyse, tâche) : c'est l'**identification
+   relative**, notée `(1,1)`. Il n'y a donc jamais deux résultats pour la même analyse et la
+   même tâche.
+3. Une **TÂCHE** a ses **CLASSES** (APPARTENIR) : 6 émotions, 50 événements, aucune pour la
+   transcription.
+4. Le résultat global **ESTIME** une **probabilité** pour chaque classe : la probabilité est un
+   attribut de l'association, parce qu'elle dépend à la fois du résultat et de la classe.
+5. Un résultat est **DÉCOUPÉ** en **SEGMENTS** (la frise), qui **DÉTAILLENT** eux aussi une
+   probabilité par classe. Aucun segment ni aucune probabilité si personne ne parle
+   (`no_speech`) ou si la tâche n'est pas branchée (`unavailable`).
+6. Un résultat est **PRODUIT** par une **VERSION** précise d'un **MODÈLE** (AVOIR) : la v2
+   d'un modèle s'ajoute sans effacer la v1.
 7. En pointillés, **LOCUTEUR** et **IDENTIFIER** : prévus pour l'identification du locuteur.
 
 > **À dire :** « Le MCD décrit les informations ; la base, elle, n'a qu'une table, `analyses`.
@@ -178,10 +191,25 @@ Fichier : `docs/uml/mcd-historique.md`.
 > du traitement et relus en une fois par la page Résultat. On ne cherche jamais "tous les segments
 > en colère". Si un jour on en a besoin, le MCD dit déjà quelles tables créer. »
 
-**Pourquoi une entité TÂCHE alors que le code range une liste ?** En MERISE, un attribut ne peut
-pas contenir une liste (première forme normale). Le MCD crée donc l'entité TÂCHE et
-l'association DEMANDER ; le code, lui, garde `["emotion", "sound_event"]` en JSON par
-simplicité, puisqu'il n'y a que 4 tâches fixes.
+**Les quatre choix à savoir justifier** (ce sont les questions posées par Luciano) :
+
+| Question | Réponse |
+| --- | --- |
+| Pourquoi pas une association DEMANDER à côté de RÉSULTAT ? | C'est le même concept : un résultat est la réponse à une tâche demandée. RÉSULTAT est une entité (et non une association) parce que SEGMENT, ESTIMER et PRODUIRE s'y rattachent, et qu'en MERISE une association ne se relie pas à une autre association. |
+| Qu'est-ce qui empêche deux résultats pour la même analyse et la même tâche ? | Son identifiant relatif (analyse, tâche) : deux résultats identiques auraient le même identifiant. Aucune note n'est nécessaire. |
+| Pourquoi une entité CLASSE ? | Pour la 3FN : le libellé « Colère » dépend de la classe `angry`, pas de la probabilité. Sinon, il serait répété à chaque probabilité. |
+| Pourquoi pas d'« étiquette principale » ? | C'est la classe de plus forte probabilité : une donnée calculable n'a pas sa place dans un MCD. |
+| Comment sait-on quelle version a produit une analyse d'hier ? | VERSION est une entité identifiée par (modèle, numéro) ; chaque résultat est relié à sa version. Publier une v2 ajoute une version, sans toucher aux anciennes. |
+
+**Ce que les cardinalités ne disent pas** : les probabilités d'un résultat ne doivent porter que
+sur les classes de **sa** tâche (pas de « Pluie » dans un résultat d'émotion). C'est une
+contrainte d'intégrité, vérifiée dans le code : au chargement, chaque modèle est comparé aux
+classes de sa tâche dans `configs/labels.yaml`.
+
+**Et le code ?** Le JSON `results` recopie le libellé, la classe la plus probable et la version
+du modèle : c'est une **dénormalisation volontaire** au niveau physique. La page Résultat
+l'affiche telle quelle, sans recalcul, et une analyse d'hier garde la version qui l'a produite.
+Le MCD, lui, reste normalisé.
 
 ## 7. Où se trouve le code
 
@@ -199,11 +227,13 @@ simplicité, puisqu'il n'y a que 4 tâches fixes.
    testable seul et réutilisé tel quel à l'entraînement, ce qui garantit les mêmes features.
 2. **Qu'est-ce qu'un stéréotype UML ?** Le mot entre « » (`«device»`, `«artifact»`) qui précise
    la sorte d'élément, quand le dessin seul ne suffit pas.
-3. **Lisez-moi la cardinalité (0,n) entre ANALYSE et RÉSULTAT.** Une analyse peut n'avoir aucun
-   résultat (en cours ou en échec) ou en avoir plusieurs (un par tâche demandée).
-4. **Votre MCD a sept entités, votre base une table : n'est-ce pas contradictoire ?** Non : le MCD
+3. **Lisez-moi les cardinalités entre ANALYSE et RÉSULTAT.** Côté ANALYSE `1,n` : une analyse
+   obtient au moins un résultat, un par tâche demandée. Côté RÉSULTAT `(1,1)` : un résultat
+   appartient à exactement une analyse, et les parenthèses disent que cette analyse fait partie
+   de son identifiant.
+4. **Votre MCD a huit entités, votre base une table : n'est-ce pas contradictoire ?** Non : le MCD
    décrit les informations, le modèle physique choisit leur rangement. Les résultats sont un
-   document écrit et lu en bloc, d'où une colonne JSON.
+   document écrit et lu en bloc, d'où une colonne JSON, dénormalisée exprès.
 5. **Pourquoi un WebSocket pour le micro ?** Le son arrive en continu : une connexion ouverte
    évite une requête HTTP toutes les 0,1 s, et le serveur peut renvoyer un résultat quand il veut.
 6. **Que se passe-t-il si le calcul d'une fenêtre dure plus de 0,5 s ?** Le RTF dépasse 1, les
