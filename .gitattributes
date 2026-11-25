@@ -1,0 +1,11 @@
+# Fins de ligne (L0) : tous les fichiers texte sont extraits en LF, sur tous les postes, même
+# sous Windows avec core.autocrlf=true. Sans cela, Prettier et ruff voient des CRLF.
+* text=auto eol=lf
+
+# Binaires : jamais de conversion de fins de ligne ni de diff texte. Les notebooks (.ipynb)
+# restent du texte (JSON).
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.wav binary
+*.pdf binary
