@@ -1,0 +1,58 @@
+% Porteurs : Nicole (comparaison des familles), Steve (métriques), Lynn (locuteur, WER,
+% analyse d'erreurs). Règle E8 : chaque chiffre vient d'un fichier de training/results/, cité
+% en commentaire à côté de la table.
+\section{Expériences et résultats}
+\label{sec:resultats}
+
+\subsection{Métriques}
+\label{sec:metriques}
+
+\aRediger{Steve}{F1 macro (métrique principale, P4) et pourquoi plutôt que l'accuracy ;
+  matrice de confusion ; WER ; EER ; intervalles de confiance par bootstrap et test de McNemar
+  (E5) ; latence et RTF (E6).}
+
+\subsection{Émotions}
+\label{sec:res-emotions}
+
+\aRediger{Nicole}{F1 macro en domaine (test de 1\,324 extraits) pour la famille A (CNN, CRNN)
+  et la famille B, avec intervalles de confiance : \texttt{training/results/emotions\_family\_a\_cnn.json},
+  \texttt{emotions\_family\_a\_crnn.json}, \texttt{c11\_family\_b\_emotions.json},
+  \texttt{emotions\_comparisons.json}. Hors domaine (CaFE, 792 extraits) : \textbf{pas encore
+  évalué}. Verdict sur H1 et H2.}
+
+\subsection{Événements sonores (ESC-50)}
+\label{sec:res-esc50}
+
+\aRediger{Nicole}{Référence MFCC + SVM (F1 macro $0{,}403 \pm 0{,}040$ sur les 5 folds,
+  \texttt{esc50\_mfcc\_svm.json}), puis familles A et B (\texttt{esc50\_family\_a\_*.json},
+  \texttt{c11\_family\_b\_esc50.json}, \texttt{esc50\_comparisons.json}). Matrices en 5
+  catégories dans \texttt{figures/}. Verdict sur H3 et H4.}
+
+\subsection{Identification du locuteur}
+\label{sec:res-locuteur}
+
+\aRediger{Lynn, après le nouveau passage de C15 sur Kaggle}{Tableau ECAPA-TDNN contre
+  mHuBERT sur le groupe d'évaluation : accuracy en ensemble fermé et EER avec leurs intervalles
+  à 95\,\% (bootstrap sur les locuteurs, P8), voix connues acceptées et justes, imposteurs
+  rejetés au seuil de la calibration, accuracy par sous-corpus, couche choisie pour mHuBERT et
+  EER de calibration par couche. Source :
+  \texttt{training/results/c15\_speaker\_openslr57.json}. Le premier passage (seuil pris sur des
+  paires isolées) est abandonné : il acceptait à tort 72\,\% des inconnus.}
+
+\subsection{Transcription}
+\label{sec:res-wer}
+
+\aRediger{Lynn, après C17}{WER et CER de Whisper base et small (français forcé) sur le test
+  officiel d'OpenSLR~57 et sur Yaoundé, avec intervalles de confiance et RTF.}
+
+\subsection{Analyse des erreurs}
+\label{sec:res-erreurs}
+
+\aRediger{Lynn}{Robustesse au bruit (F1 selon le SNR, E3) ; biais par genre sur le test
+  équilibré des émotions (E4) ; exemples d'erreurs écoutés. \textbf{À produire.}}
+
+\subsection{Explicabilité et efficacité}
+\label{sec:res-explicabilite}
+
+\aRediger{Nicole}{Carte Grad-CAM et test de masquage (E7) ; calibration par température et
+  diagramme de fiabilité (E2) ; latence p50 et p95 et RTF (\texttt{latency\_cpu.json}).}
