@@ -3,6 +3,7 @@
 import numpy as np
 import pytest
 
+from echolens.config import CONFIG_DIR, load_yaml
 from echolens.core.audio.segment import Segment
 from echolens.core.data.class_labels import load_class_labels
 from echolens.core.inference import (
@@ -11,7 +12,7 @@ from echolens.core.inference import (
     load_inference_config,
     transcription_windows,
 )
-from echolens.core.models.registry import Profile, Task
+from echolens.core.models.registry import ModelRegistry, Profile, Task
 from echolens.services.predictor import DemoPredictor, ModelInfo, class_counts
 from echolens.services.results import (
     NO_SPEECH_MESSAGE,
@@ -22,6 +23,8 @@ from echolens.services.results import (
 
 SAMPLE_RATE = 16_000
 MAX_WINDOW_S = 30.0
+# Réglages du décodage qui doivent être les mêmes dans l'application et dans l'évaluation C17a.
+DECODING_KEYS = ["language", "beam_size", "vad_filter", "condition_on_previous_text", "temperature"]
 
 
 class FixedDetector:
@@ -204,3 +207,26 @@ def test_vad_does_not_run_without_a_speech_task() -> None:
     build_results(silence(4.0), ["sound_event", "speaker"], "quality", context)
 
     assert detector.call_count == 0
+
+
+def test_app_decoding_matches_the_c17a_evaluation() -> None:
+    # Une seule vérité : l'application (configs/inference.yaml) décode comme l'évaluation C17a
+    # (configs/transcription.yaml), sinon les WER des fiches ne la décrivent plus.
+    evaluation = load_yaml(CONFIG_DIR / "transcription.yaml")
+    application = load_yaml(CONFIG_DIR / "inference.yaml")["transcription"]
+    for key in DECODING_KEYS:
+        assert application[key] == evaluation[key], key
+
+
+def test_app_models_are_the_evaluated_revisions() -> None:
+    # Mêmes poids que ceux mesurés par C17a : dépôt et révision de chaque modèle du registre.
+    evaluation = load_yaml(CONFIG_DIR / "transcription.yaml")
+    evaluated = {}
+    for model in evaluation["models"]:
+        evaluated[model["repo_id"]] = model["revision"]
+    registry = ModelRegistry.from_yaml(CONFIG_DIR / "registry.yaml")
+    entries = registry.for_task(Task.TRANSCRIPTION)
+    assert len(entries) == 2
+    for entry in entries:
+        repo_id = entry.weights.removeprefix("hf://")
+        assert evaluated[repo_id] == entry.revision, entry.id

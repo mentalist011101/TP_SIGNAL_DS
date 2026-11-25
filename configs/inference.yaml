@@ -20,10 +20,12 @@ emotion:
 # Transcription (EF-10, C17b) : segments de parole de la VAD (D5, le même détecteur que pour les
 # émotions). Un segment = une transcription ; un segment plus long que max_window_s est coupé en
 # morceaux égaux de max_window_s au plus (30 s : la fenêtre que Whisper lit d'un seul coup).
-# Aucune parole : statut no_speech. Réglages du décodage repris de l'évaluation C17a (#47,
-# configs/transcription.yaml de exp/c17-transcription) : mêmes valeurs, pour que l'application
-# transcrive comme le modèle a été mesuré. Les seuils anti-hallucination de faster-whisper
-# (no_speech_threshold, log_prob_threshold) gardent leurs valeurs par défaut.
+# Aucune parole : statut no_speech. Réglages du décodage : les mêmes que l'évaluation C17a
+# (configs/transcription.yaml), pour que l'application transcrive comme le modèle a été mesuré.
+# Le test test_app_decoding_matches_the_c17a_evaluation (tests/unit/test_transcription.py)
+# échoue si les deux fichiers divergent : modifier l'un oblige à modifier l'autre. Les seuils
+# anti-hallucination de faster-whisper (no_speech_threshold, log_prob_threshold) gardent leurs
+# valeurs par défaut.
 transcription:
   max_window_s: 30.0
   language: fr                          # langue imposée : pas de détection automatique
