@@ -58,8 +58,10 @@ manifeste garde l'étiquette d'origine ; la correspondance s'applique ensuite, d
 | RAVDESS | 1 440 | 384 | 1 056 | 96 | 192 |
 | CaFE (C16) | 936 | 144 | 792 | 72 | 144 |
 
-Sur l'entraînement (CREMA-D + RAVDESS), neutral est un peu moins fréquent (1 183 contre 1 463
-pour chacune des autres classes). Le F1 macro (P4) en tient compte.
+Sur CREMA-D et RAVDESS réunis, neutral est un peu moins fréquent (1 183 contre 1 463 pour
+chacune des autres classes). Après le découpage par acteur (section 3), l'entraînement compte
+815 neutres contre 1 007 pour chacune des autres classes ; la validation et le test, 184 contre
+228 chacun (1 324 extraits).
 
 ## 3. Découpage des émotions par acteur (P1)
 
@@ -175,9 +177,10 @@ Hypothèses de ce découpage, vérifiées ou non :
 
 ## 7. Normalisation du WER (P10, P12)
 
-Le WER est mesuré sur le test officiel d'OpenSLR 57 et sur le sous-corpus `yaounde` (rangé dans
-`train`, mais Whisper n'est pas entraîné sur OpenSLR). Référence et transcription sont
-normalisées de la même façon avant la première mesure :
+Le WER est mesuré sur le test officiel d'OpenSLR 57 et sur la partie lue `yaounde/read` du
+sous-corpus de Yaoundé (rangé dans `train`, mais Whisper n'est pas entraîné sur OpenSLR). La
+partie `yaounde/answers` est exclue : sa référence est la question posée, pas la réponse.
+Référence et transcription sont normalisées de la même façon avant la première mesure :
 
 1. tout en minuscules ;
 2. ponctuation retirée, sauf l'apostrophe et le trait d'union à l'intérieur d'un mot ;

@@ -42,9 +42,16 @@ Pour développer le front avec rechargement à chaud : `make run` dans un termin
 dans un autre, puis ouvrir http://localhost:5173.
 
 La base locale (`var/echolens.db`, l'historique des analyses) est créée au premier démarrage,
-sans migrations. Quand une version ajoute une colonne (par exemple `results` en C13), le serveur
-refuse de démarrer avec un message clair : supprimez `var/echolens.db`, elle sera recréée vide
-au démarrage suivant (l'historique local est perdu).
+sans outil de migration :
+
+- une **table** ajoutée par une nouvelle version est créée toute seule au démarrage. C'est le cas
+  de `analysis_summaries` (résumé de chaque analyse pour la page Historique) : au démarrage, le
+  résumé de chaque analyse terminée qui n'en a pas encore est calculé à partir de ses résultats.
+  Rien à faire, l'historique est conservé ; avec beaucoup d'analyses longues, ce premier
+  démarrage peut prendre quelques secondes ;
+- quand une version ajoute une **colonne** à une table existante (par exemple `results` en C13),
+  le serveur refuse de démarrer avec un message clair : supprimez `var/echolens.db`, elle sera
+  recréée vide au démarrage suivant (l'historique local est perdu).
 
 ### Prédicteur : faux ou vrais modèles
 
@@ -72,6 +79,25 @@ Avec Docker (aucun prérequis hormis Docker) :
 ```bash
 make docker       # construit l'image et lance http://localhost:5000
 ```
+
+### Export des résultats
+
+Une analyse terminée s'exporte depuis la page Résultat, ou par
+`GET /api/v1/analyses/{id}/export?format=json|csv|pdf`. Le fichier s'appelle
+`echolens_<nom du fichier>_<AAAA-MM-JJ>.<format>` :
+
+- **JSON** : le détail complet de l'analyse, identique à `GET /api/v1/analyses/{id}`.
+- **CSV** : une ligne par probabilité, globale puis de chaque segment (segments numérotés à
+  partir de 1). Une tâche sans résultat (`no_speech`, `unavailable`) a une seule ligne, avec son
+  statut dans `label`. Séparateur virgule, point décimal, UTF-8 avec BOM.
+- **PDF** : rapport d'une à deux pages en français : fichier, date, durée, profil,
+  spectrogramme, et pour chaque tâche les 3 premières classes, les segments (12 au plus, les
+  autres sont dans le CSV) et le modèle.
+
+Pour ouvrir le CSV dans un Excel en français, qui attend le point-virgule et la virgule
+décimale : **Données > À partir d'un fichier texte/CSV**, choisir le séparateur **virgule**
+(et le point comme séparateur décimal si Excel le demande). Un double-clic sur le fichier
+mettrait toutes les colonnes dans une seule.
 
 ## Commandes utiles
 

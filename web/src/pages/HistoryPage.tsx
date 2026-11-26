@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { describeApiError, useAnalysisHistory, type Analysis } from '../api/client.ts'
+import { describeApiError, useAnalysisHistory, type AnalysisSummary } from '../api/client.ts'
 import HistoryFilters from '../components/history/HistoryFilters.tsx'
 import HistoryList from '../components/history/HistoryList.tsx'
 import HistoryOverview from '../components/history/HistoryOverview.tsx'
@@ -29,7 +29,7 @@ function EmptyHistory({ hasAnalyses }: { hasAnalyses: boolean }) {
 }
 
 interface HistoryContentProps {
-  analyses: Analysis[]
+  analyses: AnalysisSummary[]
   filters: HistoryFilterValues
   onFiltersChange: (filters: HistoryFilterValues) => void
   loadedAt: number

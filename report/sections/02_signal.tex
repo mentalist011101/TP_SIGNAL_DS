@@ -1,0 +1,13 @@
+% Porteur : Steve (partie « équations » du rapport).
+\section{Signal et représentations temps-fréquence}
+\label{sec:signal}
+
+\aRediger{Steve}{Briques 1 et 2 de la spécification (D1 à D5, R1 à R5).
+  \begin{itemize}
+    \item Ingestion : décodage ffmpeg, mono 16\,kHz float32, normalisation, VAD ; limite :
+          rien au-dessus de 8\,kHz.
+    \item Équations : STFT (fenêtre de Hann 25\,ms, pas 10\,ms), échelle Mel HTK et 64 bandes,
+          passage en dB absolus (un silence reste à $-100$\,dB, R1), MFCC par DCT, deltas.
+    \item Un seul module de features pour l'entraînement et l'application (R5).
+    \item Figure disponible : \texttt{figures/analyser\_spectrogramme.png}.
+  \end{itemize}}

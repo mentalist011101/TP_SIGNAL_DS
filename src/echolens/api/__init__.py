@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import Any
 
@@ -25,6 +26,7 @@ def create_app(settings: AppSettings | None = None, **overrides: Any) -> Flask:
     ``overrides`` permet aux tests de surcharger la configuration Flask (par exemple TESTING).
     """
     settings = settings or load_settings()
+    _configure_logging()
     app = Flask(__name__, static_folder=None)
     app.config.update(
         API_TITLE="EchoLens API",
@@ -73,3 +75,16 @@ def _register_frontend(app: Flask, dist_dir: Path) -> None:
         if path and (dist_dir / path).is_file():
             return send_from_directory(dist_dir, path)
         return send_from_directory(dist_dir, "index.html")
+
+
+def _configure_logging() -> None:
+    # Les messages d'echolens (dont le choix de la VAD au démarrage, D5) vont sur la sortie
+    # d'erreur, que lisent gunicorn, Docker et le terminal de « make run ».
+    logger = logging.getLogger("echolens")
+    if logger.handlers:
+        return
+    handler = logging.StreamHandler()
+    formatter = logging.Formatter("%(asctime)s %(levelname)s %(name)s : %(message)s")
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    logger.setLevel(logging.INFO)

@@ -53,7 +53,7 @@ métriques) ; chacun parle alors 4 à 6 min.
 
 | # | Titre | Contenu | Source |
 | --- | --- | --- | --- |
-| 4 | Du fichier au signal propre | Chaîne : décodage ffmpeg → mono 16 kHz → normalisation RMS → VAD (webrtcvad) ; limite : rien au-dessus de 8 kHz | D1 à D5 ; figure du script débruitage et segmentation (C2) |
+| 4 | Du fichier au signal propre | Chaîne : décodage ffmpeg → mono 16 kHz → normalisation RMS → VAD (Silero, webrtcvad en secours sans torch ; C24 : 7,2 % contre 97,6 % de faux positifs ; 91 % des extraits de parole reconnus comme parole sur au moins la moitié de leur durée) ; limite : rien au-dessus de 8 kHz | D1 à D5 ; figure du script débruitage et segmentation (C2) |
 | 5 | Le spectrogramme log-Mel, entrée de la famille A | STFT 25 ms / 10 ms, 64 bandes Mel HTK, dB absolus (un silence vaut −100 dB) ; MFCC pour la référence ; **un seul module** pour l'entraînement et l'application | R1 à R5 ; `report/figures/analyser_spectrogramme.png` |
 
 ### Partie 3 — Données et protocole (Lynn, 2 min)

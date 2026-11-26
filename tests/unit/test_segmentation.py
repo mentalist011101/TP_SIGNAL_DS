@@ -8,6 +8,7 @@ from echolens.core.audio.segment import (
     cut_window,
     detect_speech,
     flags_to_segments,
+    hysteresis_flags,
     sliding_windows,
     speech_flags,
 )
@@ -82,10 +83,9 @@ def test_padding_is_clipped_at_start_and_end_of_audio() -> None:
 
 def test_padding_wider_than_half_the_merge_gap_is_refused() -> None:
     # 2 × 200 ms > 300 ms : les marges de deux segments voisins se chevaucheraient.
+    settings = {**vad_config().model_dump(), "padding_ms": 200}
     with pytest.raises(ValidationError, match="chevaucheraient"):
-        VadConfig(
-            aggressiveness=2, frame_ms=30, merge_gap_ms=300, min_segment_ms=100, padding_ms=200
-        )
+        VadConfig.model_validate(settings)
 
 
 def test_last_incomplete_frame_is_ignored() -> None:
@@ -163,3 +163,17 @@ def test_last_window_is_taken_from_the_audio_not_padded() -> None:
     windows = sliding_windows(3.2, window_s=2.0, hop_s=0.5)
     window = cut_window(signal, windows[-1], window_s=2.0)
     np.testing.assert_array_equal(window, signal[-2 * SAMPLE_RATE :])
+
+
+def test_hysteresis_keeps_a_brief_dip_but_needs_the_start_threshold() -> None:
+    # Un creux à 0,4 ne coupe pas un segment ouvert à 0,5 ; un son à 0,4 n'en ouvre aucun.
+    probabilities = [0.1, 0.4, 0.6, 0.4, 0.6, 0.2, 0.4]
+    flags = hysteresis_flags(probabilities, start=0.5, end=0.35)
+    assert flags == [False, False, True, True, True, False, False]
+
+
+def test_hysteresis_end_threshold_above_start_is_refused() -> None:
+    # Fermer à 0,5 un segment ouvert à 0,4 n'est plus une hystérésis.
+    settings = {**vad_config().model_dump(), "silero_end_threshold": 0.5}
+    with pytest.raises(ValidationError, match="inférieur"):
+        VadConfig.model_validate(settings)

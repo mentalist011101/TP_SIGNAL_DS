@@ -65,6 +65,7 @@ report/**/*.fdb_latexmk
 report/**/*.fls
 report/**/*.bbl
 report/**/*.blg
+report/main.pdf
 slides/**/*.aux
 slides/**/*.log
 slides/**/*.nav

@@ -3,7 +3,13 @@ import numpy as np
 import pytest
 
 from echolens.config import CONFIG_DIR
-from echolens.core.features import FeatureConfig, log_mel_spectrogram, mel_axis_position, mfcc
+from echolens.core.features import (
+    FeatureConfig,
+    band_power_share,
+    log_mel_spectrogram,
+    mel_axis_position,
+    mfcc,
+)
 
 # 1 s à 16 kHz, pas de 160, center=True : 1 + 16000 // 160 = 101 trames.
 EXPECTED_FRAMES = 101
@@ -139,3 +145,37 @@ def test_mel_axis_position_increases_with_frequency(config: FeatureConfig) -> No
         positions.append(mel_axis_position(frequency_hz, config))
     assert positions == sorted(positions)
     assert len(set(positions)) == len(positions)
+
+
+def vad_aligned_config() -> FeatureConfig:
+    # Trames de 30 ms sans centrage, alignées sur celles de webrtcvad (C24).
+    return FeatureConfig(n_fft=480, hop_length=480, center=False)
+
+
+def test_band_share_of_1_khz_sine_is_almost_one() -> None:
+    t = np.arange(16_000) / 16_000
+    signal = (0.3 * np.sin(2 * np.pi * 1000 * t)).astype(np.float32)
+    shares = band_power_share(signal, vad_aligned_config(), 300.0, 3400.0)
+    assert shares.shape == (33,)
+    assert np.all(shares > 0.99)
+
+
+def test_band_share_of_5_khz_sine_is_almost_zero() -> None:
+    t = np.arange(16_000) / 16_000
+    signal = (0.3 * np.sin(2 * np.pi * 5000 * t)).astype(np.float32)
+    shares = band_power_share(signal, vad_aligned_config(), 300.0, 3400.0)
+    assert np.all(shares < 0.01)
+
+
+def test_band_share_of_white_noise_is_the_band_width_ratio() -> None:
+    # Bruit blanc : puissance uniforme de 0 à 8 kHz, donc (3400 − 300) / 8000 ≈ 0,39.
+    generator = np.random.default_rng(0)
+    signal = (0.1 * generator.standard_normal(16_000)).astype(np.float32)
+    shares = band_power_share(signal, vad_aligned_config(), 300.0, 3400.0)
+    assert float(np.median(shares)) == pytest.approx(3100 / 8000, abs=0.05)
+
+
+def test_band_share_of_silence_is_zero() -> None:
+    signal = np.zeros(16_000, dtype=np.float32)
+    shares = band_power_share(signal, vad_aligned_config(), 300.0, 3400.0)
+    np.testing.assert_array_equal(shares, np.zeros(33, dtype=np.float32))

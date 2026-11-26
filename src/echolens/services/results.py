@@ -18,8 +18,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from echolens.core.audio.io import TARGET_SAMPLE_RATE
-from echolens.core.audio.preprocess_config import VadConfig
-from echolens.core.audio.segment import Segment, cut_window, detect_speech
+from echolens.core.audio.segment import Segment, cut_window
 from echolens.core.data.class_labels import ClassLabel, ClassLabels
 from echolens.core.inference import (
     FloatArray,
@@ -34,6 +33,7 @@ from echolens.core.inference import (
 )
 from echolens.core.models.registry import Profile, Task
 from echolens.services.predictor import ModelInfo, Predictor
+from echolens.services.speech_detection import SpeechDetector
 
 STATUS_DONE = "done"
 STATUS_NO_SPEECH = "no_speech"
@@ -46,12 +46,13 @@ TIME_DECIMALS = 3
 
 @dataclass(frozen=True)
 class ResultContext:
-    """Ce qu'il faut pour calculer les résultats : prédicteur, classes et découpage."""
+    """Ce qu'il faut pour calculer les résultats : prédicteur, classes, découpage, VAD."""
 
     predictor: Predictor
     labels: ClassLabels
     inference_config: InferenceConfig
-    vad_config: VadConfig
+    # Silero ou webrtcvad, choisi une fois au démarrage (D5, services.speech_detection).
+    speech_detector: SpeechDetector
 
 
 def build_results(
@@ -105,7 +106,7 @@ def emotion_result(signal: FloatArray, profile: Profile, context: ResultContext)
     """Émotions : segments de parole de la VAD, 5 s au plus, global pondéré par la durée (D5)."""
     info = context.predictor.model_info(Task.EMOTION, profile)
     # Étape 1 : zones de parole, coupées en morceaux de 5 s au plus.
-    speech_segments = detect_speech(signal, context.vad_config)
+    speech_segments = context.speech_detector.detect(signal)
     windows = emotion_windows(speech_segments, context.inference_config)
     # Étape 2 : pas de parole, pas d'émotion. On le dit au lieu d'inventer une prédiction.
     if not windows:
@@ -189,4 +190,36 @@ def _segment_result(
         "label": best.label,
         "label_fr": best.label_fr,
         "probabilities": [entry.model_dump() for entry in ranking],
+    }
+
+
+def summarize_results(results: dict[str, Any]) -> dict[str, Any]:
+    """Résumé des résultats pour l'historique : une entrée par tâche, sans segments (EF-08).
+
+    Calculé une fois à la fin de l'analyse et stocké dans la colonne summary, pour que la liste
+    n'ait jamais à lire les résultats complets.
+    """
+    summary: dict[str, Any] = {}
+    for task_name, result in results.items():
+        summary[task_name] = task_summary(result)
+    return summary
+
+
+def task_summary(result: dict[str, Any]) -> dict[str, Any]:
+    """Résumé d'une tâche : statut, premier choix et sa probabilité, modèle."""
+    # La liste des probabilités est triée de la plus probable à la moins probable : le premier
+    # élément est le premier choix, celui de « label ». Elle est vide si status ≠ done.
+    probability = None
+    if result["probabilities"]:
+        first_choice = result["probabilities"][0]
+        probability = first_choice["probability"]
+    return {
+        "status": result["status"],
+        "message": result["message"],
+        "label": result["label"],
+        "label_fr": result["label_fr"],
+        "probability": probability,
+        "model_id": result["model_id"],
+        "model_version": result["model_version"],
+        "calibrated": result["calibrated"],
     }

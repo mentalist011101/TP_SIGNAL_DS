@@ -11,7 +11,7 @@ apispec==6.10.0
     # via flask-smorest
 audioread==3.1.0 ; python_full_version < '3.12'
     # via librosa
-av==18.1.0 ; python_full_version < '3.12'
+av==18.1.1 ; python_full_version < '3.12'
     # via faster-whisper
 av==19.0.2 ; python_full_version >= '3.12'
     # via faster-whisper
@@ -22,7 +22,9 @@ certifi==2026.10.23
 cffi==2.1.1
     # via soundfile
 charset-normalizer==3.5.2
-    # via requests
+    # via
+    #   reportlab
+    #   requests
 click==8.5.0
     # via
     #   flask
@@ -49,6 +51,8 @@ cycler==0.12.1
     # via matplotlib
 decorator==5.3.1
     # via librosa
+docopt==0.6.2
+    # via num2words
 faster-whisper==1.2.1
     # via echolens
 filelock==4.2.7
@@ -152,6 +156,8 @@ networkx==3.7 ; python_full_version >= '3.12'
     # via torch
 noisereduce==3.0.3
     # via echolens
+num2words==0.5.14
+    # via echolens
 numba==0.68.1
     # via librosa
 numpy==2.4.6 ; python_full_version < '3.12'
@@ -237,11 +243,14 @@ packaging==26.3
     #   matplotlib
     #   onnxruntime
     #   pooch
+    #   silero-vad
     #   speechbrain
     #   transformers
     #   webargs
 pillow==13.0.0
-    # via matplotlib
+    # via
+    #   matplotlib
+    #   reportlab
 platformdirs==4.14.3
     # via pooch
 pooch==1.9.0
@@ -269,6 +278,8 @@ pyyaml==6.0.3
     #   transformers
 regex==2026.9.29
     # via transformers
+reportlab==5.1.1
+    # via echolens
 requests==2.34.2
     # via
     #   pooch
@@ -305,6 +316,8 @@ setuptools==84.2.1
     # via torch
 shellingham==1.5.4
     # via typer
+silero-vad==6.3
+    # via echolens
 simple-websocket==1.1.0
     # via flask-sock
 soundfile==0.14.0
@@ -329,6 +342,7 @@ tokenizers==0.23.3
 torch==2.15.0
     # via
     #   echolens
+    #   silero-vad
     #   speechbrain
     #   torchaudio
 torchaudio==2.11.1

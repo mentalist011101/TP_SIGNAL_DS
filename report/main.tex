@@ -1,0 +1,59 @@
+% Rapport EchoLens — INF50101, ENSPY, M2 Data Science. Remise le 2 décembre 2026.
+% Coordination : Lynn. Chaque section est dans sections/ ; son porteur est indiqué en tête.
+% Règle E8 : toutes les figures et tables viennent des scripts du dépôt (report/figures,
+% training/results), jamais d'ailleurs.
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+% Le français de babel est présent sur Overleaf ; sans lui, le document compile quand même.
+\IfFileExists{french.ldf}{\usepackage[french]{babel}}{}
+\IfFileExists{lmodern.sty}{\usepackage{lmodern}}{}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{xcolor}
+\usepackage{csquotes}
+\usepackage[hidelinks]{hyperref}
+
+\graphicspath{{figures/}}
+
+% Encadré « à rédiger » : visible tant qu'une partie n'est pas écrite. À retirer à la fin.
+\newcommand{\aRediger}[2]{%
+  \par\noindent\fcolorbox{orange}{orange!8}{\parbox{0.96\linewidth}{%
+    \textbf{À rédiger --- #1.} #2}}\par\medskip}
+
+\title{EchoLens : analyse multitâche d'un signal audio\\
+  \large Émotion, événements sonores, transcription et locuteur}
+\author{Luciano Fokouo \and Steve \and Daniella Lynn Sha Oyono \and Nicole\\[0.5em]
+  \small INF50101 --- Traitement multimédia des données, ENSPY, M2 Data Science}
+\date{2 décembre 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+  \aRediger{Luciano, à la fin}{Dix lignes : le problème, les deux familles de modèles, les
+    données, les trois chiffres principaux (émotions en domaine et hors domaine, ESC-50, locuteur
+    ou WER) et l'application.}
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+\input{sections/01_introduction}
+\input{sections/02_signal}
+\input{sections/03_donnees_protocole}
+\input{sections/04_architecture}
+\input{sections/05_modeles}
+\input{sections/06_application}
+\input{sections/07_resultats}
+\input{sections/08_discussion}
+\input{sections/09_conclusion}
+
+\appendix
+\input{sections/annexes}
+
+\end{document}

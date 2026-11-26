@@ -1,0 +1,9 @@
+% Porteur : Luciano.
+\section{Modèles}
+\label{sec:modeles}
+
+\aRediger{Luciano}{Famille A (CNN et CRNN sur log-Mel : blocs, BiGRU, pooling par attention,
+  SpecAugment après standardisation) ; famille B (wav2vec 2.0, mHuBERT-147, encodeur Whisper ;
+  somme pondérée des couches, moyenne temporelle, MLP) ; référence MFCC + SVM ; transcription
+  (Whisper via faster-whisper) ; locuteur (ECAPA-TDNN, similarité cosinus, seuil « inconnu »).
+  Sources : \texttt{docs/specification.md} §8 et les fiches de \texttt{docs/models/}.}

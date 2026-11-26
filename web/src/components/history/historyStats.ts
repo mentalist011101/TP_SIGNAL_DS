@@ -1,4 +1,4 @@
-import type { Analysis } from '../../api/client.ts'
+import type { AnalysisSummary } from '../../api/client.ts'
 
 // Chiffres clés de l'historique. Ce ne sont que des comptes et des sommes sur la liste
 // renvoyée par l'API : aucun calcul sur le signal (R5).
@@ -14,7 +14,7 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000
 const WEEK_DAYS = 7
 
 // Nombre d'analyses qui ont un statut donné.
-function countWithStatus(analyses: Analysis[], status: Analysis['status']): number {
+function countWithStatus(analyses: AnalysisSummary[], status: AnalysisSummary['status']): number {
   let count = 0
   for (const analysis of analyses) {
     if (analysis.status === status) {
@@ -25,7 +25,7 @@ function countWithStatus(analyses: Analysis[], status: Analysis['status']): numb
 }
 
 // Durée totale des audios dont l'analyse est terminée, en secondes.
-function totalAnalysedSeconds(analyses: Analysis[]): number {
+function totalAnalysedSeconds(analyses: AnalysisSummary[]): number {
   let total = 0
   for (const analysis of analyses) {
     if (analysis.status === 'done' && analysis.duration_s !== null) {
@@ -36,7 +36,7 @@ function totalAnalysedSeconds(analyses: Analysis[]): number {
 }
 
 // Nombre d'analyses créées pendant les 7 derniers jours.
-function countLastWeek(analyses: Analysis[], now: Date): number {
+function countLastWeek(analyses: AnalysisSummary[], now: Date): number {
   const weekStart = now.getTime() - WEEK_DAYS * MS_PER_DAY
   let count = 0
   for (const analysis of analyses) {
@@ -49,7 +49,7 @@ function countLastWeek(analyses: Analysis[], now: Date): number {
 }
 
 // Tous les chiffres clés de l'historique chargé.
-export function computeHistoryStats(analyses: Analysis[], now: Date): HistoryStats {
+export function computeHistoryStats(analyses: AnalysisSummary[], now: Date): HistoryStats {
   return {
     analysisCount: analyses.length,
     doneCount: countWithStatus(analyses, 'done'),

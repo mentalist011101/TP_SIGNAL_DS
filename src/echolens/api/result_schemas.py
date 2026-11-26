@@ -1,5 +1,10 @@
 """Schémas des résultats d'une analyse (contrat de GET /api/v1/analyses/{id}, C13).
 
+Deux formes :
+- complète (ResultsSchema), avec les segments, pour la page Résultat (colonne results) ;
+- résumée (ResultsSummarySchema), le premier choix seul, pour l'historique (GET /analyses,
+  table analysis_summaries).
+
 Un objet par tâche demandée. Chaque objet a le même format, que la tâche ait un résultat
 (done), qu'aucune parole n'ait été trouvée (no_speech) ou qu'elle ne soit pas encore branchée
 (unavailable) : le front lit toujours les mêmes champs.
@@ -107,6 +112,66 @@ class TaskResultSchema(Schema):
             "de 5 s au plus pour les émotions. Liste vide si status ≠ done."
         },
     )
+
+
+class TaskSummarySchema(Schema):
+    """Résumé d'une tâche pour l'historique : le premier choix et le modèle, rien de plus.
+
+    Il est calculé une fois à la fin de l'analyse (services.results.summarize_results) et lu
+    dans la table analysis_summaries : l'historique ne charge jamais les résultats complets.
+    """
+
+    status = fields.String(
+        validate=validate.OneOf(TASK_RESULT_STATUSES),
+        metadata={"description": "Même valeur que dans le résultat complet."},
+    )
+    message = fields.String(
+        allow_none=True,
+        metadata={"description": "Message en français si status ≠ done ; sinon null."},
+    )
+    label = fields.String(
+        allow_none=True,
+        metadata={
+            "description": "Classe la plus probable sur tout l'audio ; null si status ≠ done."
+        },
+    )
+    label_fr = fields.String(
+        allow_none=True,
+        metadata={"description": "Libellé français de cette classe ; null si status ≠ done."},
+    )
+    # dump_only : champ calculé, en lecture seule (readOnly dans l'OpenAPI, comme avant).
+    probability = fields.Float(
+        allow_none=True,
+        dump_only=True,
+        metadata={
+            "description": "Probabilité de cette classe (premier choix), entre 0 et 1 ; null "
+            "si status ≠ done.",
+        },
+    )
+    model_id = fields.String(
+        allow_none=True,
+        metadata={"description": "Identifiant du modèle (registre) ; « demo » ou null."},
+    )
+    model_version = fields.String(
+        allow_none=True,
+        metadata={"description": "Version du modèle ; null si la tâche n'est pas branchée."},
+    )
+    calibrated = fields.Boolean(
+        allow_none=True,
+        metadata={
+            "description": "Vrai si les probabilités sont calibrées (ENF-06) ; null si la "
+            "tâche n'est pas branchée."
+        },
+    )
+
+
+class ResultsSummarySchema(Schema):
+    """Résumé des résultats pour l'historique : une entrée par tâche demandée."""
+
+    emotion = fields.Nested(TaskSummarySchema)
+    sound_event = fields.Nested(TaskSummarySchema)
+    transcription = fields.Nested(TaskSummarySchema)
+    speaker = fields.Nested(TaskSummarySchema)
 
 
 class ResultsSchema(Schema):

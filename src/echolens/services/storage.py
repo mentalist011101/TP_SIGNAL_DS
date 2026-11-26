@@ -1,9 +1,11 @@
-"""Persistance des analyses (décision S3) : SQLite via SQLAlchemy 2, une seule table pour l'instant.
+"""Persistance des analyses (décision S3) : SQLite via SQLAlchemy 2.
 
 Les tables des segments et des prédictions viendront avec le MCD MERISE ; elles ne sont pas
-anticipées ici : les résultats sont stockés en JSON dans la table analyses (C13). Les tables
-sont créées au démarrage, sans migrations : une base créée par une version plus ancienne doit
-être supprimée, elle est recréée au démarrage suivant.
+anticipées ici : les résultats sont stockés en JSON dans la table analyses (C13). La table
+analysis_summaries garde une copie calculée du premier choix de chaque tâche, pour que
+l'historique n'ait jamais à lire results (EF-08). Les tables sont créées au démarrage, sans
+outil de migration : une colonne manquante dans une table existante arrête le démarrage avec
+un message clair.
 """
 
 from __future__ import annotations
@@ -12,8 +14,17 @@ from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Any
 
-from sqlalchemy import JSON, DateTime, Engine, String, create_engine, inspect
-from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
+from sqlalchemy import JSON, DateTime, Engine, ForeignKey, String, create_engine, inspect, select
+from sqlalchemy.orm import (
+    DeclarativeBase,
+    Mapped,
+    Session,
+    mapped_column,
+    relationship,
+    sessionmaker,
+)
+
+from echolens.services.results import summarize_results
 
 
 def _utc_now() -> datetime:
@@ -51,6 +62,34 @@ class AnalysisRecord(Base):
     # Résultats, un objet par tâche demandée (JSON, contrat de l'API) ; null tant que
     # l'analyse n'est pas terminée.
     results: Mapped[dict[str, Any] | None] = mapped_column(JSON, default=None)
+    # Ligne de résumé (table analysis_summaries) ; absente tant que l'analyse n'est pas
+    # terminée. cascade : supprimer l'analyse supprime aussi son résumé.
+    summary_row: Mapped[AnalysisSummaryRecord | None] = relationship(
+        back_populates="analysis", cascade="all, delete-orphan"
+    )
+
+    @property
+    def summary(self) -> dict[str, Any] | None:
+        """Résumé de l'analyse pour l'historique, ou None s'il n'y en a pas encore."""
+        if self.summary_row is None:
+            return None
+        return self.summary_row.summary
+
+
+class AnalysisSummaryRecord(Base):
+    """Résumé d'une analyse terminée : premier choix de chaque tâche, sans segments (EF-08).
+
+    Copie calculée de results (services.results.summarize_results), voulue : la liste de
+    l'historique la lit sans toucher à results. Une table à part plutôt qu'une colonne de
+    analyses : SQLite range une ligne d'un seul bloc, et lire une colonne placée après results
+    oblige à parcourir tout le JSON de results sur le disque.
+    """
+
+    __tablename__ = "analysis_summaries"
+
+    analysis_id: Mapped[str] = mapped_column(ForeignKey("analyses.id"), primary_key=True)
+    summary: Mapped[dict[str, Any]] = mapped_column(JSON)
+    analysis: Mapped[AnalysisRecord] = relationship(back_populates="summary_row")
 
 
 def create_session_factory(database_url: str) -> sessionmaker[Session]:
@@ -62,7 +101,9 @@ def create_session_factory(database_url: str) -> sessionmaker[Session]:
     engine = create_engine(database_url)
     Base.metadata.create_all(engine)
     check_columns_are_current(engine)
-    return sessionmaker(bind=engine, expire_on_commit=False)
+    session_factory = sessionmaker(bind=engine, expire_on_commit=False)
+    fill_missing_summaries(session_factory)
+    return session_factory
 
 
 def check_columns_are_current(engine: Engine) -> None:
@@ -81,3 +122,34 @@ def check_columns_are_current(engine: Engine) -> None:
             f"d'EchoLens : colonnes manquantes {', '.join(missing)}. Supprimez le fichier de la "
             "base (var/echolens.db par défaut) : il sera recréé au prochain démarrage."
         )
+
+
+def fill_missing_summaries(session_factory: sessionmaker[Session]) -> None:
+    """Crée le résumé de chaque analyse terminée qui n'en a pas encore (EF-08).
+
+    Cas d'une base créée avant la table analysis_summaries. Une analyse à la fois, chacune
+    dans sa propre transaction : on peut relancer sans risque, et un arrêt en plein
+    remplissage est repris au démarrage suivant.
+    """
+    # Étape 1 : analyses terminées sans ligne de résumé (jointure externe gauche).
+    query = select(AnalysisRecord.id)
+    query = query.outerjoin(AnalysisSummaryRecord)
+    query = query.where(AnalysisRecord.status == AnalysisStatus.DONE)
+    query = query.where(AnalysisSummaryRecord.analysis_id.is_(None))
+    with session_factory() as session:
+        analysis_ids = session.scalars(query).all()
+    # Étape 2 : résumé calculé depuis results, un seul JSON complet en mémoire à la fois.
+    for analysis_id in analysis_ids:
+        add_summary(session_factory, analysis_id)
+
+
+def add_summary(session_factory: sessionmaker[Session], analysis_id: str) -> None:
+    """Calcule le résumé d'une analyse depuis results et l'enregistre."""
+    with session_factory() as session:
+        results_query = select(AnalysisRecord.results).where(AnalysisRecord.id == analysis_id)
+        results = session.scalar(results_query)
+        if results is None:
+            return
+        summary = summarize_results(results)
+        session.add(AnalysisSummaryRecord(analysis_id=analysis_id, summary=summary))
+        session.commit()
