@@ -9,12 +9,14 @@ from echolens.training.transcription_eval import (
     SentenceScore,
     bootstrap_intervals,
     corpus_rows,
+    country_of_speaker,
     error_rates,
     interval_contains_zero,
     load_transcription_eval_config,
     paired_wer_difference,
     sample_rows,
     score_sentence,
+    scores_by_country,
     suspect_sentences,
     worst_sentences,
 )
@@ -219,3 +221,24 @@ def test_configuration_pins_both_models() -> None:
     assert config.condition_on_previous_text is False
     assert config.bootstrap_draws == 1000
     assert config.cpu_check_sentences == 100
+
+
+def test_country_of_speaker() -> None:
+    assert country_of_speaker("cameroon_m_006") == "cameroon"
+    assert country_of_speaker("gabon_f_024") == "gabon"
+    with pytest.raises(ValueError, match="sans pays"):
+        country_of_speaker("ctell1-01")
+
+
+def test_scores_by_country_keeps_every_sentence() -> None:
+    scores = [
+        make_score("a.wav", "cameroon_m_006", 1, 10),
+        make_score("b.wav", "gabon_f_024", 0, 8),
+        make_score("c.wav", "cameroon_m_012", 2, 5),
+    ]
+
+    grouped = scores_by_country(scores)
+
+    assert sorted(grouped) == ["cameroon", "gabon"]
+    cameroon_paths = [score.path for score in grouped["cameroon"]]
+    assert cameroon_paths == ["a.wav", "c.wav"]
