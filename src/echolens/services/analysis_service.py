@@ -35,6 +35,7 @@ from echolens.core.inference import load_inference_config
 from echolens.core.models.registry import Profile, Task
 from echolens.services.predictor import make_predictor
 from echolens.services.results import ResultContext, build_results, summarize_results
+from echolens.services.speaker_service import SpeakerService
 from echolens.services.spectrogram_image import save_spectrogram_png
 from echolens.services.speech_detection import make_speech_detector
 from echolens.services.storage import (
@@ -72,6 +73,8 @@ class AnalysisService:
         # Paramètres des features lus une seule fois : les mêmes que l'entraînement (R5).
         self.feature_config = FeatureConfig.from_yaml(settings.features_path)
         self.result_context = _make_result_context(settings)
+        # Locuteurs enregistrés : même prédicteur et même VAD que les analyses (EF-11).
+        self.speakers = SpeakerService(settings, session_factory, self.result_context)
         self.executor = ThreadPoolExecutor(max_workers=settings.analysis_workers)
         self._fail_interrupted_analyses()
 
@@ -270,9 +273,13 @@ class AnalysisService:
     def _compute_results(self, analysis_id: str) -> dict[str, Any]:
         # Étape 1 : l'audio converti, relu par le point d'entrée unique du cœur (D1, D2).
         signal = load_audio(self.converted_audio_path(analysis_id))
-        # Étape 2 : un résultat par tâche demandée, global calculé à partir des segments.
+        # Étape 2 : un résultat par tâche demandée, global calculé à partir des segments. Les
+        # voix enregistrées sont relues à chaque analyse : un locuteur ajouté compte tout de suite.
         record = self.get_analysis(analysis_id)
-        return build_results(signal, record.tasks, record.profile, self.result_context)
+        voices = []
+        if Task.SPEAKER.value in record.tasks:
+            voices = self.speakers.enrolled_voices()
+        return build_results(signal, record.tasks, record.profile, self.result_context, voices)
 
     def _original_audio_path(self, analysis_id: str) -> Path:
         # L'extension est conservée dans le nom original.<ext> : on retrouve le fichier dans

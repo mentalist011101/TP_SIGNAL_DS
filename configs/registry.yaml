@@ -9,7 +9,8 @@
 #   profiles  quality | realtime (EF-07) : un seul modèle par tâche et par profil
 #   weights   hf://<utilisateur>/<dépôt> ; revision : hash de commit du dépôt (40 caractères)
 #   metrics   F1 macro et accuracy de test : ESC-50, moyenne des 5 tours (P3) ; émotions,
-#             moyenne des 3 graines sur le test de CREMA-D et RAVDESS (P1)
+#             moyenne des 3 graines sur le test de CREMA-D et RAVDESS (P1) ; locuteur,
+#             accuracy entre voix enregistrées sur l'évaluation d'OpenSLR 57 (C15, P11)
 #   temperature  T de la calibration (E2, ENF-06), calibration.temperature du config.json du
 #             dépôt arrondie au millième ; sert à l'affichage (page Modèles, page Résultat)
 #   engine    transcription seulement : moteur d'inférence (faster-whisper, CTranslate2) ;
@@ -82,3 +83,12 @@ models:
     compute_type: int8
     cpu_threads: 4
     description: Whisper base (OpenAI), converti pour faster-whisper (CTranslate2), int8 sur CPU, français imposé ; WER 0,279 [0,235 ; 0,320] sur le test d'OpenSLR 57 et 0,505 [0,487 ; 0,523] sur yaounde/read, CER 0,133 et 0,253 (C17a), écart int8/float16 non significatif
+  - id: ecapa-voxceleb
+    task: speaker
+    family: pretrained
+    profiles: [quality, realtime]
+    version: 1.0.0
+    weights: hf://speechbrain/spkrec-ecapa-voxceleb
+    revision: 0f99f2d0ebe89ac095bcc5903c4dd8f72b367286
+    metrics: {accuracy: 0.979}
+    description: ECAPA-TDNN de SpeechBrain (VoxCeleb), gelé, vecteur de voix de 192 valeurs, similarité cosinus ; sur OpenSLR 57 (C15), accuracy 0,979 [0,966 ; 0,988] entre voix enregistrées, EER 0,030 [0,019 ; 0,044], seuil « inconnu » 0,5485 (90,6 % des voix connues reconnues, 93,8 % des inconnus rejetés)

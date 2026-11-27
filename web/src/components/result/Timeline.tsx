@@ -18,6 +18,9 @@ import {
 const MIN_EVENT_OPACITY = 0.35
 const MAX_FILL_OPACITY = 0.45
 
+// Étiquette d'un morceau dont la voix n'est proche d'aucune voix enregistrée (API, EF-11).
+const UNKNOWN_SPEAKER = 'unknown'
+
 // Les fenêtres d'événements se chevauchent de moitié (5 s, pas de 2,5 s, D5) : elles
 // alternent entre deux voies pour rester lisibles.
 const EVENT_LANES = 2
@@ -102,6 +105,50 @@ function EmotionRow(props: TimelineProps & { segments: SegmentResult[] }) {
               className={`${BLOCK_CLASSES} bg-card ${blockBorder(isChosen)}`}
               style={segmentStyle(segment, props.durationS)}
               onClick={() => props.onSelect({ task: 'emotion', index }, segment.start_s)}
+            >
+              {segment.label_fr}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// « Locuteur Awa, de 5,3 s à 6,8 s » : ce que lit un lecteur d'écran.
+function speakerLabel(segment: SegmentResult): string {
+  const start = formatSeconds(segment.start_s)
+  const end = formatSeconds(segment.end_s)
+  return `Locuteur ${segment.label_fr}, de ${start} à ${end}`
+}
+
+// Bloc d'un morceau de locuteur : « Inconnu » en gris, un nom sur fond de carte.
+function speakerBackground(segment: SegmentResult): string {
+  if (segment.label === UNKNOWN_SPEAKER) {
+    return 'bg-paper-alt text-ink-soft'
+  }
+  return 'bg-card'
+}
+
+// Rangée « Locuteur » (EF-11, EF-12) : le nom reconnu sur chaque morceau de parole de 1 à 5 s ;
+// un clic le choisit et place la lecture au début du morceau.
+function SpeakerRow(props: TimelineProps & { segments: SegmentResult[] }) {
+  return (
+    <div className="space-y-1">
+      <p className={ROW_TITLE_CLASSES}>Locuteur</p>
+      <div className="relative h-8">
+        {props.segments.map((segment, index) => {
+          const isChosen = isSelected(props.selected, 'speaker', index)
+          return (
+            <button
+              key={index}
+              type="button"
+              aria-pressed={isChosen}
+              aria-label={speakerLabel(segment)}
+              title={speakerLabel(segment)}
+              className={`${BLOCK_CLASSES} ${speakerBackground(segment)} ${blockBorder(isChosen)}`}
+              style={segmentStyle(segment, props.durationS)}
+              onClick={() => props.onSelect({ task: 'speaker', index }, segment.start_s)}
             >
               {segment.label_fr}
             </button>
@@ -241,8 +288,10 @@ export default function Timeline(props: TimelineProps) {
   const emotion = doneResult(props.analysis, 'emotion')
   const soundEvent = doneResult(props.analysis, 'sound_event')
   const transcription = doneResult(props.analysis, 'transcription')
+  const speaker = doneResult(props.analysis, 'speaker')
   const noSpeech = hasNoSpeech(props.analysis)
-  if (emotion === null && soundEvent === null && transcription === null && !noSpeech) {
+  const hasRows = emotion !== null || soundEvent !== null || transcription !== null
+  if (!hasRows && speaker === null && !noSpeech) {
     return null
   }
   return (
@@ -251,6 +300,7 @@ export default function Timeline(props: TimelineProps) {
       {emotion !== null && <SpeechRow segments={emotion.segments} durationS={props.durationS} />}
       {emotion !== null && <EmotionRow {...props} segments={emotion.segments} />}
       {soundEvent !== null && <EventRow {...props} segments={soundEvent.segments} />}
+      {speaker !== null && <SpeakerRow {...props} segments={speaker.segments} />}
       {transcription !== null && <TextRow {...props} segments={transcription.segments} />}
       {/* Tête de lecture seulement une fois la lecture lancée ou un segment choisi. */}
       {props.currentTimeS > 0 && (

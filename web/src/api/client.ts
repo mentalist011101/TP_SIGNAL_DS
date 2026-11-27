@@ -126,7 +126,9 @@ export interface ClassProbability {
 
 // Résultat d'un morceau de l'audio, pour la frise temporelle (EF-12). Transcription : label et
 // label_fr à null, probabilities vide, et le texte dit sur ce morceau dans text (null pour les
-// autres tâches).
+// autres tâches). Locuteur (EF-11) : label = identifiant du locuteur (« unknown » s'il est
+// inconnu), label_fr = son nom (« Inconnu »), probabilities vide, et score = cosinus avec la
+// voix la plus proche (absent ou null pour les autres tâches).
 export interface SegmentResult {
   start_s: number
   end_s: number
@@ -134,6 +136,7 @@ export interface SegmentResult {
   label_fr: string | null
   probabilities: ClassProbability[]
   text: string | null
+  score?: number | null
 }
 
 // Résultat d'une tâche. Les probabilités arrivent triées de la plus probable à la moins
@@ -347,5 +350,77 @@ export function useModels() {
     queryKey: ['models'],
     queryFn: () => apiGet<ModelInfo[]>('/models'),
     staleTime: Infinity,
+  })
+}
+
+// Un locuteur enregistré (GET /api/v1/speakers, EF-11), sans sa voix : le vecteur reste sur
+// le serveur. Écrit à la main d'après SpeakerSchema (api/speakers.py).
+export interface Speaker {
+  id: string
+  name: string
+  created_at: string
+  speech_s: number
+  segment_count: number
+  audio_count: number
+  model_id: string
+  model_version: string
+  consent_version: string
+}
+
+// Clé du cache des locuteurs, partagée par la lecture, l'ajout et la suppression.
+const SPEAKERS_QUERY_KEY = ['speakers']
+
+// Liste des locuteurs enregistrés, par ordre alphabétique.
+export function useSpeakers() {
+  return useQuery({
+    queryKey: SPEAKERS_QUERY_KEY,
+    queryFn: () => apiGet<Speaker[]>('/speakers'),
+  })
+}
+
+export interface SpeakerRequest {
+  name: string
+  // Vrai seulement si la case de consentement est cochée (S6).
+  consent: boolean
+  // Extraits de voix : enregistrements du micro ou fichiers choisis.
+  files: File[]
+}
+
+// Formulaire de POST /speakers : le champ « files » est répété une fois par extrait.
+function buildSpeakerForm(request: SpeakerRequest): FormData {
+  const form = new FormData()
+  form.append('name', request.name)
+  form.append('consent', String(request.consent))
+  for (const file of request.files) {
+    form.append('files', file)
+  }
+  return form
+}
+
+// Enregistrement d'une voix, puis rechargement de la liste des locuteurs.
+export function useEnrollSpeaker() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (request: SpeakerRequest) => {
+      const form = buildSpeakerForm(request)
+      return apiPostForm<Speaker>('/speakers', form)
+    },
+    onSuccess: () => {
+      return queryClient.invalidateQueries({ queryKey: SPEAKERS_QUERY_KEY })
+    },
+  })
+}
+
+// Suppression d'un locuteur (sa voix et ses extraits), puis rechargement de la liste.
+export function useDeleteSpeaker() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (speakerId: string) => {
+      const path = `/speakers/${speakerId}`
+      return apiDelete(path)
+    },
+    onSuccess: () => {
+      return queryClient.invalidateQueries({ queryKey: SPEAKERS_QUERY_KEY })
+    },
   })
 }
