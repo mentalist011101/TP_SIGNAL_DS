@@ -6,7 +6,8 @@ build_export et envoyer le fichier.
 - JSON : le détail de l'analyse, tel que le renvoie GET /api/v1/analyses/{id}. Ce détail est
   construit par le schéma de l'API ; la route le passe tout prêt, pour que services/ n'importe
   pas l'API.
-- CSV : format long, une ligne par probabilité (globale ou de segment).
+- CSV : format long, une ligne par probabilité (globale ou de segment) ; pour la
+  transcription, une ligne de texte globale puis une par segment.
 - PDF : une à deux pages en français, avec le spectrogramme déjà enregistré.
 """
 
@@ -148,6 +149,9 @@ def json_export(detail: dict[str, Any]) -> bytes:
 def csv_export(record: AnalysisRecord) -> bytes:
     """Résultats au format long : une ligne par probabilité, globale puis de chaque segment.
 
+    Transcription : pas de probabilités, mais une ligne global avec le texte complet, puis
+    une ligne par segment avec ses bornes et son texte (colonne text).
+
     UTF-8 avec BOM (pour qu'Excel reconnaisse les accents), séparateur virgule, point décimal.
     Une tâche sans résultat (no_speech, unavailable) a une seule ligne, avec son statut.
     """
@@ -197,6 +201,8 @@ def _task_csv_rows(analysis_id: str, task: str, result: dict[str, Any]) -> list[
     # Tâche sans résultat : une seule ligne, son statut dans label, le reste vide.
     if result["status"] != "done":
         return [{"analysis_id": analysis_id, "task": task, "label": result["status"]}]
+    if task == "transcription":
+        return _transcription_csv_rows(analysis_id, result)
     rows = []
     # Étape 1 : probabilités globales, sans segment.
     for rank, entry in enumerate(result["probabilities"], start=1):
@@ -218,7 +224,8 @@ def _task_csv_rows(analysis_id: str, task: str, result: dict[str, Any]) -> list[
 def _probability_row(
     analysis_id: str, task: str, result: dict[str, Any], rank: int, entry: dict[str, Any]
 ) -> dict[str, Any]:
-    # Colonnes communes aux lignes globales et de segment ; text attend la transcription (C17).
+    # Colonnes communes aux lignes globales et de segment ; text reste vide : seule la
+    # transcription a du texte.
     calibrated = "true" if result["calibrated"] else "false"
     return {
         "analysis_id": analysis_id,
@@ -232,6 +239,38 @@ def _probability_row(
         "calibrated": calibrated,
         "text": "",
     }
+
+
+def _transcription_csv_rows(analysis_id: str, result: dict[str, Any]) -> list[dict[str, Any]]:
+    # Ligne global : le texte complet ; puis une ligne par segment, avec ses bornes.
+    calibrated = "true" if result["calibrated"] else "false"
+    model: dict[str, Any] = {
+        "model_id": result["model_id"],
+        "model_version": result["model_version"],
+        "calibrated": calibrated,
+    }
+    rows = []
+    global_row: dict[str, Any] = {
+        "analysis_id": analysis_id,
+        "task": "transcription",
+        "scope": "global",
+    }
+    global_row.update(model)
+    global_row["text"] = result["text"]
+    rows.append(global_row)
+    for segment_index, segment in enumerate(result["segments"], start=1):
+        row: dict[str, Any] = {
+            "analysis_id": analysis_id,
+            "task": "transcription",
+            "scope": "segment",
+        }
+        row["segment_index"] = segment_index
+        row["start_s"] = segment["start_s"]
+        row["end_s"] = segment["end_s"]
+        row.update(model)
+        row["text"] = segment["text"]
+        rows.append(row)
+    return rows
 
 
 def _pdf_styles() -> dict[str, ParagraphStyle]:
@@ -294,6 +333,13 @@ def _task_flowables(
         flowables.append(Paragraph(f"Statut : {result['message']}", styles["body"]))
         flowables.append(Paragraph(_model_line(result), styles["small"]))
         return flowables
+    # Transcription : le texte de chaque segment avec son horodatage, sans probabilités.
+    if task == "transcription":
+        flowables.append(Paragraph("Statut : terminé", styles["body"]))
+        flowables.extend(_transcript_flowables(result, styles))
+        model = f"Modèle : {result['model_id']} · version {result['model_version']}"
+        flowables.append(Paragraph(model, styles["small"]))
+        return flowables
     # Étape 1 : statut et les 3 classes les plus probables (liste déjà triée par l'API).
     flowables.append(Paragraph("Statut : terminé", styles["body"]))
     flowables.append(_top_classes_table(result))
@@ -323,6 +369,26 @@ def _segments_flowables(
         rows.append([start, end, segment["label_fr"]])
     flowables: list[Flowable] = [_simple_table(rows)]
     # Au-delà de MAX_PDF_SEGMENTS, on renvoie au CSV plutôt que d'allonger le rapport.
+    hidden_count = len(segments) - MAX_PDF_SEGMENTS
+    if hidden_count > 0:
+        note = f"… et {hidden_count} segment(s) de plus, détaillés dans l'export CSV."
+        flowables.append(Paragraph(note, styles["small"]))
+    return flowables
+
+
+def _transcript_flowables(
+    result: dict[str, Any], styles: dict[str, ParagraphStyle]
+) -> list[Flowable]:
+    # « 0,0 s – 4,2 s  Bonjour à tous » : un paragraphe par segment, qui passe à la ligne.
+    segments = result["segments"]
+    flowables: list[Flowable] = []
+    for segment in segments[:MAX_PDF_SEGMENTS]:
+        start = _seconds_fr(segment["start_s"])
+        end = _seconds_fr(segment["end_s"])
+        text = _escape(segment["text"])
+        line = f"<b>{start} – {end}</b>  {text}"
+        flowables.append(Paragraph(line, styles["body"]))
+    # Au-delà de MAX_PDF_SEGMENTS, on renvoie au CSV, comme pour les autres tâches.
     hidden_count = len(segments) - MAX_PDF_SEGMENTS
     if hidden_count > 0:
         note = f"… et {hidden_count} segment(s) de plus, détaillés dans l'export CSV."

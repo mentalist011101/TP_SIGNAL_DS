@@ -124,17 +124,21 @@ export interface ClassProbability {
   probability: number
 }
 
-// Résultat d'un morceau de l'audio, pour la future frise temporelle (EF-12).
+// Résultat d'un morceau de l'audio, pour la frise temporelle (EF-12). Transcription : label et
+// label_fr à null, probabilities vide, et le texte dit sur ce morceau dans text (null pour les
+// autres tâches).
 export interface SegmentResult {
   start_s: number
   end_s: number
-  label: string
-  label_fr: string
+  label: string | null
+  label_fr: string | null
   probabilities: ClassProbability[]
+  text: string | null
 }
 
 // Résultat d'une tâche. Les probabilités arrivent triées de la plus probable à la moins
-// probable, de somme 1 : le front les affiche sans les recalculer (R5).
+// probable, de somme 1 : le front les affiche sans les recalculer (R5). Transcription (EF-10) :
+// pas de classe ni de probabilités, le texte complet dans text (null pour les autres tâches).
 export interface TaskResult {
   status: TaskResultStatus
   message: string | null
@@ -145,6 +149,7 @@ export interface TaskResult {
   model_version: string | null
   calibrated: boolean | null
   segments: SegmentResult[]
+  text: string | null
 }
 
 // Un résultat par tâche demandée ; une tâche non demandée est absente.

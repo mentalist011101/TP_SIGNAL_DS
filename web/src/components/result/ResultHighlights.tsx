@@ -7,7 +7,8 @@ interface Highlight {
   result: TaskResult
 }
 
-// Tâches terminées avec un résultat (done), dans l'ordre de la demande.
+// Tâches terminées avec un résultat principal (done), dans l'ordre de la demande. La
+// transcription n'a pas de classe principale : son texte est dans sa propre carte.
 function doneResults(analysis: Analysis): Highlight[] {
   const highlights: Highlight[] = []
   if (analysis.results === null) {
@@ -15,6 +16,9 @@ function doneResults(analysis: Analysis): Highlight[] {
   }
   for (const task of analysis.tasks) {
     const result = analysis.results[task]
+    if (task === 'transcription') {
+      continue
+    }
     if (result !== undefined && result.status === 'done') {
       highlights.push({ task, result })
     }

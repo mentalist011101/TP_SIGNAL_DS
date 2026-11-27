@@ -140,6 +140,41 @@ phrases.
 2. On ne garde que les locuteurs qui ont au moins 10 phrases.
 3. Le seuil « locuteur inconnu » est choisi sur un groupe de locuteurs et évalué sur un autre.
 
+Mise en œuvre (C15, `core/data/speaker_enrollment.py`, `training/speaker_eval.py`,
+`configs/speaker.yaml`) :
+
+- un locuteur d'OpenSLR 57 est identifié par « sous-corpus/dossier ». Les découpages officiels
+  ne séparent pas tous les locuteurs : 14 dossiers ca16 (`002`, `004`… `037`) sont à la fois
+  dans train et dans devtest, avec le même préfixe de session (`afc-gabon_16.06.11_002`). C'est
+  la même personne, comptée une seule fois ;
+- 225 locuteurs sur 233 ont au moins 10 phrases. Dans chaque sous-corpus, l'ordre des
+  locuteurs est tiré au hasard, puis un sur quatre va dans chaque groupe :
+
+  | Groupe | Rôle | Locuteurs | Phrases de test |
+  | --- | --- | --- | --- |
+  | calibration | voix enregistrées pour choisir le seuil (et la couche de mHuBERT) | 57 | 3 570 |
+  | imposteurs de calibration | voix inconnues pour choisir le seuil | 56 | 3 906 |
+  | évaluation | voix enregistrées pour mesurer les scores | 57 | 4 246 |
+  | imposteurs d'évaluation | voix inconnues pour mesurer le rejet | 55 | 3 770 |
+
+- le seuil « inconnu » est choisi comme dans l'application : on compare le **meilleur** score
+  d'une phrase parmi toutes les voix enregistrées au seuil. Il est pris au point où, sur la
+  calibration, la part des connus rejetés égale celle des imposteurs acceptés ;
+- intervalles de confiance à 95 % de l'accuracy et de l'EER par bootstrap sur les
+  **locuteurs** (P8) : on tire des locuteurs avec remise et on garde toutes leurs phrases, car
+  les phrases d'une même personne ne sont pas indépendantes ;
+- le découpage est versionné dans `data/splits/openslr57_speakers.csv` (une ligne par phrase).
+
+Hypothèses de ce découpage, vérifiées ou non :
+
+| Hypothèse | État |
+| --- | --- |
+| Un même dossier ca16 dans train et devtest est une seule personne | vérifiée : même préfixe de session dans les noms de fichiers (14 dossiers) |
+| Deux dossiers différents sont deux personnes différentes | **non vérifiable** : OpenSLR 57 ne fournit pas d'identité. Les dossiers du Niger (`niger_sys1_1`, `niger_sys2_1`…) ne partagent aucune phrase lue ; un locuteur du test ca16 (`gabon_m_074`) pourrait aussi exister sous un numéro de session. Si c'était le cas, le score serait sous-estimé (une personne comptée comme deux) |
+| Le genre est connu | seulement pour les 12 locuteurs du test officiel ; vide ailleurs |
+| Couper à 20 s ne change presque rien | 140 extraits sur 16 656 dépassent 20 s (ca16 et yaounde) ; seul leur début est gardé |
+| Les extraits très courts suffisent | 169 extraits durent moins de 1 s ; ils sont gardés tels quels |
+
 ## 7. Normalisation du WER (P10, P12)
 
 Le WER est mesuré sur le test officiel d'OpenSLR 57 et sur la partie lue `yaounde/read` du

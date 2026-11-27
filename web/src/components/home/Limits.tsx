@@ -8,7 +8,8 @@ const LIMITS: string[] = [
   'Un seul événement par fenêtre de 5 s : deux sons simultanés ne sont pas séparés.',
   'Émotions : F1 de 0,805 sur les voix féminines contre 0,702 sur les voix masculines ; voix d’acteurs, en anglais. Le français et les accents africains restent à mesurer (CaFE, African Accented French).',
   'La robustesse au bruit et aux micros des téléphones n’est pas encore mesurée.',
-  'Transcription et locuteurs ne sont pas encore branchés.',
+  'Transcription : 14 % de mots faux (WER) sur le test d’OpenSLR 57, 35 % sur les textes lus du corpus de Yaoundé (whisper-small, profil Qualité).',
+  'Les locuteurs ne sont pas encore branchés.',
   'Plusieurs jeux d’entraînement sont sous licence non commerciale (ESC-50, RAVDESS) : usage académique uniquement.',
 ]
 

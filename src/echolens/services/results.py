@@ -3,13 +3,15 @@
 Pour chaque tâche, on découpe l'audio en segments, le prédicteur donne des probabilités par
 segment, puis le résultat global est calculé à partir de ces segments. Les deux sont gardés :
 le global pour les cartes de la page Résultat, les segments pour la frise temporelle (EF-12).
+La transcription (EF-10) donne un texte par segment de parole au lieu de probabilités ; le
+texte complet est celui des segments mis bout à bout. Le champ text vaut null pour les
+autres tâches.
 
 Trois statuts par tâche :
 - done : résultat calculé ;
-- no_speech : émotion demandée, mais la VAD n'a trouvé aucune parole ; on ne prédit rien
-  plutôt que d'inventer une émotion à de la pluie ou à un moteur ;
-- unavailable : tâche pas encore branchée (transcription, locuteur) ; l'analyse réussit quand
-  même.
+- no_speech : émotion ou transcription demandée, mais la VAD n'a trouvé aucune parole ; on ne
+  prédit rien plutôt que d'inventer une émotion ou un texte à de la pluie ou à un moteur ;
+- unavailable : tâche pas encore branchée (locuteur) ; l'analyse réussit quand même.
 """
 
 from __future__ import annotations
@@ -30,6 +32,7 @@ from echolens.core.inference import (
     ranked_probabilities,
     segment_samples,
     sound_event_windows,
+    transcription_windows,
 )
 from echolens.core.models.registry import Profile, Task
 from echolens.services.predictor import ModelInfo, Predictor
@@ -42,6 +45,8 @@ NO_SPEECH_MESSAGE = "Aucune parole détectée"
 UNAVAILABLE_MESSAGE = "Disponible prochainement"
 # Bornes des segments arrondies à la milliseconde : 11,559999999 s devient 11,56 s.
 TIME_DECIMALS = 3
+# Tâches qui lisent les zones de parole de la VAD (D5).
+SPEECH_TASKS = (Task.EMOTION, Task.TRANSCRIPTION)
 
 
 @dataclass(frozen=True)
@@ -60,25 +65,48 @@ def build_results(
 ) -> dict[str, Any]:
     """Un objet par tâche demandée, prêt à être stocké en JSON et renvoyé par l'API.
 
-    Le profil (EF-07) choisit le modèle de chaque tâche : qualité ou temps réel.
+    Le profil (EF-07) choisit le modèle de chaque tâche : qualité ou temps réel. La VAD ne
+    tourne qu'une fois par analyse : l'émotion et la transcription lisent les mêmes zones de
+    parole.
     """
+    requested = [Task(task_name) for task_name in tasks]
+    # Étape 1 : zones de parole, une seule fois, si une tâche en a besoin (D5).
+    speech_segments: list[Segment] = []
+    if needs_speech_segments(requested):
+        speech_segments = context.speech_detector.detect(signal)
+    # Étape 2 : un résultat par tâche demandée.
     results: dict[str, Any] = {}
-    for task_name in tasks:
-        task = Task(task_name)
-        results[task.value] = task_result(signal, task, Profile(profile), context)
+    for task in requested:
+        result = task_result(signal, speech_segments, task, Profile(profile), context)
+        results[task.value] = result
     return results
 
 
+def needs_speech_segments(tasks: list[Task]) -> bool:
+    """Vrai si l'émotion ou la transcription est demandée : il faut alors la VAD."""
+    speech_tasks = [task for task in tasks if task in SPEECH_TASKS]
+    return len(speech_tasks) > 0
+
+
 def task_result(
-    signal: FloatArray, task: Task, profile: Profile, context: ResultContext
+    signal: FloatArray,
+    speech_segments: list[Segment],
+    task: Task,
+    profile: Profile,
+    context: ResultContext,
 ) -> dict[str, Any]:
-    """Résultat d'une tâche : calculé, « aucune parole » ou « disponible prochainement »."""
+    """Résultat d'une tâche : calculé, « aucune parole » ou « disponible prochainement ».
+
+    speech_segments : zones de parole de la VAD, calculées une fois par build_results.
+    """
     if not context.predictor.supports(task, profile):
         return unavailable_result()
     if task == Task.SOUND_EVENT:
         return sound_event_result(signal, profile, context)
     if task == Task.EMOTION:
-        return emotion_result(signal, profile, context)
+        return emotion_result(signal, speech_segments, profile, context)
+    if task == Task.TRANSCRIPTION:
+        return transcription_result(signal, speech_segments, profile, context)
     return unavailable_result()
 
 
@@ -102,11 +130,12 @@ def sound_event_result(
     return done_result(windows, probabilities, overall, classes, info)
 
 
-def emotion_result(signal: FloatArray, profile: Profile, context: ResultContext) -> dict[str, Any]:
+def emotion_result(
+    signal: FloatArray, speech_segments: list[Segment], profile: Profile, context: ResultContext
+) -> dict[str, Any]:
     """Émotions : segments de parole de la VAD, 5 s au plus, global pondéré par la durée (D5)."""
     info = context.predictor.model_info(Task.EMOTION, profile)
     # Étape 1 : zones de parole, coupées en morceaux de 5 s au plus.
-    speech_segments = context.speech_detector.detect(signal)
     windows = emotion_windows(speech_segments, context.inference_config)
     # Étape 2 : pas de parole, pas d'émotion. On le dit au lieu d'inventer une prédiction.
     if not windows:
@@ -121,6 +150,56 @@ def emotion_result(signal: FloatArray, profile: Profile, context: ResultContext)
     overall = duration_weighted_mean(probabilities, durations_s)
     classes = context.labels.emotions
     return done_result(windows, probabilities, overall, classes, info)
+
+
+def transcription_result(
+    signal: FloatArray, speech_segments: list[Segment], profile: Profile, context: ResultContext
+) -> dict[str, Any]:
+    """Transcription : segments de parole de la VAD, 30 s au plus, un texte par segment (EF-10).
+
+    Le détecteur de parole est le même que pour les émotions (D5) ; aucune parole : no_speech.
+    """
+    info = context.predictor.model_info(Task.TRANSCRIPTION, profile)
+    # Étape 1 : zones de parole, coupées en morceaux égaux de 30 s au plus.
+    windows = transcription_windows(speech_segments, context.inference_config)
+    # Étape 2 : pas de parole, pas de texte inventé.
+    if not windows:
+        return no_speech_result(info)
+    window_signals = []
+    for window in windows:
+        samples = segment_samples(signal, window)
+        window_signals.append(samples)
+    # Étape 3 : un texte par morceau, puis le texte complet.
+    texts = context.predictor.transcribe(profile, window_signals)
+    return text_result(windows, texts, info)
+
+
+def text_result(windows: list[Segment], texts: list[str], info: ModelInfo) -> dict[str, Any]:
+    """Transcription calculée : un texte par segment (bornes = celles du segment), texte complet
+    = textes des segments joints par une espace. Pas de classe ni de probabilités.
+    """
+    segments = []
+    for window, text in zip(windows, texts, strict=True):
+        segments.append(_text_segment(window, text))
+    return {
+        "status": STATUS_DONE,
+        "message": None,
+        "label": None,
+        "label_fr": None,
+        "probabilities": [],
+        "model_id": info.model_id,
+        "model_version": info.model_version,
+        "calibrated": info.calibrated,
+        "segments": segments,
+        "text": join_texts(texts),
+    }
+
+
+def join_texts(texts: list[str]) -> str:
+    """Textes des segments mis bout à bout, séparés par une espace ; un segment sans texte
+    (Whisper n'y a rien entendu) est sauté, pour ne pas laisser de double espace."""
+    non_empty = [text for text in texts if text != ""]
+    return " ".join(non_empty)
 
 
 def done_result(
@@ -146,11 +225,13 @@ def done_result(
         "model_version": info.model_version,
         "calibrated": info.calibrated,
         "segments": segments,
+        "text": None,
     }
 
 
 def no_speech_result(info: ModelInfo) -> dict[str, Any]:
-    """Émotion demandée sur un audio sans parole : aucune prédiction, un message."""
+    """Émotion ou transcription demandée sur un audio sans parole : aucune prédiction, un
+    message."""
     return {
         "status": STATUS_NO_SPEECH,
         "message": NO_SPEECH_MESSAGE,
@@ -161,6 +242,7 @@ def no_speech_result(info: ModelInfo) -> dict[str, Any]:
         "model_version": info.model_version,
         "calibrated": info.calibrated,
         "segments": [],
+        "text": None,
     }
 
 
@@ -176,6 +258,7 @@ def unavailable_result() -> dict[str, Any]:
         "model_version": None,
         "calibrated": None,
         "segments": [],
+        "text": None,
     }
 
 
@@ -190,6 +273,19 @@ def _segment_result(
         "label": best.label,
         "label_fr": best.label_fr,
         "probabilities": [entry.model_dump() for entry in ranking],
+        "text": None,
+    }
+
+
+def _text_segment(window: Segment, text: str) -> dict[str, Any]:
+    # Même forme qu'un segment de classification, sans classe ni probabilités.
+    return {
+        "start_s": round(window.start_s, TIME_DECIMALS),
+        "end_s": round(window.end_s, TIME_DECIMALS),
+        "label": None,
+        "label_fr": None,
+        "probabilities": [],
+        "text": text,
     }
 
 
