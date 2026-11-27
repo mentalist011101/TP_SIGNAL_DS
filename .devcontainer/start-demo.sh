@@ -17,13 +17,18 @@ if [ -z "${ECHOLENS_ACCESS_PASSWORD:-}" ]; then
   exit 1
 fi
 
+if ! command -v uv > /dev/null || [ ! -f web/dist/index.html ]; then
+  echo "Codespace pas encore prêt (uv ou front absent) : lancez bash .devcontainer/post-create.sh" >&2
+  exit 1
+fi
+
 export ECHOLENS_INFERENCE_BACKEND=models
 # Modèles chargés et chauffés au démarrage : la première analyse du jury n'attend pas.
 export ECHOLENS_PRELOAD_MODELS=true
 export ECHOLENS_VOICE_CLONING_LICENSE_ACCEPTED="${ACCEPT_CPML:-false}"
 
 # Le port devient public : sans cela, seul le propriétaire du Codespace pourrait ouvrir la page.
-if [ -n "${CODESPACE_NAME:-}" ]; then
+if [ -n "${CODESPACE_NAME:-}" ] && command -v gh > /dev/null; then
   gh codespace ports visibility 5000:public -c "$CODESPACE_NAME" \
     || echo "Rendez le port 5000 public à la main (onglet Ports, clic droit, Port Visibility)."
 fi
