@@ -44,6 +44,8 @@ COPY src/ src/
 RUN uv sync --frozen --no-dev ${UV_EXTRAS}
 
 COPY configs/ configs/
+# Résultats des notebooks : chiffres des fiches des modèles (EF-16).
+COPY training/results/ training/results/
 COPY --from=web /app/web/dist web/dist
 
 # Utilisateur sans droits d'administration ; seul var/ (base, audios, poids) lui est ouvert.

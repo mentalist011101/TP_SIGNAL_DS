@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import type { ModelInfo } from '../../api/client.ts'
 import { FAMILY_LABELS, PROFILE_LABELS, TASK_LABELS } from '../../labels.ts'
 import { formatCalibration, formatScore } from './modelFormat.ts'
@@ -20,18 +21,16 @@ function profilesText(model: ModelInfo): string {
   return labels.join(', ')
 }
 
-// Identifiant du modèle, en lien vers sa page Hugging Face quand les poids y sont publiés.
+// Identifiant du modèle, en lien vers sa fiche (EF-16) : scores, calibration, matrice de
+// confusion, F1 par classe et lien vers ses poids.
 function ModelName({ model }: { model: ModelInfo }) {
-  if (model.huggingface_url === null) {
-    return <span className="font-mono break-all">{model.id}</span>
-  }
   return (
-    <a
-      href={model.huggingface_url}
+    <Link
+      to={`/modeles/${model.id}`}
       className="font-mono break-all text-accent-ink underline underline-offset-4"
     >
       {model.id}
-    </a>
+    </Link>
   )
 }
 

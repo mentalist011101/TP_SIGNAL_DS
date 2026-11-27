@@ -21,7 +21,8 @@ export default function ModelsPage() {
           <p className="text-xs text-ink-soft">
             F1 macro et accuracy de test : ESC-50, moyenne des 5 tours (P3) ; émotions, moyenne des
             3 graines sur le test de CREMA-D et RAVDESS (P1). T : température de la calibration
-            (ENF-06).
+            (ENF-06). Cliquez sur un modèle pour sa fiche : matrice de confusion, F1 par classe et
+            ECE avant et après calibration.
           </p>
         </section>
         <section className="space-y-3">
