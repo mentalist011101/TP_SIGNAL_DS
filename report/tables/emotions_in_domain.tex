@@ -1,0 +1,13 @@
+% Généré par training/scripts/make_report_figures.py, ne pas modifier à la main.
+% Source : training/results/c11_family_b_emotions.json, training/results/emotions_family_a_cnn.json, training/results/emotions_family_a_crnn.json, training/results/emotions_comparisons.json
+\begin{tabular}{@{}llccc@{}}
+\toprule
+Modèle & Fam. & F1 macro (3 graines) & IC 95 \% (graine 42) & Accuracy \\
+\midrule
+cnn & A & $0{,}621 \pm 0{,}005$ & $[0{,}601\,;\,0{,}652]$ & 0{,}621 \\
+crnn & A & $0{,}668 \pm 0{,}014$ & $[0{,}656\,;\,0{,}705]$ & 0{,}666 \\
+wav2vec2-base & B & $0{,}751 \pm 0{,}002$ & $[0{,}731\,;\,0{,}777]$ & 0{,}747 \\
+mhubert-147 & B & $0{,}769 \pm 0{,}009$ & $[0{,}739\,;\,0{,}787]$ & 0{,}766 \\
+whisper-base & B & $0{,}753 \pm 0{,}003$ & $[0{,}728\,;\,0{,}774]$ & 0{,}749 \\
+\bottomrule
+\end{tabular}
