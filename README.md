@@ -80,6 +80,21 @@ Avec Docker (aucun prérequis hormis Docker) :
 make docker       # construit l'image et lance http://localhost:5000
 ```
 
+### Analyse en direct (page Direct)
+
+La page Direct envoie le micro au serveur par le WebSocket `/ws/stream`. Toutes les 0,5 s, le
+serveur analyse les 2 dernières secondes (émotion et événement, profil Temps réel) et renvoie
+les résultats, le temps de calcul, le RTF et la latence. Le protocole est décrit dans
+[`docs/api-flux-micro.md`](docs/api-flux-micro.md).
+
+- Navigateur conseillé : **Chrome ou Edge**. Firefox a longtemps refusé de relier un micro à un
+  contexte audio à 16 kHz ; si le navigateur refuse, la page le dit au lieu d'échouer en
+  silence.
+- Rien n'est enregistré par défaut. La case « Enregistrer cette session » demande un
+  consentement écrit ; la session devient alors une analyse de l'Historique, supprimable comme
+  les autres.
+- Le micro n'est accessible qu'en `http://localhost` ou en `https://` (règle des navigateurs).
+
 ### Export des résultats
 
 Une analyse terminée s'exporte depuis la page Résultat, ou par
