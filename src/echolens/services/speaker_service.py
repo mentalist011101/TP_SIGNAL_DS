@@ -26,7 +26,7 @@ from echolens.core.inference import FloatArray, segment_samples, speaker_windows
 from echolens.core.models.registry import Profile, Task
 from echolens.core.speaker_id import voice_print
 from echolens.services.results import EnrolledVoice, ResultContext
-from echolens.services.storage import SpeakerRecord
+from echolens.services.storage import CloningConsentRecord, SpeakerRecord
 
 MAX_NAME_LENGTH = 80
 # Le modèle de locuteur est le même dans les deux profils ; la voix est calculée avec celui du
@@ -57,9 +57,12 @@ class SpeakerService:
         # Même prédicteur, même VAD et mêmes réglages que les analyses.
         self.context = context
 
-    def enroll(self, name: str, consent: bool, uploads: list[FileStorage]) -> SpeakerRecord:
+    def enroll(
+        self, name: str, consent: bool, uploads: list[FileStorage], cloning_consent: bool = False
+    ) -> SpeakerRecord:
         """Enregistre un locuteur ; lève SpeakerRejectedError, sans rien garder, si un contrôle
-        échoue."""
+        échoue. cloning_consent : seconde case, la personne accepte aussi que sa voix soit
+        clonée (C35, ENF-10) ; sans elle, la page Cloner ne la propose pas."""
         # Étape 1 : contrôles qui ne demandent pas de lire l'audio.
         clean_name = self._check_request(name, consent, uploads)
         speaker_id = str(uuid.uuid4())
@@ -89,10 +92,28 @@ class SpeakerService:
             audio_count=len(signals),
             consent_version=self.context.inference_config.speaker.consent_version,
         )
+        if cloning_consent:
+            version = self.context.inference_config.voice_cloning.consent_version
+            record.cloning_consent_row = CloningConsentRecord(
+                speaker_id=speaker_id, consent_version=version
+            )
         with self.session_factory() as session:
             session.add(record)
             session.commit()
+        return self.get_speaker(speaker_id)
+
+    def get_speaker(self, speaker_id: str) -> SpeakerRecord:
+        """Renvoie un locuteur, ou lève SpeakerNotFoundError."""
+        with self.session_factory() as session:
+            record = session.get(SpeakerRecord, speaker_id)
+        if record is None:
+            raise SpeakerNotFoundError(f"Aucun locuteur ne porte l'identifiant {speaker_id}.")
         return record
+
+    def enrollment_audio(self, speaker_id: str) -> list[Path]:
+        """Extraits d'enregistrement gardés (WAV mono 16 kHz), dans l'ordre d'envoi."""
+        folder = self.speaker_dir(speaker_id)
+        return sorted(folder.glob("enrollment_*.wav"))
 
     def list_speakers(self) -> list[SpeakerRecord]:
         """Tous les locuteurs, par ordre alphabétique de nom."""

@@ -18,10 +18,13 @@ from echolens.api.health import blp as health_blp
 from echolens.api.models import blp as models_blp
 from echolens.api.speakers import blp as speakers_blp
 from echolens.api.stream import sock
+from echolens.api.tts import blp as tts_blp
 from echolens.config import AppSettings, load_settings
 from echolens.services.analysis_service import AnalysisService
+from echolens.services.cloning_service import CloningService
 from echolens.services.comparison_service import ComparisonService
 from echolens.services.storage import create_session_factory
+from echolens.services.voice_cloning import make_voice_cloner
 
 
 def create_app(settings: AppSettings | None = None, **overrides: Any) -> Flask:
@@ -52,6 +55,10 @@ def create_app(settings: AppSettings | None = None, **overrides: Any) -> Flask:
     app.extensions["analysis_service"] = analysis_service
     app.extensions["comparison_service"] = ComparisonService(analysis_service)
     app.extensions["speaker_service"] = analysis_service.speakers
+    # Clonage (C35) : XTTS n'est chargé qu'au premier clonage, pas au démarrage.
+    cloning_settings = analysis_service.result_context.inference_config.voice_cloning
+    cloner = make_voice_cloner(settings, cloning_settings)
+    app.extensions["cloning_service"] = CloningService(analysis_service, cloner)
 
     api = Api(app)
     api.register_blueprint(health_blp)
@@ -59,6 +66,7 @@ def create_app(settings: AppSettings | None = None, **overrides: Any) -> Flask:
     api.register_blueprint(models_blp)
     api.register_blueprint(compare_blp)
     api.register_blueprint(speakers_blp)
+    api.register_blueprint(tts_blp)
     # Enregistré après Api(app) pour remplacer le gestionnaire de flask-smorest : toute erreur
     # porte ainsi un « message » en français (format décrit dans echolens.api.errors).
     app.register_error_handler(HTTPException, handle_http_error)

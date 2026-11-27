@@ -3,6 +3,7 @@ import { describeApiError, useEnrollSpeaker, type Speaker } from '../../api/clie
 import { ACCEPTED_FORMATS, useMicrophone } from '../analyze/microphone.ts'
 import { MicIcon, UploadIcon } from '../icons.tsx'
 import { MIN_SPEECH_SECONDS, formatSpeech } from './speakerFormat.ts'
+import CloningConsent from './CloningConsent.tsx'
 import VoiceConsent from './VoiceConsent.tsx'
 
 // Enregistrement d'une voix (EF-11) : un nom, des extraits (micro ou fichiers), le
@@ -131,6 +132,7 @@ export default function EnrollForm() {
   const [name, setName] = useState('')
   const [clips, setClips] = useState<VoiceClip[]>([])
   const [accepted, setAccepted] = useState(false)
+  const [cloningAccepted, setCloningAccepted] = useState(false)
   const enrollment = useEnrollSpeaker()
 
   function addClips(added: VoiceClip[]) {
@@ -144,12 +146,13 @@ export default function EnrollForm() {
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const files = clips.map((clip) => clip.file)
-    const request = { name, consent: accepted, files }
+    const request = { name, consent: accepted, cloningConsent: cloningAccepted, files }
     enrollment.mutate(request, {
       onSuccess: () => {
         setName('')
         setClips([])
         setAccepted(false)
+        setCloningAccepted(false)
       },
     })
   }
@@ -188,6 +191,11 @@ export default function EnrollForm() {
         accepted={accepted}
         disabled={enrollment.isPending}
         onAcceptedChange={setAccepted}
+      />
+      <CloningConsent
+        accepted={cloningAccepted}
+        disabled={enrollment.isPending}
+        onAcceptedChange={setCloningAccepted}
       />
       <div className="space-y-2">
         <button type="submit" className={SUBMIT_CLASSES} disabled={isDisabled}>

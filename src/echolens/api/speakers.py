@@ -67,6 +67,13 @@ class SpeakerSchema(Schema):
     consent_version = fields.String(
         required=True, metadata={"description": "Version du texte de consentement accepté."}
     )
+    cloning_allowed = fields.Boolean(
+        required=True,
+        metadata={
+            "description": "Vrai si la personne a aussi accepté que sa voix soit clonée "
+            "(seconde case, C35) : seule une telle voix est proposée par la page Cloner."
+        },
+    )
 
 
 class SpeakerFormSchema(Schema):
@@ -89,6 +96,14 @@ class SpeakerFormSchema(Schema):
         metadata={
             "description": "true si la personne accepte que sa voix et ses extraits soient "
             "gardés par EchoLens pour la reconnaître (S6) ; sinon rien n'est enregistré."
+        },
+    )
+    cloning_consent = fields.Boolean(
+        load_default=False,
+        error_messages={"invalid": "Le champ cloning_consent doit valoir true ou false."},
+        metadata={
+            "description": "true si la personne accepte AUSSI que sa voix soit clonée par "
+            "XTTS-v2 (EF-18, ENF-10) ; false par défaut."
         },
     )
 
@@ -128,7 +143,9 @@ class Speakers(MethodView):
         leurs vecteurs (C15). Il faut au moins 10 s de parole, extraits réunis.
         """
         try:
-            return _service().enroll(form["name"], form["consent"], files["files"])
+            return _service().enroll(
+                form["name"], form["consent"], files["files"], form["cloning_consent"]
+            )
         except SpeakerRejectedError as error:
             abort(400, message=str(error))
 

@@ -63,6 +63,20 @@ export async function apiPostForm<T>(path: string, form: FormData): Promise<T> {
   return (await response.json()) as T
 }
 
+// Envoi d'un corps JSON (POST) : lève une ApiError lisible si la réponse n'est pas 2xx.
+export async function apiPostJson<T>(path: string, body: unknown): Promise<T> {
+  const response = await fetch(`${API_BASE}${path}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  if (!response.ok) {
+    const message = await readErrorMessage(response, path)
+    throw new ApiError(response.status, message)
+  }
+  return (await response.json()) as T
+}
+
 // Suppression : l'API répond 204 (sans corps) ; on ne lit donc pas de JSON en retour.
 export async function apiDelete(path: string): Promise<void> {
   const response = await fetch(`${API_BASE}${path}`, { method: 'DELETE' })
@@ -365,6 +379,8 @@ export interface Speaker {
   model_id: string
   model_version: string
   consent_version: string
+  // Vrai si la personne a aussi accepté le clonage de sa voix (C35, seconde case).
+  cloning_allowed: boolean
 }
 
 // Clé du cache des locuteurs, partagée par la lecture, l'ajout et la suppression.
@@ -382,6 +398,8 @@ export interface SpeakerRequest {
   name: string
   // Vrai seulement si la case de consentement est cochée (S6).
   consent: boolean
+  // Vrai seulement si la seconde case (clonage, C35) est cochée.
+  cloningConsent: boolean
   // Extraits de voix : enregistrements du micro ou fichiers choisis.
   files: File[]
 }
@@ -391,6 +409,7 @@ function buildSpeakerForm(request: SpeakerRequest): FormData {
   const form = new FormData()
   form.append('name', request.name)
   form.append('consent', String(request.consent))
+  form.append('cloning_consent', String(request.cloningConsent))
   for (const file of request.files) {
     form.append('files', file)
   }
@@ -526,6 +545,80 @@ export function useDeleteComparison() {
     mutationFn: (comparisonId: string) => apiDelete(`/compare/${comparisonId}`),
     onSuccess: () => {
       return queryClient.invalidateQueries({ queryKey: COMPARISONS_QUERY_KEY })
+    },
+  })
+}
+
+// Un extrait de voix synthétique (SynthesisSchema, api/tts.py, C35) : quelle voix a dit quel
+// texte, avec quel modèle ; audio_url une fois la synthèse terminée.
+export interface Synthesis {
+  id: string
+  created_at: string
+  speaker_id: string
+  speaker_name: string
+  text: string
+  status: AnalysisStatusValue
+  error_message: string | null
+  model_id: string
+  model_version: string
+  duration_s: number | null
+  compute_s: number | null
+  audio_url: string | null
+  download_name: string
+}
+
+export interface SynthesisRequest {
+  speaker_id: string
+  text: string
+}
+
+// Clé du cache des extraits synthétiques, partagée par la lecture, l'ajout et la suppression.
+const SYNTHESES_QUERY_KEY = ['syntheses']
+
+// Vrai si au moins un extrait est encore en cours de synthèse.
+function hasRunningSynthesis(syntheses: Synthesis[]): boolean {
+  for (const synthesis of syntheses) {
+    if (synthesis.status === 'pending' || synthesis.status === 'processing') {
+      return true
+    }
+  }
+  return false
+}
+
+// Extraits synthétiques, les plus récents d'abord ; rafraîchis chaque seconde tant qu'une
+// synthèse tourne.
+export function useSyntheses() {
+  return useQuery({
+    queryKey: SYNTHESES_QUERY_KEY,
+    queryFn: () => apiGet<Synthesis[]>('/tts'),
+    refetchInterval: (query) => {
+      const syntheses = query.state.data
+      if (syntheses !== undefined && hasRunningSynthesis(syntheses)) {
+        return POLL_INTERVAL_MS
+      }
+      return false
+    },
+  })
+}
+
+// Demande de clonage : l'API répond 202, la liste suit ensuite la synthèse.
+export function useCreateSynthesis() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (request: SynthesisRequest) => apiPostJson<Synthesis>('/tts', request),
+    onSuccess: () => {
+      return queryClient.invalidateQueries({ queryKey: SYNTHESES_QUERY_KEY })
+    },
+  })
+}
+
+// Suppression d'un extrait synthétique et de son audio.
+export function useDeleteSynthesis() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (synthesisId: string) => apiDelete(`/tts/${synthesisId}`),
+    onSuccess: () => {
+      return queryClient.invalidateQueries({ queryKey: SYNTHESES_QUERY_KEY })
     },
   })
 }

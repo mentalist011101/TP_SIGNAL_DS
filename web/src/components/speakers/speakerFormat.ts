@@ -8,6 +8,10 @@ export const MIN_SPEECH_SECONDS = 10
 // (speaker.consent_version). Changer le texte oblige à changer la version des deux côtés.
 export const SPEAKER_CONSENT_VERSION = 'locuteurs-v1'
 
+// Version du texte de consentement au clonage (CloningConsent) : configs/inference.yaml
+// (voice_cloning.consent_version).
+export const CLONING_CONSENT_VERSION = 'clonage-v1'
+
 // « 12,3 s » : une durée en secondes, une décimale.
 export function formatSpeech(seconds: number): string {
   const formatted = seconds.toLocaleString('fr-FR', { maximumFractionDigits: 1 })

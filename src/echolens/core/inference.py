@@ -66,6 +66,20 @@ class SpeakerSettings(BaseModel):
     consent_version: str = Field(min_length=1)
 
 
+class VoiceCloningSettings(BaseModel):
+    """Clonage de voix (EF-18, C35) : texte, modèle à la demande, bip de marquage."""
+
+    language: str
+    max_text_chars: int = Field(gt=0)
+    temperature: float = Field(gt=0)
+    idle_unload_s: float = Field(gt=0)
+    marker_frequency_hz: float = Field(gt=0)
+    marker_duration_s: float = Field(gt=0)
+    marker_amplitude: float = Field(gt=0, le=1)
+    marker_gap_s: float = Field(ge=0)
+    consent_version: str = Field(min_length=1)
+
+
 class StreamSettings(BaseModel):
     """Flux micro en direct (EF-14, D8) : fenêtres, limites et enregistrement consenti."""
 
@@ -87,6 +101,7 @@ class InferenceConfig(BaseModel):
     emotion: EmotionWindows
     transcription: TranscriptionSettings
     speaker: SpeakerSettings
+    voice_cloning: VoiceCloningSettings
     stream: StreamSettings
 
 

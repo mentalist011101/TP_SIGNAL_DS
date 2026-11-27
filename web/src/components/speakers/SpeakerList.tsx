@@ -64,6 +64,7 @@ function SpeakerItem({ speaker }: { speaker: Speaker }) {
         <p className="text-xs text-ink-soft">
           Modèle <span className="font-mono">{speaker.model_id}</span> · consentement{' '}
           <span className="font-mono">{speaker.consent_version}</span>
+          {speaker.cloning_allowed && ' · clonage accepté'}
         </p>
       </div>
       <DeleteSpeaker speaker={speaker} />

@@ -45,6 +45,10 @@ training = [
     "pandas>=2.2",
     "jiwer>=4.0.0",
 ]
+tts = [
+    "coqui-tts[codec]>=0.27",
+    "six>=1.16",
+]
 
 [dependency-groups]
 dev = [

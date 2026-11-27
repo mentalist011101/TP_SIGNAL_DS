@@ -156,6 +156,64 @@ class SpeakerRecord(Base):
     audio_count: Mapped[int]
     # Version du texte de consentement accepté (configs/inference.yaml, speaker).
     consent_version: Mapped[str] = mapped_column(String(32))
+    # Consentement au clonage (C35), donné par une seconde case ; absent : la voix ne peut pas
+    # être clonée. cascade : supprimer le locuteur supprime aussi ce consentement et ses
+    # extraits synthétiques.
+    # lazy="selectin" : lu avec le locuteur, car l'objet est utilisé après la session.
+    cloning_consent_row: Mapped[CloningConsentRecord | None] = relationship(
+        back_populates="speaker", cascade="all, delete-orphan", lazy="selectin"
+    )
+    syntheses: Mapped[list[SynthesisRecord]] = relationship(
+        back_populates="speaker", cascade="all, delete-orphan"
+    )
+
+    @property
+    def cloning_allowed(self) -> bool:
+        """Vrai si la personne a accepté que sa voix soit clonée."""
+        return self.cloning_consent_row is not None
+
+
+class CloningConsentRecord(Base):
+    """Consentement au clonage d'une voix enregistrée (EF-18, ENF-10, S6).
+
+    Une table à part : create_all la crée seule dans une base existante, sans toucher à la
+    table speakers.
+    """
+
+    __tablename__ = "cloning_consents"
+
+    speaker_id: Mapped[str] = mapped_column(ForeignKey("speakers.id"), primary_key=True)
+    consent_version: Mapped[str] = mapped_column(String(32))
+    accepted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utc_now)
+    speaker: Mapped[SpeakerRecord] = relationship(back_populates="cloning_consent_row")
+
+
+class SynthesisRecord(Base):
+    """Un extrait de voix synthétique produit par la page Cloner (EF-18).
+
+    Le texte et le locuteur cloné sont gardés : on sait toujours quelle voix a dit quoi, et
+    quand. L'audio (WAV marqué) est dans le dossier du locuteur : le supprimer efface tout.
+    """
+
+    __tablename__ = "syntheses"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utc_now)
+    speaker_id: Mapped[str] = mapped_column(ForeignKey("speakers.id"))
+    text: Mapped[str] = mapped_column(String)
+    status: Mapped[str] = mapped_column(String(16), default=AnalysisStatus.PENDING)
+    error_message: Mapped[str | None] = mapped_column(String, default=None)
+    model_id: Mapped[str] = mapped_column(String(64))
+    model_version: Mapped[str] = mapped_column(String(32))
+    duration_s: Mapped[float | None] = mapped_column(default=None)
+    compute_s: Mapped[float | None] = mapped_column(default=None)
+    # lazy="joined" : le nom du locuteur est lu avec l'extrait, utilisable après la session.
+    speaker: Mapped[SpeakerRecord] = relationship(back_populates="syntheses", lazy="joined")
+
+    @property
+    def speaker_name(self) -> str:
+        """Nom du locuteur dont la voix a été clonée."""
+        return self.speaker.name
 
 
 def create_session_factory(database_url: str) -> sessionmaker[Session]:
