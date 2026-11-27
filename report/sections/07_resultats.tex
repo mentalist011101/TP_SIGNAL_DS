@@ -70,18 +70,21 @@ small divise environ par deux les erreurs de base : $-13{,}5$ points sur le test
 [$-16{,}5$ ; $-10{,}5$] et $-16{,}0$ points sur Yaoundé [$-16{,}9$ ; $-15{,}1$], deux écarts
 significatifs. Il reste
 assez rapide pour l'application (RTF 0,52 : trente secondes de son sont transcrites en environ
-quinze secondes). Le WER est plus du double sur Yaoundé que sur le test ; les causes de cet
-écart (conditions d'enregistrement, textes lus) ne sont pas analysées ici.
+quinze secondes). Le WER est bien plus élevé sur Yaoundé que sur le test (34,5\,\% contre
+14,4\,\% pour small, 50,5\,\% contre 27,9\,\% pour base). Les deux corpus diffèrent par le
+contenu, la longueur des phrases, l'enregistrement et les locuteurs, et le test contient aussi
+des locuteurs camerounais : cette mesure ne permet pas d'isoler l'effet de l'accent.
 
 \paragraph{Par pays.} Le test officiel ne contient que 72 phrases camerounaises, dites par trois
 hommes. En les retranscrivant avec le reste du test (CPU, int8 ; le WER global obtenu,
 14,3\,\% pour small, est celui de C17a à 0,1 point près), small donne 13,8\,\%
 [7,0 ; 18,7] au Cameroun contre 14,9\,\% [10,7 ; 18,4] au Gabon (410 phrases, 7 locuteurs) :
-aucun écart visible entre ces deux accents. base est moins bon sur les phrases camerounaises
-(34,6\,\% [23,1 ; 45,3] contre 25,6\,\%), mais les intervalles se recouvrent. Le Tchad et le
-Congo n'ont qu'un locuteur chacun : leur WER ne se généralise pas. Deux des 72 phrases
-camerounaises ont une référence suspecte (les deux modèles y font 100\,\% d'erreurs ou plus) ;
-sans elles, small descend à 12,4\,\%.
+pas d'écart mesurable entre ces deux pays, avec seulement trois locuteurs camerounais, tous des
+hommes. base est moins bon sur les phrases camerounaises (34,6\,\% [23,1 ; 45,3] contre
+25,6\,\%), mais les intervalles se recouvrent. Le Tchad et le Congo n'ont qu'un locuteur
+chacun : leur WER ne se généralise pas. Deux des 72 phrases camerounaises font partie des
+phrases du test où les deux modèles se trompent sur tous les mots : après vérification, ce sont
+des erreurs de reconnaissance et non des références fausses ; elles restent donc dans le calcul.
 
 
 \subsection{Analyse des erreurs}
