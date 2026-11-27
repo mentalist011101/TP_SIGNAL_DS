@@ -44,6 +44,10 @@ stream:
   hop_s: 0.5                    # H (D8)
   max_message_s: 1.0            # un message binaire plus long est refusé (S6)
   latency_history: 600          # p50 et p95 calculés sur les 600 dernières fenêtres (5 min)
+  # Sous ce niveau RMS (dBFS), la fenêtre reçue est considérée comme muette : un micro coupé
+  # ou mal choisi envoie des zéros, et les modèles rendent alors toujours le même résultat.
+  # Le moindre bruit de fond d'un micro réel est bien au-dessus.
+  silent_level_dbfs: -80.0
   tasks: [emotion, sound_event]
   # Enregistrement dans l'historique (avec consentement) : à l'arrêt, l'audio complet de la
   # session devient une analyse ordinaire, faite avec ces tâches et ce profil, et limitée à

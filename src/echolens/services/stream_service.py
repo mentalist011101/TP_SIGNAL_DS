@@ -25,7 +25,7 @@ from werkzeug.datastructures import FileStorage
 from echolens.core.audio.io import TARGET_SAMPLE_RATE
 from echolens.core.inference import FloatArray, StreamSettings
 from echolens.core.models.registry import Profile
-from echolens.core.stream import StreamBuffer, StreamWindow, pcm16_to_float32
+from echolens.core.stream import StreamBuffer, StreamWindow, level_dbfs, pcm16_to_float32
 from echolens.services.analysis_service import AnalysisRejectedError, AnalysisService
 from echolens.services.results import build_results, summarize_results
 
@@ -159,12 +159,17 @@ class StreamSession:
         median_s = float(np.percentile(compute_times, MEDIAN_PERCENT))
         tail_s = float(np.percentile(compute_times, TAIL_PERCENT))
         summary = summarize_results(results)
+        # Niveau du son reçu : il montre tout de suite si le micro du navigateur est muet.
+        level = level_dbfs(window.signal)
+        silent = level < self.settings.silent_level_dbfs
         return {
             "type": "window",
             "end_s": round(window.end_s, 3),
             "skipped": window.skipped,
             "results": summary,
             "speech": _has_speech(summary),
+            "level_dbfs": round(level, 1),
+            "silent": silent,
             "compute_ms": round(compute_s * SECONDS_TO_MS, 1),
             "rtf": round(rtf, 3),
             "compute_p50_ms": round(median_s * SECONDS_TO_MS, 1),

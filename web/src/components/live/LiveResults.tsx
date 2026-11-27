@@ -45,6 +45,23 @@ function SpeechIndicator({ speech }: { speech: boolean | null }) {
   )
 }
 
+// « −42 dBFS » : niveau du son reçu par le serveur, pour voir si le micro capte.
+function LevelIndicator({ levelDbfs }: { levelDbfs: number }) {
+  const level = Math.round(levelDbfs).toLocaleString('fr-FR')
+  return <span className="font-mono text-sm text-ink-soft">niveau reçu {level} dBFS</span>
+}
+
+// Le serveur ne reçoit que du silence : les résultats affichés ne veulent alors rien dire.
+function SilentWarning() {
+  return (
+    <p className="text-sm text-danger">
+      Le serveur ne reçoit que du silence : le micro choisi par le navigateur ne capte rien.
+      Vérifiez le micro sélectionné (icône du micro dans la barre d’adresse) et qu’il n’est pas
+      coupé dans le système, puis redémarrez.
+    </p>
+  )
+}
+
 export default function LiveResults({ latest }: { latest: WindowMessage | null }) {
   const emotion = latest?.results.emotion
   const soundEvent = latest?.results.sound_event
@@ -52,8 +69,14 @@ export default function LiveResults({ latest }: { latest: WindowMessage | null }
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-base font-semibold">Les 2 dernières secondes</h2>
-        {latest !== null && <SpeechIndicator speech={latest.speech} />}
+        {latest !== null && (
+          <div className="flex flex-wrap items-center gap-4">
+            <LevelIndicator levelDbfs={latest.level_dbfs} />
+            <SpeechIndicator speech={latest.speech} />
+          </div>
+        )}
       </div>
+      {latest !== null && latest.silent && <SilentWarning />}
       <div className="grid gap-px overflow-hidden rounded-card border border-rule bg-rule sm:grid-cols-2">
         <div className={TILE_CLASSES}>
           <p className="label-mono text-ink-faint">{TASK_LABELS.emotion}</p>

@@ -134,10 +134,29 @@ def test_stream_sends_ready_then_windows(server_url: str) -> None:
     assert first["results"]["emotion"]["model_id"] == "demo"
     assert first["results"]["sound_event"]["probability"] > 0
     assert first["speech"] is True
+    assert first["silent"] is False
+    assert first["level_dbfs"] > -30
     assert first["compute_ms"] > 0
     assert first["rtf"] == pytest.approx(first["compute_ms"] / 2000, abs=1e-3)
     assert first["compute_p95_ms"] >= first["compute_p50_ms"]
     assert of_type(messages, "saved") == []
+
+
+def test_silent_microphone_is_reported(server_url: str) -> None:
+    # Un micro muet envoie des zéros : le serveur le dit, au lieu d'afficher des résultats
+    # qui ne veulent rien dire.
+    client = Client.connect(server_url)
+    client.send(json.dumps({"type": "start", "record": False}))
+    silent_chunk = bytes(int(CHUNK_S * SAMPLE_RATE) * 2)
+    for _ in range(25):
+        client.send(silent_chunk)
+    client.send(json.dumps({"type": "stop"}))
+    messages = receive_all(client)
+    close_if_open(client)
+
+    windows = of_type(messages, "window")
+    assert windows[0]["silent"] is True
+    assert windows[0]["level_dbfs"] == -200.0
 
 
 def test_stream_without_consent_stores_nothing(stream_app: Flask, server_url: str) -> None:

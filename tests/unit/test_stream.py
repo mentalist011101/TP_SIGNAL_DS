@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 
 from echolens.core.inference import load_inference_config
-from echolens.core.stream import StreamBuffer, pcm16_to_float32
+from echolens.core.stream import StreamBuffer, level_dbfs, pcm16_to_float32
 from echolens.services.stream_service import StreamError, parse_start
 
 SAMPLE_RATE = 16_000
@@ -126,3 +126,15 @@ def test_recording_with_unknown_consent_text_is_refused() -> None:
 
     with pytest.raises(StreamError, match="rechargez la page"):
         parse_start(message, settings)
+
+
+def test_level_of_zeros_is_the_floor() -> None:
+    assert level_dbfs(np.zeros(16_000, dtype=np.float32)) == pytest.approx(-200.0)
+
+
+def test_level_of_a_full_scale_sine_is_minus_3_dbfs() -> None:
+    times = np.arange(16_000) / SAMPLE_RATE
+    sine = np.sin(2 * np.pi * 440 * times).astype(np.float32)
+
+    # RMS d'une sinusoïde = amplitude / racine de 2, soit -3,01 dBFS à pleine échelle.
+    assert level_dbfs(sine) == pytest.approx(-3.01, abs=0.01)

@@ -18,6 +18,8 @@ FloatArray = npt.NDArray[np.float32]
 # Int16 couvre [-32 768, 32 767] : diviser par 32 768 ramène le signal dans [-1, 1).
 PCM16_SCALE = 32768.0
 BYTES_PER_SAMPLE = 2
+# Plancher du RMS : un signal nul (micro muet) vaut -200 dBFS au lieu de moins l'infini.
+MIN_RMS = 1e-10
 
 
 def pcm16_to_float32(data: bytes) -> FloatArray:
@@ -28,6 +30,14 @@ def pcm16_to_float32(data: bytes) -> FloatArray:
     as_float = samples.astype(np.float32)
     scaled: FloatArray = as_float / np.float32(PCM16_SCALE)
     return scaled
+
+
+def level_dbfs(signal: FloatArray) -> float:
+    """Niveau RMS du signal en dBFS : 0 dBFS = pleine échelle, -200 dBFS = zéros partout."""
+    squares = np.square(signal, dtype=np.float64)
+    rms = float(np.sqrt(np.mean(squares)))
+    floored = max(rms, MIN_RMS)
+    return 20.0 * float(np.log10(floored))
 
 
 @dataclass(frozen=True)

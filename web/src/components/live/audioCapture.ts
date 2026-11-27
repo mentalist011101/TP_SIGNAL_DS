@@ -13,16 +13,11 @@ export interface AudioCapture {
 // Erreur de capture, avec un message en français affichable tel quel.
 export class CaptureError extends Error {}
 
-// Micro sans les traitements du navigateur (annulation d'écho, réduction de bruit, gain
-// automatique) : le serveur reçoit le son tel qu'il est, comme un fichier importé.
-const MICROPHONE_CONSTRAINTS: MediaStreamConstraints = {
-  audio: {
-    channelCount: 1,
-    echoCancellation: false,
-    noiseSuppression: false,
-    autoGainControl: false,
-  },
-}
+// Micro avec les réglages par défaut du navigateur, comme l'enregistrement de la page
+// Analyser. Couper ses traitements (écho, bruit, gain) fait passer certains pilotes Windows
+// en capture « brute », qui peut ne rendre que du silence : essai du 27 nov., le serveur ne
+// recevait que des zéros.
+const MICROPHONE_CONSTRAINTS: MediaStreamConstraints = { audio: true }
 
 async function openMicrophone(): Promise<MediaStream> {
   try {

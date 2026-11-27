@@ -27,6 +27,9 @@ export interface WindowMessage {
   results: { emotion?: TaskResultSummary; sound_event?: TaskResultSummary }
   // La VAD a trouvé de la parole ; null si l'émotion n'est pas demandée.
   speech: boolean | null
+  // Niveau RMS de la fenêtre reçue, en dBFS (-200 pour des zéros), et vrai s'il est muet.
+  level_dbfs: number
+  silent: boolean
   compute_ms: number
   rtf: number
   compute_p50_ms: number

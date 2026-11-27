@@ -61,6 +61,7 @@ class StreamSettings(BaseModel):
     hop_s: float = Field(gt=0)
     max_message_s: float = Field(gt=0)
     latency_history: int = Field(gt=0)
+    silent_level_dbfs: float
     tasks: list[str] = Field(min_length=1)
     recording_tasks: list[str] = Field(min_length=1)
     recording_profile: str
