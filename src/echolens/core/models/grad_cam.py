@@ -45,8 +45,10 @@ def grad_cam(
     class_index : la classe à expliquer ; None pour la classe prédite (décision C14). Le réseau
     doit être en mode eval et garder la sortie de son bloc 4 (last_block_output).
     """
-    # Étape 1 : passage avant AVEC gradients ; le réseau garde la sortie du bloc 4.
-    inputs = torch.from_numpy(standardized).unsqueeze(0)
+    # Étape 1 : passage avant AVEC gradients ; le réseau garde la sortie du bloc 4. L'entrée
+    # va sur le matériel du réseau (CPU dans l'application, GPU dans le notebook de fidélité).
+    device = next(network.parameters()).device
+    inputs = torch.from_numpy(standardized).unsqueeze(0).to(device)
     with torch.enable_grad():
         output = network(inputs)
         activations = network.last_block_output
@@ -73,5 +75,5 @@ def grad_cam(
     resized = functional.interpolate(
         cam[None, None], size=standardized.shape, mode="bilinear", align_corners=False
     )
-    values = resized[0, 0].numpy().astype(np.float32)
+    values = resized[0, 0].cpu().numpy().astype(np.float32)
     return GradCamResult(values=values, class_index=chosen)

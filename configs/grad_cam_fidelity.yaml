@@ -1,0 +1,23 @@
+# Test de fidélité de Grad-CAM par suppression (E7, C14b). Lu par
+# echolens.training.grad_cam_fidelity.FidelityConfig.
+#
+# Principe : on cache de plus en plus de cases du spectrogramme, soit les plus chaudes de la
+# carte d'abord, soit dans un ordre tiré au hasard, et on suit la probabilité de la classe
+# prédite. La carte est fidèle si la courbe « plus chaudes d'abord » descend nettement plus vite.
+
+# Taille d'une case masquée : celle d'un point de la carte du bloc 4 (4 MaxPool 2 × 2), soit
+# 64 / 16 = 4 bandes en fréquence et 16 trames de 10 ms = 160 ms en temps. Masquer plus fin
+# reviendrait à trier des pixels que la carte ne distingue pas.
+cell_bands: 16
+cell_frames: 16
+
+# Part des cases masquées à chaque point de la courbe (de 0 = rien à 1 = tout).
+fractions: [0.0, 0.05, 0.1, 0.15, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+
+# Valeur d'une case masquée, APRÈS la standardisation R4 : 0 = moyenne du train (décision C14).
+# C'est aussi la valeur des masques de SpecAugment à l'entraînement (P6) : le réseau a déjà vu
+# des zones à 0, il ne réagit pas à une entrée jamais vue.
+fill_value: 0.0
+
+# Graine de l'ordre au hasard : un ordre par extrait, le même à chaque exécution.
+seed: 42
