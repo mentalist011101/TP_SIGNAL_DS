@@ -21,7 +21,7 @@ from echolens.services.speech_detection import make_speech_detector
 pytest.importorskip("torch")
 pytest.importorskip("silero_vad")
 
-from echolens.services.silero_detector import SileroDetector
+from echolens.services.silero_detector import SileroDetector  # noqa: E402
 
 pytestmark = pytest.mark.ml
 

@@ -7,6 +7,7 @@ c19_denoising_ablation, pas ici.
 from __future__ import annotations
 
 from pathlib import Path
+from typing import cast
 
 import numpy as np
 import numpy.typing as npt
@@ -58,7 +59,7 @@ def fit_noise_length(noise: FloatArray, length: int, start: int) -> FloatArray:
     Un bruit plus court que la parole (ESC-50 : 5 s) est répété jusqu'à la bonne longueur.
     """
     positions = (start + np.arange(length)) % len(noise)
-    return noise[positions].astype(np.float32)
+    return cast(FloatArray, noise[positions].astype(np.float32))
 
 
 def mix_at_snr(signal: FloatArray, noise: FloatArray, snr_db: float) -> FloatArray:
@@ -77,7 +78,7 @@ def mix_at_snr(signal: FloatArray, noise: FloatArray, snr_db: float) -> FloatArr
     wanted_ratio = 10.0 ** (snr_db / 20.0)
     gain = signal_level / (noise_level * wanted_ratio)
     mixed = signal + gain * noise
-    return mixed.astype(np.float32)
+    return cast(FloatArray, mixed.astype(np.float32))
 
 
 def measured_snr_db(signal: FloatArray, mixed: FloatArray) -> float:
