@@ -1,0 +1,49 @@
+# Fiches des modèles (EF-16) : d'où viennent la matrice de confusion et le F1 par classe de chaque
+# modèle de classification, dans les résultats versionnés de training/results/ (produits par les
+# notebooks Kaggle). Lu par echolens.services.model_cards.
+#
+# Champs :
+#   results           fichier JSON de résultats, relatif à la racine du dépôt
+#   evaluation        sur quoi les chiffres ont été mesurés (protocole)
+#   task_labels       emotions | esc50 : classes de configs/labels.yaml, dans l'ordre des sorties
+#   confusion         chemin de la matrice dans le JSON : clés successives, ou positions dans une
+#                     liste ; lignes = vraie classe, normalisées (chaque ligne somme à 1)
+#   confusion_labels  chemin des noms des lignes et colonnes ; absent : les classes de la tâche.
+#                     ESC-50 : matrice des 5 grandes catégories, lisible (50 × 50 ne l'est pas)
+#   per_class_f1      chemin du F1 de chaque classe : liste de nombres dans l'ordre des classes,
+#                     ou liste de {class, f1}
+cards:
+  - model_id: echolens-sound-event-crnn
+    results: training/results/esc50_family_a_crnn.json
+    evaluation: >-
+      ESC-50, validation croisée en 5 tours (P3) : chacun des 2 000 extraits est prédit une fois,
+      par le réseau du tour qui ne l'a jamais vu (graine 42).
+    task_labels: esc50
+    confusion: [pooled_reference_seed, confusion_categories]
+    confusion_labels: [pooled_reference_seed, category_names]
+    per_class_f1: [pooled_reference_seed, per_class_f1]
+  - model_id: echolens-sound-event-whisper-base
+    results: training/results/c11_family_b_esc50.json
+    evaluation: >-
+      ESC-50, validation croisée en 5 tours (P3) : chacun des 2 000 extraits est prédit une fois,
+      par la tête du tour qui ne l'a jamais vu.
+    task_labels: esc50
+    confusion: [models, whisper-base, confusion_categories]
+    confusion_labels: [category_names]
+    per_class_f1: [models, whisper-base, f1_per_class]
+  - model_id: echolens-emotion-crnn
+    results: training/results/emotions_family_a_crnn.json
+    evaluation: >-
+      Test de CREMA-D et RAVDESS (1 324 extraits), acteurs jamais vus à l'entraînement (P1),
+      graine 42.
+    task_labels: emotions
+    confusion: [confusion]
+    per_class_f1: [seeds, 0, test, f1_per_class]
+  - model_id: echolens-emotion-whisper-base
+    results: training/results/c11_family_b_emotions.json
+    evaluation: >-
+      Test de CREMA-D et RAVDESS (1 324 extraits), acteurs jamais vus à l'entraînement (P1),
+      graine 42.
+    task_labels: emotions
+    confusion: [models, whisper-base, confusion]
+    per_class_f1: [models, whisper-base, f1_per_class]

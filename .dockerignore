@@ -11,7 +11,9 @@
 var
 data
 models
-training
+training/*
+# Les résultats des notebooks (JSON, quelques Ko) servent aux fiches des modèles (EF-16).
+!training/results
 report
 slides
 docs

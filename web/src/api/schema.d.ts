@@ -457,6 +457,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/models/{model_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                model_id: string;
+            };
+            cookie?: never;
+        };
+        /** Fiche d'un modèle : scores, calibration, matrice de confusion, F1 par classe. */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    model_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ModelCard"];
+                    };
+                };
+                /** @description Modèle absent du registre. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                default: components["responses"]["DEFAULT_ERROR"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/compare": {
         parameters: {
             query?: never;
@@ -1234,6 +1282,54 @@ export interface components {
             /** @description Révision figée des poids (hash de commit). */
             revision?: string | null;
             description: string;
+        };
+        Confusion: {
+            /** @description Noms des lignes et des colonnes, dans l'ordre de la matrice. */
+            labels: string[];
+            /** @description matrix[i][j] : part des extraits de la classe i prédits j. */
+            matrix: number[][];
+        };
+        ClassF1: {
+            label: string;
+            label_fr: string;
+            f1: number;
+        };
+        ModelCard: {
+            /** @description Identifiant, aussi nom du dépôt Hugging Face. */
+            id: string;
+            /** @description emotion, sound_event, transcription, speaker ou voice_cloning. */
+            task: string;
+            /** @description Famille comparée : baseline, A, B ou pretrained. */
+            family: string;
+            /** @description Profils qui utilisent ce modèle : quality, realtime (EF-07). */
+            profiles: string[];
+            version: string;
+            /** @description F1 macro de test (ESC-50 : moyenne des 5 tours, P3 ; émotions : moyenne des 3 graines, P1) ; null si non mesuré. */
+            f1_macro?: number | null;
+            /** @description Accuracy de test. */
+            accuracy?: number | null;
+            /** @description Température T de la calibration (ENF-06) ; null sinon. */
+            temperature?: number | null;
+            /** @description Vrai si les probabilités sont calibrées. */
+            calibrated: boolean;
+            /** @description Page du dépôt des poids sur Hugging Face. */
+            huggingface_url?: string | null;
+            /** @description Révision figée des poids (hash de commit). */
+            revision?: string | null;
+            description: string;
+            /** @description ECE avant la calibration (E2) ; null sans calibration. */
+            ece_before?: number | null;
+            /** @description ECE après la calibration par température (ENF-06). */
+            ece_after?: number | null;
+            /** @description Sur quoi les chiffres ont été mesurés. */
+            evaluation?: string | null;
+            /** @description Fichier de résultats du dépôt d'où viennent les chiffres. */
+            results_file?: string | null;
+            /** @description Commit du code qui a produit ces résultats. */
+            results_commit?: string | null;
+            confusion?: (Record<string, never> | null) | components["schemas"]["Confusion"];
+            /** @description F1 de chaque classe, du plus haut au plus bas ; vide hors classification. */
+            per_class_f1: components["schemas"]["ClassF1"][];
         };
         ComparisonSummary: {
             id: string;

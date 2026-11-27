@@ -358,6 +358,41 @@ export interface ModelInfo {
   description: string
 }
 
+// Matrice de confusion normalisée (EF-16) : lignes = vraie classe, chaque ligne somme à 1.
+export interface ConfusionMatrix {
+  labels: string[]
+  matrix: number[][]
+}
+
+// F1 de test d'une classe.
+export interface ClassF1 {
+  label: string
+  label_fr: string
+  f1: number
+}
+
+// Fiche d'un modèle (GET /api/v1/models/{id}, EF-16) : le catalogue, la calibration et, pour la
+// classification, la matrice et le F1 par classe, recopiés des résultats des notebooks.
+export interface ModelCard extends ModelInfo {
+  ece_before: number | null
+  ece_after: number | null
+  evaluation: string | null
+  results_file: string | null
+  results_commit: string | null
+  confusion: ConfusionMatrix | null
+  per_class_f1: ClassF1[]
+}
+
+// Fiche d'un modèle : elle ne change qu'avec le registre et les résultats, une lecture suffit.
+export function useModelCard(modelId: string | undefined) {
+  return useQuery({
+    queryKey: ['model-card', modelId],
+    queryFn: () => apiGet<ModelCard>(`/models/${modelId}`),
+    enabled: modelId !== undefined,
+    staleTime: Infinity,
+  })
+}
+
 // Catalogue des modèles : il ne change qu'avec le registre, donc une seule lecture suffit.
 export function useModels() {
   return useQuery({
