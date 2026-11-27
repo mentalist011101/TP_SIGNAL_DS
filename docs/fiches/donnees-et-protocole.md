@@ -176,10 +176,12 @@ chaque classe pèse autant dans le score, quel que soit son nombre d'exemples.
 
 - ECAPA, fait pour reconnaître des voix, dépasse nettement mHuBERT, fait pour représenter la
   parole : les intervalles ne se recouvrent pas.
-- Pour mHuBERT, plus la couche est profonde, moins elle garde la voix (EER de calibration de
-  9,7 % à la couche 0 à 20,8 % à la couche 12).
+- Pour mHuBERT, plus la couche est profonde, moins bien elle sépare les voix (EER de
+  calibration de 9,7 % à la couche 0 à 20,8 % à la couche 12). C'est cohérent avec l'idée que
+  les couches profondes gardent surtout ce qui est dit, sans que la mesure le démontre.
 - Le premier protocole (seuil pris sur des paires isolées) ne rejetait que 27,7 % des
-  inconnus ; prendre le seuil sur le meilleur score, comme l'application, donne 93,8 %.
+  inconnus (première version de `c15_speaker_openslr57.json`, commit f019855) ; prendre le
+  seuil sur le meilleur score, comme l'application, donne 93,8 %.
 
 **Pas encore disponible** : F1 sur CaFE (hors domaine), WER des phrases camerounaises du test
 (C17c, en cours), résultats sur nos enregistrements (T6), robustesse au bruit et biais par
