@@ -67,6 +67,11 @@ class AnalysisRecord(Base):
     summary_row: Mapped[AnalysisSummaryRecord | None] = relationship(
         back_populates="analysis", cascade="all, delete-orphan"
     )
+    # Consentement donné avant l'enregistrement d'une session du flux micro (ENF-10) ; absent
+    # pour un fichier importé. cascade : supprimer l'analyse supprime aussi le consentement.
+    consent_row: Mapped[RecordingConsentRecord | None] = relationship(
+        back_populates="analysis", cascade="all, delete-orphan"
+    )
 
     @property
     def summary(self) -> dict[str, Any] | None:
@@ -90,6 +95,22 @@ class AnalysisSummaryRecord(Base):
     analysis_id: Mapped[str] = mapped_column(ForeignKey("analyses.id"), primary_key=True)
     summary: Mapped[dict[str, Any]] = mapped_column(JSON)
     analysis: Mapped[AnalysisRecord] = relationship(back_populates="summary_row")
+
+
+class RecordingConsentRecord(Base):
+    """Consentement à l'enregistrement de sa voix, donné sur la page Direct (ENF-10, S6).
+
+    Une ligne par analyse issue du flux micro : la version du texte accepté et la date. Sans
+    cette ligne, le serveur n'enregistre pas la session. Une table à part : create_all la crée
+    seule dans une base existante, sans toucher à la table analyses.
+    """
+
+    __tablename__ = "recording_consents"
+
+    analysis_id: Mapped[str] = mapped_column(ForeignKey("analyses.id"), primary_key=True)
+    consent_version: Mapped[str] = mapped_column(String(32))
+    accepted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utc_now)
+    analysis: Mapped[AnalysisRecord] = relationship(back_populates="consent_row")
 
 
 def create_session_factory(database_url: str) -> sessionmaker[Session]:

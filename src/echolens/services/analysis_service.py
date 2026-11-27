@@ -36,7 +36,12 @@ from echolens.services.predictor import make_predictor
 from echolens.services.results import ResultContext, build_results, summarize_results
 from echolens.services.spectrogram_image import save_spectrogram_png
 from echolens.services.speech_detection import make_speech_detector
-from echolens.services.storage import AnalysisRecord, AnalysisStatus, AnalysisSummaryRecord
+from echolens.services.storage import (
+    AnalysisRecord,
+    AnalysisStatus,
+    AnalysisSummaryRecord,
+    RecordingConsentRecord,
+)
 
 # Format de l'audio conservé : WAV PCM 16 bits, mono 16 kHz (D2).
 CONVERTED_AUDIO_NAME = "audio.wav"
@@ -66,10 +71,16 @@ class AnalysisService:
         self._fail_interrupted_analyses()
 
     def create_analysis(
-        self, upload: FileStorage, tasks: list[str], profile: str
+        self,
+        upload: FileStorage,
+        tasks: list[str],
+        profile: str,
+        consent_version: str | None = None,
     ) -> AnalysisRecord:
         """Contrôle le fichier, enregistre l'analyse au statut pending et lance son traitement.
 
+        consent_version : pour une session du flux micro, la version du consentement accepté ;
+        il est enregistré dans le même commit que l'analyse (ENF-10). None pour un fichier.
         Lève AnalysisRejectedError (message en français) si un contrôle échoue ; dans ce cas,
         rien n'est enregistré.
         """
@@ -99,6 +110,11 @@ class AnalysisService:
             tasks=tasks,
             profile=profile,
         )
+        if consent_version is not None:
+            consent = RecordingConsentRecord(
+                analysis_id=analysis_id, consent_version=consent_version
+            )
+            record.consent_row = consent
         with self.session_factory() as session:
             session.add(record)
             session.commit()
