@@ -2,7 +2,15 @@ import type { ComponentType } from 'react'
 import { Link, NavLink, Outlet } from 'react-router-dom'
 import { useHealth } from '../api/client.ts'
 import Brand from './Brand.tsx'
-import { HistoryIcon, ModelsIcon, PlusIcon, WaveIcon } from './icons.tsx'
+import {
+  CompareIcon,
+  HistoryIcon,
+  LiveIcon,
+  ModelsIcon,
+  PlusIcon,
+  SpeakersIcon,
+  WaveIcon,
+} from './icons.tsx'
 import ThemeToggle from './ThemeToggle.tsx'
 
 interface NavItem {
@@ -11,10 +19,13 @@ interface NavItem {
   icon: ComponentType<{ className?: string }>
 }
 
-// Pages livrées. Les pages encore vides (Direct, Comparer, Locuteurs) n'entrent au menu
-// qu'une fois livrées.
+// Pages du menu, dans l'ordre d'usage : analyser un fichier ou le micro, comparer, gérer les
+// voix, puis l'historique et les modèles.
 const MAIN_ITEMS: NavItem[] = [
   { to: '/analyser', label: 'Analyser', icon: WaveIcon },
+  { to: '/direct', label: 'Direct', icon: LiveIcon },
+  { to: '/comparer', label: 'Comparer', icon: CompareIcon },
+  { to: '/locuteurs', label: 'Locuteurs', icon: SpeakersIcon },
   { to: '/historique', label: 'Historique', icon: HistoryIcon },
   { to: '/modeles', label: 'Modèles', icon: ModelsIcon },
 ]
