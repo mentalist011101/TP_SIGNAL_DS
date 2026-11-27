@@ -23,6 +23,7 @@ from typing import Any
 
 import numpy as np
 
+from echolens.core.audio import load_audio
 from echolens.core.inference import VoiceCloningSettings
 from echolens.core.models.registry import ModelEntry
 from echolens.services.voice_cloning import CloningUnavailableError, SpeechAudio
@@ -121,9 +122,14 @@ def _load_xtts(entry: ModelEntry) -> tuple[Any, int]:
     os.environ["COQUI_TOS_AGREED"] = "1"
     try:
         from TTS.tts.configs.xtts_config import XttsConfig
+        from TTS.tts.models import xtts as xtts_module
         from TTS.tts.models.xtts import Xtts
     except ImportError as error:
         raise CloningUnavailableError(MISSING_EXTRA_MESSAGE) from error
+    # Contournement : XTTS lit les extraits de référence avec torchaudio, qui passe par
+    # torchcodec, lequel exige les bibliothèques partagées de FFmpeg (absentes d'un FFmpeg
+    # « statique » sous Windows). On lui donne notre chargeur unique (D1), qui appelle ffmpeg.
+    xtts_module.load_audio = _reference_audio
     config = XttsConfig()
     config.load_json(str(folder / "config.json"))
     # Étape 3 : le réseau, puis ses poids, en mode eval ; « not enough memory » de torch devient
@@ -137,3 +143,13 @@ def _load_xtts(entry: ModelEntry) -> tuple[Any, int]:
         raise
     sample_rate = int(config.audio.output_sample_rate)
     return model, sample_rate
+
+
+def _reference_audio(audio_path: str, sampling_rate: int) -> Any:
+    # Même contrat que TTS.tts.models.xtts.load_audio : tenseur (1, échantillons), mono, à la
+    # fréquence demandée, dans [-1, 1].
+    import torch
+
+    signal = load_audio(audio_path, sample_rate=sampling_rate)
+    tensor = torch.from_numpy(signal).unsqueeze(0)
+    return tensor.clamp(-1.0, 1.0)
