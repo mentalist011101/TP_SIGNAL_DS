@@ -30,6 +30,22 @@ DEMO_SCORE_SCALE = 2.0
 DEMO_TRANSCRIPTION = "Transcription de démonstration"
 
 
+class ExplanationUnavailableError(ValueError):
+    """Pas de carte Grad-CAM possible ; le message, en français, s'affiche tel quel."""
+
+
+@dataclass(frozen=True)
+class WindowExplanation:
+    """Carte Grad-CAM d'une fenêtre (bandes, trames), sur les seules trames réelles du son.
+
+    first_frame : place de la première colonne dans la fenêtre (le modèle voit la partie
+    centrale d'une fenêtre trop longue).
+    """
+
+    values: FloatArray
+    first_frame: int
+
+
 @dataclass(frozen=True)
 class ModelInfo:
     """Modèle qui a produit un résultat, pour la traçabilité (registre, S1)."""
@@ -64,6 +80,13 @@ class Predictor(Protocol):
 
     def embed_voices(self, profile: Profile, windows: list[FloatArray]) -> list[VoiceVector]:
         """Un vecteur de voix par morceau de parole mono 16 kHz, dans le même ordre (EF-11)."""
+        ...
+
+    def explain(self, task: Task, profile: Profile, window: FloatArray) -> WindowExplanation:
+        """Carte Grad-CAM de la classe prédite sur une fenêtre (E7, EF-13).
+
+        Lève ExplanationUnavailableError si le modèle n'est pas un réseau sur log-Mel.
+        """
         ...
 
 
@@ -127,6 +150,12 @@ class DemoPredictor:
             vector = _demo_voice(window, self.feature_config)
             vectors.append(vector)
         return vectors
+
+    def explain(self, task: Task, profile: Profile, window: FloatArray) -> WindowExplanation:
+        """Le faux prédicteur n'a pas de réseau : aucune carte à montrer."""
+        raise ExplanationUnavailableError(
+            "Grad-CAM indisponible en mode démonstration : aucun vrai modèle n'est chargé."
+        )
 
 
 def make_predictor(settings: AppSettings, labels: ClassLabels) -> Predictor:
