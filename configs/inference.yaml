@@ -56,6 +56,25 @@ speaker:
   # Changer le texte oblige à changer la version, ici et dans le front.
   consent_version: locuteurs-v1
 
+# Clonage de voix (EF-18, ENF-10, C35) : XTTS-v2 parle avec la voix d'un locuteur enregistré qui
+# a accepté le clonage (seconde case de la page Locuteurs). Ses extraits d'enregistrement servent
+# de référence. Le modèle n'est chargé qu'au premier clonage (environ 2,5 Go de mémoire) et libéré
+# après idle_unload_s secondes sans usage. Chaque extrait produit est marqué « voix synthétique » :
+# un bip audible au début, le nom du fichier et les métadonnées du WAV.
+voice_cloning:
+  language: fr                  # XTTS-v2 sait le français ; langue imposée, comme la transcription
+  max_text_chars: 300           # environ 20 s de parole : une synthèse sur CPU reste raisonnable
+  temperature: 0.7              # valeur conseillée par Coqui pour XTTS-v2, écrite explicitement
+  idle_unload_s: 300            # 5 min sans clonage : le modèle quitte la mémoire
+  # Bip de marquage, avant la voix : 1 kHz pendant 0,25 s, puis 0,25 s de silence. Un son pur,
+  # bien distinct d'une voix, qui reste dans le fichier même copié sans ses métadonnées.
+  marker_frequency_hz: 1000.0
+  marker_duration_s: 0.25
+  marker_amplitude: 0.3
+  marker_gap_s: 0.25
+  # Version du texte de consentement au clonage (page Locuteurs), gardée avec la voix.
+  consent_version: clonage-v1
+
 # Flux micro en direct (EF-14, C23, D8) : le navigateur envoie du PCM Int16 mono à 16 kHz par
 # WebSocket. Toutes les hop_s secondes, le serveur analyse les window_s dernières secondes, en
 # profil temps réel (CRNN des événements, CRNN des émotions, VAD Silero). Un calcul plus long

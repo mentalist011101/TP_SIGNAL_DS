@@ -92,3 +92,11 @@ models:
     revision: 0f99f2d0ebe89ac095bcc5903c4dd8f72b367286
     metrics: {accuracy: 0.979}
     description: ECAPA-TDNN de SpeechBrain (VoxCeleb), gelé, vecteur de voix de 192 valeurs, similarité cosinus ; sur OpenSLR 57 (C15), accuracy 0,979 [0,966 ; 0,988] entre voix enregistrées, EER 0,030 [0,019 ; 0,044], seuil « inconnu » 0,5485 (90,6 % des voix connues reconnues, 93,8 % des inconnus rejetés)
+  - id: xtts-v2
+    task: voice_cloning
+    family: pretrained
+    profiles: [quality]
+    version: 2.0.3
+    weights: hf://coqui/XTTS-v2
+    revision: 6c2b0d75eae4b7047358e3b6bd9325f857d43f77
+    description: XTTS-v2 de Coqui (Coqui Public Model License, usage non commercial), clonage à partir de quelques secondes de voix, français imposé ; chargé seulement au premier clonage, sortie marquée « voix synthétique » (bip, nom de fichier, métadonnées) ; voix consentantes seulement (ENF-10)

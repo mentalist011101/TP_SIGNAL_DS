@@ -774,6 +774,222 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/tts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Extraits synthétiques gardés, les plus récents d'abord. */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Synthesis"][];
+                    };
+                };
+                default: components["responses"]["DEFAULT_ERROR"];
+            };
+        };
+        put?: never;
+        /**
+         * Fait dire un texte à une voix consentante (XTTS-v2), en arrière-plan.
+         * @description Répond 202 ; suivre le calcul avec GET /api/v1/tts/{id}. L'audio commence par un bip
+         *     et ses métadonnées disent « voix synthétique ».
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["SynthesisRequest"];
+                };
+            };
+            responses: {
+                /** @description Accepted */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Synthesis"];
+                    };
+                };
+                /** @description Texte vide ou trop long. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Le locuteur n'a pas accepté le clonage. */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Locuteur introuvable. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Clonage indisponible. */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                default: components["responses"]["DEFAULT_ERROR"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tts/{synthesis_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                synthesis_id: string;
+            };
+            cookie?: never;
+        };
+        /** Statut d'un extrait synthétique. */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    synthesis_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Synthesis"];
+                    };
+                };
+                /** @description Extrait introuvable. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                default: components["responses"]["DEFAULT_ERROR"];
+            };
+        };
+        put?: never;
+        post?: never;
+        /** Supprime un extrait synthétique et son audio. */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    synthesis_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description No Content */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Extrait introuvable. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                default: components["responses"]["DEFAULT_ERROR"];
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tts/{synthesis_id}/audio": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                synthesis_id: string;
+            };
+            cookie?: never;
+        };
+        /** Audio de l'extrait, avec le bip de marquage et ses métadonnées. */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    synthesis_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description WAV marqué « voix synthétique ». */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Extrait introuvable ou pas encore prêt. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                default: components["responses"]["DEFAULT_ERROR"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1083,10 +1299,40 @@ export interface components {
             model_version: string;
             /** @description Version du texte de consentement accepté. */
             consent_version: string;
+            /** @description Vrai si la personne a aussi accepté que sa voix soit clonée (seconde case, C35) : seule une telle voix est proposée par la page Cloner. */
+            cloning_allowed: boolean;
         };
         SpeakerFiles: {
             /** @description Un ou plusieurs extraits (micro ou fichiers : wav, mp3, flac, ogg, webm ou m4a) ; répéter le champ ; au moins 10 s de parole au total. */
             files: string[];
+        };
+        Synthesis: {
+            id: string;
+            /** Format: date-time */
+            created_at: string;
+            speaker_id: string;
+            /** @description Voix clonée. */
+            speaker_name: string;
+            /** @description Texte dit par la voix. */
+            text: string;
+            /** @enum {string} */
+            status: "pending" | "processing" | "done" | "failed";
+            error_message?: string | null;
+            model_id: string;
+            model_version: string;
+            /** @description Durée de l'extrait marqué (bip compris). */
+            duration_s?: number | null;
+            /** @description Temps de synthèse sur le serveur, en s. */
+            compute_s?: number | null;
+            readonly audio_url?: unknown;
+            /** @description Nom de fichier proposé, qui commence par voix_synthetique. */
+            readonly download_name?: unknown;
+        };
+        SynthesisRequest: {
+            /** @description Locuteur enregistré qui a accepté le clonage. */
+            speaker_id: string;
+            /** @description Texte en français, 300 caractères au plus. */
+            text: string;
         };
     };
     responses: {

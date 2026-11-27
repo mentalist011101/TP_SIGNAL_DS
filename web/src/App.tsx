@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import Layout from './components/Layout.tsx'
 import AnalyzePage from './pages/AnalyzePage.tsx'
+import ClonePage from './pages/ClonePage.tsx'
 import ComparePage from './pages/ComparePage.tsx'
 import ComparisonPage from './pages/ComparisonPage.tsx'
 import HomePage from './pages/HomePage.tsx'
@@ -24,6 +25,7 @@ export default function App() {
         <Route path="historique" element={<HistoryPage />} />
         <Route path="analyses/:analysisId" element={<ResultPage />} />
         <Route path="locuteurs" element={<SpeakersPage />} />
+        <Route path="cloner" element={<ClonePage />} />
         <Route path="modeles" element={<ModelsPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
