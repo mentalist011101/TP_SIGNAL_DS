@@ -44,9 +44,15 @@ class XttsCloner:
     """XTTS-v2 chargé à la demande, libéré après un temps sans usage."""
 
     def __init__(
-        self, entry: ModelEntry, settings: VoiceCloningSettings, license_accepted: bool
+        self,
+        entry: ModelEntry,
+        settings: VoiceCloningSettings,
+        license_accepted: bool,
+        device: str = "cpu",
     ) -> None:
         self.entry = entry
+        # « cpu » dans l'application (ENF-01) ; « cuda » dans le notebook d'évaluation (C35b).
+        self.device = device
         self.model_id = entry.id
         self.model_version = entry.version
         self.settings = settings
@@ -90,7 +96,7 @@ class XttsCloner:
 
     def _loaded_model(self) -> Any:
         if self._model is None:
-            self._model, self._sample_rate = _load_xtts(self.entry)
+            self._model, self._sample_rate = _load_xtts(self.entry, self.device)
         return self._model
 
     def _schedule_unload(self) -> None:
@@ -109,7 +115,7 @@ class XttsCloner:
             gc.collect()
 
 
-def _load_xtts(entry: ModelEntry) -> tuple[Any, int]:
+def _load_xtts(entry: ModelEntry, device: str) -> tuple[Any, int]:
     # Étape 1 : le dépôt à sa révision figée (cache Hugging Face).
     if not entry.weights.startswith(HF_PREFIX) or not entry.revision:
         raise CloningUnavailableError(f"{entry.id} : dépôt et révision attendus dans le registre.")
@@ -131,6 +137,7 @@ def _load_xtts(entry: ModelEntry) -> tuple[Any, int]:
     try:
         model = Xtts.init_from_config(config)
         model.load_checkpoint(config, checkpoint_dir=str(folder), eval=True)
+        model.to(device)
     except (MemoryError, RuntimeError) as error:
         if isinstance(error, MemoryError) or "memory" in str(error):
             raise CloningUnavailableError(MEMORY_MESSAGE) from error
