@@ -148,7 +148,7 @@ function HomeFooter() {
         <div className="space-y-3">
           <Brand />
           <p className="max-w-xs text-sm text-ink-soft">
-            Analyse audio : événements sonores, émotions, et bientôt transcription et locuteurs.
+            Analyse audio : événements sonores, émotions, transcription, et bientôt locuteurs.
           </p>
         </div>
         <div className="space-y-3 text-sm">
