@@ -6,6 +6,7 @@ import {
   CompareIcon,
   HistoryIcon,
   LiveIcon,
+  MicIcon,
   ModelsIcon,
   PlusIcon,
   SpeakersIcon,
@@ -19,13 +20,14 @@ interface NavItem {
   icon: ComponentType<{ className?: string }>
 }
 
-// Pages du menu, dans l'ordre d'usage : analyser un fichier ou le micro, comparer, gérer les
-// voix, puis l'historique et les modèles.
+// Pages du menu, dans l'ordre d'usage : analyser un fichier ou le micro, comparer, gérer et
+// cloner les voix, puis l'historique et les modèles.
 const MAIN_ITEMS: NavItem[] = [
   { to: '/analyser', label: 'Analyser', icon: WaveIcon },
   { to: '/direct', label: 'Direct', icon: LiveIcon },
   { to: '/comparer', label: 'Comparer', icon: CompareIcon },
   { to: '/locuteurs', label: 'Locuteurs', icon: SpeakersIcon },
+  { to: '/cloner', label: 'Cloner', icon: MicIcon },
   { to: '/historique', label: 'Historique', icon: HistoryIcon },
   { to: '/modeles', label: 'Modèles', icon: ModelsIcon },
 ]
