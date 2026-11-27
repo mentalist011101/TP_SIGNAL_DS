@@ -349,3 +349,108 @@ export function useModels() {
     staleTime: Infinity,
   })
 }
+
+// Tâches comparables (EF-15) : celles qui ont plusieurs modèles au registre.
+export type ComparedTask = 'emotion' | 'sound_event' | 'transcription'
+
+// Passage d'un modèle sur le fichier comparé (ModelRunSchema, api/compare.py) : son identité,
+// ses profils, son temps de calcul (VAD exclue) et son résultat au format d'une analyse.
+export interface ModelRun {
+  model_id: string
+  model_version: string
+  profiles: AnalysisProfile[]
+  compute_s: number
+  result: TaskResult
+}
+
+// Comparaison telle que la liste de l'Historique l'affiche, sans les résultats.
+export interface ComparisonSummary {
+  id: string
+  created_at: string
+  original_filename: string
+  status: AnalysisStatusValue
+  error_message: string | null
+  duration_s: number | null
+  tasks: ComparedTask[]
+}
+
+// Comparaison complète : pour chaque tâche, un passage par modèle (null tant que le calcul
+// tourne).
+export interface Comparison extends ComparisonSummary {
+  results: Partial<Record<ComparedTask, ModelRun[]>> | null
+  audio_url: string | null
+}
+
+export interface ComparisonRequest {
+  file: File
+  tasks: ComparedTask[]
+}
+
+// Clé du cache de la liste des comparaisons, partagée par la lecture et la suppression.
+const COMPARISONS_QUERY_KEY = ['comparisons']
+
+// Formulaire de POST /compare : le champ « tasks » est répété une fois par tâche.
+function buildComparisonForm(request: ComparisonRequest): FormData {
+  const form = new FormData()
+  form.append('file', request.file)
+  for (const task of request.tasks) {
+    form.append('tasks', task)
+  }
+  return form
+}
+
+// Envoi d'un audio à comparer : l'API répond 202 avec la comparaison en attente.
+export function useCreateComparison() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (request: ComparisonRequest) => {
+      const form = buildComparisonForm(request)
+      return apiPostForm<Comparison>('/compare', form)
+    },
+    onSuccess: () => {
+      return queryClient.invalidateQueries({ queryKey: COMPARISONS_QUERY_KEY })
+    },
+  })
+}
+
+// Vrai tant que le serveur n'a pas fini (en attente ou en cours).
+function isComparisonRunning(comparison: ComparisonSummary | undefined): boolean {
+  if (comparison === undefined) {
+    return false
+  }
+  return comparison.status === 'pending' || comparison.status === 'processing'
+}
+
+// Suivi d'une comparaison : interroge GET /compare/{id} chaque seconde jusqu'à la fin.
+export function useComparison(comparisonId: string | null) {
+  return useQuery({
+    queryKey: ['comparison', comparisonId],
+    queryFn: () => apiGet<Comparison>(`/compare/${comparisonId}`),
+    enabled: comparisonId !== null,
+    refetchInterval: (query) => {
+      if (isComparisonRunning(query.state.data)) {
+        return POLL_INTERVAL_MS
+      }
+      return false
+    },
+  })
+}
+
+// Comparaisons passées, les plus récentes d'abord (Historique).
+export function useComparisons() {
+  return useQuery({
+    queryKey: COMPARISONS_QUERY_KEY,
+    queryFn: () => apiGet<ComparisonSummary[]>(`/compare?limit=${HISTORY_LIMIT}`),
+  })
+}
+
+// Suppression d'une comparaison et de son audio, puis rechargement de la liste.
+export function useDeleteComparison() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (comparisonId: string) => apiDelete(`/compare/${comparisonId}`),
+    onSuccess: () => {
+      return queryClient.invalidateQueries({ queryKey: COMPARISONS_QUERY_KEY })
+    },
+  })
+}

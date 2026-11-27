@@ -61,6 +61,11 @@ class Predictor(Protocol):
         """Un texte par morceau de parole mono 16 kHz, dans le même ordre (EF-10)."""
         ...
 
+    def prepare(self, task: Task, profile: Profile) -> None:
+        """Charge le modèle de cette tâche dans ce profil, sans rien prédire : un temps de
+        calcul mesuré ensuite ne compte pas le chargement (comparaison, EF-15)."""
+        ...
+
 
 class DemoPredictor:
     """Faux prédicteur : probabilités au hasard, mais toujours les mêmes pour le même audio.
@@ -103,6 +108,9 @@ class DemoPredictor:
         for _ in windows:
             texts.append(DEMO_TRANSCRIPTION)
         return texts
+
+    def prepare(self, task: Task, profile: Profile) -> None:
+        """Rien à charger : le faux prédicteur n'a pas de modèle."""
 
 
 def make_predictor(settings: AppSettings, labels: ClassLabels) -> Predictor:

@@ -26,6 +26,7 @@ import numpy as np
 import torch
 from huggingface_hub import hf_hub_download
 
+from echolens.core.audio.io import TARGET_SAMPLE_RATE
 from echolens.core.data.class_labels import ClassLabels
 from echolens.core.features import FeatureConfig, log_mel_spectrogram
 from echolens.core.frame_windows import centered_start, frame_window, window_frame_count
@@ -139,6 +140,19 @@ class ModelPredictor:
         entry = self._entry(Task.TRANSCRIPTION, profile)
         whisper = self._whisper_transcriber()
         return whisper.transcribe(entry, windows)
+
+    def prepare(self, task: Task, profile: Profile) -> None:
+        """Charge le modèle de cette tâche dans ce profil (S1) ; pour la classification, une
+        inférence de chauffe sur une seconde de silence en plus : la première inférence de
+        torch paie son initialisation (plusieurs secondes), qu'un temps mesuré ne doit pas
+        compter. La transcription n'est pas chauffée (voir warm_up_models)."""
+        entry = self._entry(task, profile)
+        if task == Task.TRANSCRIPTION:
+            whisper = self._whisper_transcriber()
+            whisper.load(entry)
+            return
+        silence = np.zeros(TARGET_SAMPLE_RATE, dtype=np.float32)
+        self.predict_with(entry, [silence])
 
     def preload(self) -> None:
         """Charge tous les modèles du registre : classification et transcription (S1)."""

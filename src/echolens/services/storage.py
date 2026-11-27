@@ -113,6 +113,26 @@ class RecordingConsentRecord(Base):
     analysis: Mapped[AnalysisRecord] = relationship(back_populates="consent_row")
 
 
+class ComparisonRecord(Base):
+    """Une comparaison de modèles sur un même fichier (EF-15), gardée dans l'Historique.
+
+    results : pour chaque tâche, la liste des modèles du registre qui ont tourné, chacun avec
+    son temps de calcul et son résultat au format d'une analyse (JSON). Une table à part :
+    create_all la crée seule dans une base existante, sans toucher à la table analyses.
+    """
+
+    __tablename__ = "comparisons"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utc_now)
+    original_filename: Mapped[str] = mapped_column(String(255))
+    status: Mapped[str] = mapped_column(String(16), default=AnalysisStatus.PENDING)
+    error_message: Mapped[str | None] = mapped_column(String, default=None)
+    duration_s: Mapped[float | None] = mapped_column(default=None)
+    tasks: Mapped[list[str]] = mapped_column(JSON)
+    results: Mapped[dict[str, Any] | None] = mapped_column(JSON, default=None)
+
+
 def create_session_factory(database_url: str) -> sessionmaker[Session]:
     """Ouvre la base, crée les tables manquantes et renvoie une fabrique de sessions.
 
