@@ -1,0 +1,21 @@
+# Contexte de build Docker (docker/Dockerfile) : seulement le code, les configurations et le
+# front. Jamais de données, de modèles, de secrets ni d'environnements locaux.
+.git
+.venv
+**/__pycache__
+.mypy_cache
+.pytest_cache
+.ruff_cache
+.coverage
+.env
+var
+data
+models
+training
+report
+slides
+docs
+tests
+web/node_modules
+web/dist
+**/*.ipynb

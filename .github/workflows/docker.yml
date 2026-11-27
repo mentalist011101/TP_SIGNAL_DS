@@ -1,0 +1,55 @@
+name: Docker
+
+# Construit les deux variantes de l'image (S5, ENF-08) quand ce qui les compose change : la
+# démo (sans torch) et la complète (vrais modèles, torch CPU). La démo est lancée, et sa route
+# de santé doit répondre. Aucune image n'est publiée.
+on:
+  pull_request:
+    paths:
+      - docker/**
+      - .dockerignore
+      - pyproject.toml
+      - uv.lock
+      - web/package-lock.json
+      - .github/workflows/docker.yml
+  workflow_dispatch:
+
+concurrency:
+  group: docker-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  demo:
+    name: image démo
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Construire l'image démo
+        run: >
+          docker build -f docker/Dockerfile
+          --build-arg UV_EXTRAS=""
+          --build-arg INFERENCE_BACKEND=demo
+          -t echolens-demo .
+      - name: Lancer et interroger la route de santé
+        run: |
+          docker run -d --name echolens -p 5000:5000 echolens-demo
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://localhost:5000/api/v1/health; then exit 0; fi
+            sleep 2
+          done
+          docker logs echolens
+          exit 1
+      - name: Taille de l'image
+        run: docker image ls echolens-demo
+
+  full:
+    name: image complète
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Construire l'image complète (vrais modèles, torch CPU)
+        run: docker build -f docker/Dockerfile -t echolens .
+      - name: torch est bien la version CPU
+        run: docker run --rm echolens /app/.venv/bin/python -c "import torch; print(torch.__version__); assert not torch.cuda.is_available()"
+      - name: Taille de l'image
+        run: docker image ls echolens

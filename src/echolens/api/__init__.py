@@ -11,6 +11,7 @@ from flask_smorest import Api
 from werkzeug.exceptions import HTTPException
 
 from echolens import __version__
+from echolens.api.access import require_password
 from echolens.api.analyses import blp as analyses_blp
 from echolens.api.compare import blp as compare_blp
 from echolens.api.errors import handle_http_error
@@ -47,6 +48,8 @@ def create_app(settings: AppSettings | None = None, **overrides: Any) -> Flask:
         ECHOLENS_SETTINGS=settings,
     )
     app.config.update(overrides)
+    if settings.access_password:
+        require_password(app, settings.access_password)
 
     # Base de données et service des analyses, partagés par toutes les requêtes (S2, S3).
     settings.data_dir.mkdir(parents=True, exist_ok=True)
