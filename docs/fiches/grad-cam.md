@@ -114,7 +114,7 @@ le demande.
 | Même entrée que la prédiction | `src/echolens/services/model_predictor.py` (`explain`) | Fait (C14) |
 | Exposition par l'API | `GET /api/v1/analyses/{id}/gradcam?task=sound_event\|emotion` : PNG transparent de la taille du spectrogramme, 409 avec un message si pas de carte | Fait (C14) |
 | Superposition activable | Page Résultat, sous le spectrogramme : « Carte Grad-CAM : Aucune / Événement / Émotion » | Fait (C14, EF-13) |
-| Test de fidélité par masquage | Code testé et notebook Kaggle (C14b) | Résultats à produire |
+| Test de fidélité par masquage | `src/echolens/training/grad_cam_fidelity.py` (calcul pur), `grad_cam_fidelity_models.py` (avec le réseau), `configs/grad_cam_fidelity.yaml`, notebook `training/notebooks/c14_grad_cam_fidelity.ipynb` | Code testé (C14b) ; résultats à produire sur Kaggle |
 
 Ce qu'il faut savoir lire dans `grad_cam` (les étapes sont numérotées dans le code) :
 
@@ -125,7 +125,20 @@ Ce qu'il faut savoir lire dans `grad_cam` (les étapes sont numérotées dans le
 
 ## 6. Résultats
 
-**Pas encore de résultat chiffré** : la mesure de fidélité attend son notebook Kaggle (C14b).
+**Pas encore de résultat chiffré** : la mesure de fidélité attend l'exécution de son notebook
+Kaggle (`c14_grad_cam_fidelity.ipynb`). Protocole retenu (C14b) :
+
+- une case masquée = un point de la carte du bloc 4 (16 bandes × 16 trames), remplie par 0 ;
+- 13 parts masquées de 0 à 100 % ; deux ordres par extrait : les plus chaudes d'abord, et un
+  ordre tiré au hasard (graine fixe) ;
+- on suit la probabilité (softmax, sans température) de la classe prédite au départ ; mesure =
+  aire sous la courbe, écart « hasard − carte » par extrait, IC à 95 % par bootstrap (P8) ;
+- données jamais vues par le réseau testé : pour ESC-50, le CRNN de production a appris les
+  5 folds, donc on prend le CRNN de C9 du tour k sur le fold k (même recette, P3) ; pour les
+  émotions, le CRNN de production sur le test (acteurs jamais vus, P1).
+
+Essai local (27 nov., CRNN de production des événements, 5 fenêtres d'un seul enregistrement,
+donc sans valeur statistique) : aire 0,13 avec la carte contre 0,21 au hasard.
 
 Première observation, à confirmer sur plus d'extraits (essai du 27 nov., extrait « pluie et
 parole » de 15,5 s, profil Temps réel) : la carte du CRNN des **événements** s'allume aussi sur un
