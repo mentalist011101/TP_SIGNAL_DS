@@ -31,6 +31,7 @@ from echolens.core.features import FeatureConfig, log_mel_spectrogram
 from echolens.core.frame_windows import centered_start, frame_window, window_frame_count
 from echolens.core.inference import FloatArray, ProbabilityArray, TranscriptionSettings
 from echolens.core.models.family_a import SpectrogramCnn, SpectrogramCrnn
+from echolens.core.models.grad_cam import grad_cam
 from echolens.core.models.heads import LayerWeightedHead
 from echolens.core.models.production_config import (
     CONFIG_FILE,
@@ -47,7 +48,7 @@ from echolens.core.models.whisper_encoder import (
     load_whisper_encoder,
     whisper_useful_layer_means,
 )
-from echolens.services.predictor import ModelInfo
+from echolens.services.predictor import ExplanationUnavailableError, ModelInfo, WindowExplanation
 
 if TYPE_CHECKING:
     from echolens.services.whisper_transcriber import WhisperTranscriber
@@ -181,7 +182,31 @@ class ModelPredictor:
             scores: torch.Tensor = loaded.network(inputs)
         return scores[0]
 
-    def _spectrogram_scores(self, loaded: LoadedModel, window: FloatArray) -> torch.Tensor:
+    def explain(self, task: Task, profile: Profile, window: FloatArray) -> WindowExplanation:
+        """Carte Grad-CAM de la classe prédite sur une fenêtre, avec le modèle de ce profil.
+
+        Seuls les réseaux sur log-Mel (famille A) ont une carte : les têtes Whisper lisent les
+        couches de l'encodeur, pas un spectrogramme (E7).
+        """
+        entry = self._entry(task, profile)
+        loaded = self.load(entry)
+        network = loaded.network
+        if not isinstance(network, (SpectrogramCnn, SpectrogramCrnn)):
+            raise ExplanationUnavailableError(
+                "Grad-CAM : modèles de la famille A seulement (profil Temps réel)."
+            )
+        # Étape 1 : exactement l'entrée de la prédiction (même fenêtre, même standardisation).
+        standardized, start, length = self._spectrogram_input(loaded, window)
+        # Étape 2 : la carte, puis seulement les colonnes qui viennent du vrai son.
+        with self._lock:
+            result = grad_cam(network, standardized, class_index=None)
+        real_frames = min(standardized.shape[1], length - start)
+        values = result.values[:, :real_frames]
+        return WindowExplanation(values=values, first_frame=start)
+
+    def _spectrogram_input(
+        self, loaded: LoadedModel, window: FloatArray
+    ) -> tuple[FloatArray, int, int]:
         # Étape 1 : log-Mel par le module unique de features (R5), ramené à la longueur de la
         # fenêtre du modèle : fenêtre centrale, ou silence ajouté à la fin (comme au test).
         log_mel = log_mel_spectrogram(window, self.feature_config)
@@ -195,6 +220,10 @@ class ModelPredictor:
         centered = fixed - loaded.mean.reshape(band_count, 1)
         standardized = centered / loaded.std.reshape(band_count, 1)
         as_float32 = standardized.astype(np.float32)
+        return as_float32, start, length
+
+    def _spectrogram_scores(self, loaded: LoadedModel, window: FloatArray) -> torch.Tensor:
+        as_float32, _, _ = self._spectrogram_input(loaded, window)
         inputs = torch.from_numpy(as_float32).unsqueeze(0)
         with torch.no_grad():
             output = loaded.network(inputs)

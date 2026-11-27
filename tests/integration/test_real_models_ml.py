@@ -12,6 +12,7 @@ import urllib.request
 from pathlib import Path
 from typing import Any
 
+import matplotlib.image
 import numpy as np
 import pytest
 import soundfile as sf
@@ -114,3 +115,27 @@ def test_realtime_profile_gives_a_calibrated_emotion(tmp_path: Path) -> None:
     assert emotion["model_id"] in ("echolens-emotion-cnn", "echolens-emotion-crnn")
     assert emotion["label"] in ["neutral", "happy", "sad", "angry", "fear", "disgust"]
     assert sum(entry["probability"] for entry in emotion["probabilities"]) == pytest.approx(1.0)
+
+
+def test_realtime_analysis_has_a_grad_cam_map(tmp_path: Path) -> None:
+    # C14 (E7, EF-13) : la carte du CRNN a exactement la taille de l'image du spectrogramme.
+    settings = AppSettings(
+        data_dir=tmp_path,
+        web_dist_dir=tmp_path / "dist",
+        run_jobs_synchronously=True,
+        inference_backend="models",
+        models_dir=models_dir(),
+    )
+    client = create_app(settings, TESTING=True).test_client()
+    with urllib.request.urlopen(CLIP_URL, timeout=60) as response:
+        clip = response.read()
+    analysis = analyse(client, clip, "realtime")
+    assert analysis["status"] == "done", analysis["error_message"]
+
+    response = client.get(f"/api/v1/analyses/{analysis['id']}/gradcam?task=sound_event")
+
+    assert response.status_code == 200
+    assert response.mimetype == "image/png"
+    grad_map = matplotlib.image.imread(io.BytesIO(response.data))
+    spectrogram = matplotlib.image.imread(io.BytesIO(client.get(analysis["spectrogram_url"]).data))
+    assert grad_map.shape[:2] == spectrogram.shape[:2]

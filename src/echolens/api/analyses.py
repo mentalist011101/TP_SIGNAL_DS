@@ -41,6 +41,8 @@ from echolens.services.analysis_service import (
     AnalysisService,
 )
 from echolens.services.export import EXPORT_FORMATS, AnalysisNotDoneError, build_export
+from echolens.services.grad_cam_service import GRAD_CAM_TASKS, grad_cam_path
+from echolens.services.predictor import ExplanationUnavailableError
 from echolens.services.spectrogram_image import colormap_stops
 from echolens.services.storage import AnalysisRecord, AnalysisStatus
 
@@ -314,6 +316,20 @@ class ExportQuerySchema(Schema):
     )
 
 
+class GradCamQuerySchema(Schema):
+    """Tâche dont on veut la carte Grad-CAM (E7, EF-13)."""
+
+    task = fields.String(
+        required=True,
+        validate=validate.OneOf(
+            GRAD_CAM_TASKS,
+            error="Tâche sans carte Grad-CAM : « {input} ». Tâches possibles : {choices}.",
+        ),
+        error_messages={"required": "Choisissez une tâche : emotion ou sound_event."},
+        metadata={"description": "emotion ou sound_event."},
+    )
+
+
 class HistoryQuerySchema(Schema):
     """Pagination de l'historique."""
 
@@ -429,6 +445,39 @@ class AnalysisExport(MethodView):
         return send_file(
             content, mimetype=export.mimetype, as_attachment=True, download_name=export.filename
         )
+
+
+@blp.route("/<analysis_id>/gradcam")
+class AnalysisGradCam(MethodView):
+    @blp.arguments(GradCamQuerySchema, location="query", error_status_code=VALIDATION_ERROR_STATUS)
+    @blp.response(
+        200,
+        description="Carte Grad-CAM en PNG transparent, de la taille du spectrogramme.",
+        content_type="image/png",
+    )
+    @blp.alt_response(404, description="Analyse introuvable.")
+    @blp.alt_response(
+        409,
+        description="Pas de carte possible : analyse pas terminée, tâche sans résultat, "
+        "profil Qualité (têtes Whisper) ou mode démonstration.",
+    )
+    def get(self, query: dict[str, str], analysis_id: str) -> Response:
+        """Carte Grad-CAM d'une tâche (E7, EF-13), à poser sur l'image du spectrogramme.
+
+        Blanc plus ou moins opaque : plus une zone est claire, plus elle a poussé le modèle vers
+        la classe prédite. Seulement pour les CRNN de la famille A (profil Temps réel) ;
+        calculée à la première demande, puis gardée.
+        """
+        service = _service()
+        try:
+            record = service.get_analysis(analysis_id)
+        except AnalysisNotFoundError as error:
+            abort(404, message=str(error))
+        try:
+            path = grad_cam_path(service, record, query["task"])
+        except ExplanationUnavailableError as error:
+            abort(409, message=str(error))
+        return send_file(path, mimetype="image/png")
 
 
 @blp.route("/<analysis_id>/spectrogram")
