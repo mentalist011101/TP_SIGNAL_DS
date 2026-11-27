@@ -1,3 +1,8 @@
+# Lancement en une commande (ENF-08) : « make docker », ou depuis la racine du dépôt :
+#   docker compose -f docker/docker-compose.yml up --build
+# Puis http://localhost:5000. Les réglages viennent de ../.env (voir .env.example) :
+# ECHOLENS_ACCESS_PASSWORD pour une instance publique, ECHOLENS_PRELOAD_MODELS=true pour une
+# démo sans attente à la première analyse.
 services:
   echolens:
     build:
@@ -9,10 +14,10 @@ services:
       - path: ../.env
         required: false
     volumes:
-      # Historique, audios et base SQLite conservés entre deux lancements.
+      # Historique, audios, voix enregistrées, base SQLite et poids téléchargés depuis Hugging
+      # Face, conservés entre deux lancements.
       - echolens-var:/app/var
-      # Poids des modèles téléchargés par « make models ».
-      - ../models:/app/models:ro
+    restart: unless-stopped
 
 volumes:
   echolens-var:

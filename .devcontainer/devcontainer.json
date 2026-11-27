@@ -1,0 +1,22 @@
+{
+  // Codespace EchoLens (ENF-08) : de quoi développer, et de quoi lancer une démo publique avec
+  // les vrais modèles (.devcontainer/start-demo.sh). 4 cœurs et 16 Go : les modèles du registre
+  // et XTTS-v2 tiennent ensemble en mémoire, ce qu'un PC de 8 Go ne permet pas.
+  "name": "EchoLens",
+  "image": "mcr.microsoft.com/devcontainers/python:1-3.11-bookworm",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": { "version": "22" }
+  },
+  "hostRequirements": { "cpus": 4, "memory": "16gb", "storage": "32gb" },
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+  "forwardPorts": [5000],
+  "portsAttributes": {
+    "5000": { "label": "EchoLens", "onAutoForward": "notify" }
+  },
+  // Secret à définir dans les réglages Codespaces du compte GitHub, jamais dans le dépôt.
+  "secrets": {
+    "ECHOLENS_ACCESS_PASSWORD": {
+      "description": "Mot de passe demandé par la démo publique (S6) : à donner à l'équipe et au jury."
+    }
+  }
+}
