@@ -15,6 +15,7 @@ from pathlib import Path
 import matplotlib
 import matplotlib.colors
 import matplotlib.image
+import numpy as np
 
 from echolens.core.features import FeatureConfig, FloatArray
 
@@ -39,6 +40,26 @@ def save_spectrogram_png(log_mel: FloatArray, path: Path, config: FeatureConfig)
         origin="lower",
         format="png",
     )
+
+
+# Carte Grad-CAM : blanc plus ou moins opaque posé sur le spectrogramme. L'opacité monte
+# avec la carte, jusqu'à ce plafond, pour que les couleurs du spectrogramme restent visibles.
+GRAD_CAM_MAX_OPACITY = 0.8
+
+
+def save_grad_cam_png(grad_map: FloatArray, path: Path) -> None:
+    """Enregistre la carte Grad-CAM (bandes, trames), entre 0 et 1, en PNG transparent.
+
+    Même taille et même orientation que l'image du spectrogramme (graves en bas) : posée
+    dessus, chaque pixel de la carte tombe sur la case qu'il explique (EF-13).
+    """
+    # Étape 1 : une image blanche (rouge, vert et bleu à 1).
+    band_count, frame_count = grad_map.shape
+    rgba = np.ones((band_count, frame_count, 4), dtype=np.float32)
+    # Étape 2 : l'opacité suit la carte : transparent là où rien ne soutient la classe.
+    clipped = np.clip(grad_map, 0.0, 1.0)
+    rgba[:, :, 3] = clipped * GRAD_CAM_MAX_OPACITY
+    matplotlib.image.imsave(path, rgba, origin="lower", format="png")
 
 
 def colormap_stops(config: FeatureConfig, count: int) -> list[str]:

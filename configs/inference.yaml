@@ -34,6 +34,28 @@ transcription:
   condition_on_previous_text: false     # chaque segment est transcrit seul
   temperature: [0.0, 0.2, 0.4, 0.6, 0.8, 1.0]   # replis de faster-whisper, écrits explicitement
 
+# Locuteur (EF-11, C15) : ECAPA-TDNN donne un vecteur de voix (192 valeurs) par morceau de
+# parole de la VAD (D5). La voix d'un locuteur enregistré est la moyenne de ses vecteurs, ramenée
+# à une norme 1. Chaque morceau d'une analyse est comparé à chaque voix par similarité cosinus :
+# le meilleur score désigne le locuteur s'il atteint le seuil, sinon « Inconnu ». C'est la règle
+# exacte de l'évaluation C15 (P11).
+speaker:
+  # Seuil « inconnu » de C15 (training/results/c15_speaker_openslr57.json, ecapa-voxceleb), au
+  # dix-millième : EER de la décision en ensemble ouvert sur le groupe de calibration. Mesuré
+  # ensuite sur l'évaluation : 90,6 % des voix connues acceptées ET bien reconnues, 93,8 % des
+  # inconnus rejetés. Le test test_speaker_threshold_is_the_c15_one vérifie la recopie.
+  threshold: 0.5485
+  # Un long tour de parole est coupé en morceaux égaux de 5 s au plus ; un morceau de moins de
+  # 1 s est écarté, trop court pour une voix fiable (médiane des phrases de C15 : 3,6 s).
+  max_window_s: 5.0
+  min_window_s: 1.0
+  # Enregistrement d'une voix : au moins 10 s de parole au total, extraits réunis (en C15, la
+  # voix était la moyenne de 5 phrases, soit environ 18 s en médiane).
+  min_enrollment_speech_s: 10.0
+  # Version du texte de consentement de la page Locuteurs (S6), enregistrée avec la voix.
+  # Changer le texte oblige à changer la version, ici et dans le front.
+  consent_version: locuteurs-v1
+
 # Flux micro en direct (EF-14, C23, D8) : le navigateur envoie du PCM Int16 mono à 16 kHz par
 # WebSocket. Toutes les hop_s secondes, le serveur analyse les window_s dernières secondes, en
 # profil temps réel (CRNN des événements, CRNN des émotions, VAD Silero). Un calcul plus long

@@ -229,7 +229,8 @@ def task_comparison(
         # modèle est chargé avant, sinon le premier passage paierait son chargement.
         context.predictor.prepare(task, profile)
         started = time.perf_counter()
-        result = task_result(signal, speech_segments, task, profile, context)
+        # Aucune voix : le locuteur ne fait pas partie des tâches comparables.
+        result = task_result(signal, speech_segments, task, profile, context, [])
         compute_s = time.perf_counter() - started
         run = {
             "model_id": info.model_id,

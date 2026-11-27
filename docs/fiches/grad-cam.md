@@ -5,11 +5,9 @@ Décisions et exigences : **E7**, **EF-13**, en lien avec **EF-04**, **R2**, **R
 Article de référence : R. R. Selvaraju et al., *Grad-CAM: Visual Explanations from Deep Networks
 via Gradient-based Localization*, ICCV 2017.
 
-> **État au 10 novembre 2026 : rien n'est encore implémenté.** Aucun modèle de la famille A n'est
-> entraîné (`configs/registry.yaml` est vide), le spectrogramme n'est pas encore servi par l'API
-> et aucun code Grad-CAM n'existe. Cette fiche décrit ce que la spécification impose. Les points
-> marqués **« à trancher »** doivent être décidés en équipe, puis reportés dans
-> `docs/specification.md`.
+> **État au 27 novembre 2026 (C14) : la carte est calculée et affichée.** Les choix « à
+> trancher » ont été tranchés par Luciano le 27 novembre (section 4). Le test de fidélité par
+> masquage a son code ; ses résultats viendront de son notebook Kaggle (section 6).
 
 ## 1. L'idée en trois phrases
 
@@ -92,14 +90,13 @@ Ce qu'il faut savoir dire :
 | Spectrogramme affiché = entrée du modèle | Décidé (EF-04, R5, U6) | Calculé par `log_mel_spectrogram`, côté serveur, avec `configs/features.yaml` : on explique bien ce que le modèle a vu | Spectrogramme calculé dans le navigateur, interdit par R5 (le faux spectrogramme du front a été retiré dans la PR #7) |
 | Log-Mel en dB absolus | Décidé (R2) | Un silence vaut toujours −100 dB : la carte ne peut pas « s'allumer » sur un silence rendu artificiellement fort | dB relatifs au maximum de l'extrait |
 | Test de fidélité par masquage | Décidé (E7) | Une carte jolie n'est pas forcément vraie : on vérifie qu'effacer les zones chaudes fait vraiment baisser le score | Se contenter d'une inspection visuelle |
-| Couche ciblée : sortie du bloc 4 | **À trancher** | Dernière couche de convolution, recommandée par l'article | Bloc 3 : carte plus fine, mais motifs moins abstraits |
-| Classe expliquée : la classe prédite | **À trancher** | C'est la question naturelle de l'utilisateur (« pourquoi colère ? ») | Choix de la classe dans l'interface |
-| Valeur de remplissage du masquage | **À trancher** | −100 dB (le plancher R2, « silence ») ou 0 après standardisation R4 (« moyenne du train ») | — |
-| Grad-CAM sur le CRNN | **À trancher** | Possible : on prend la sortie du bloc 4, avant le BiGRU, et le gradient traverse le BiGRU | Grad-CAM sur le CNN uniquement |
+| Couche ciblée : sortie du bloc 4 | Décidé (C14) | Dernière couche de convolution, recommandée par l'article | Bloc 3 : carte plus fine, mais motifs moins abstraits |
+| Classe expliquée : la classe prédite de chaque fenêtre | Décidé (C14) | C'est la question naturelle de l'utilisateur (« pourquoi colère ? ») | Choix de la classe dans l'interface |
+| Valeur de remplissage du masquage | Décidé (C14) : **moyenne du train** (0 après la standardisation R4) | Une zone « neutre » pour le modèle, qui ne crée pas d'entrée extrême ; choix courant des tests de suppression | −100 dB (plancher R2) : le modèle pourrait réagir au silence lui-même plutôt qu'à la perte d'information |
+| Grad-CAM sur le CRNN | Décidé (C14) : ce sont les modèles en production (profil Temps réel) | Possible : on prend la sortie du bloc 4, avant le BiGRU, et le gradient traverse le BiGRU | Grad-CAM sur le CNN uniquement |
 
-**Résolution de la carte (à vérifier quand l'architecture sera fixée).** La spécification dit
-« 4 blocs … MaxPool » sans donner la taille du pooling. **Si** chaque MaxPool divise par 2 les deux
-axes, la carte du bloc 4 mesure 64 / 16 = **4 lignes** en fréquence et une colonne pour
+**Résolution de la carte (vérifiée sur le CRNN de production).** Chaque bloc finit par un MaxPool
+2 × 2 (`core/models/family_a.py`) : la carte du bloc 4 mesure 64 / 16 = **4 lignes** en fréquence et une colonne pour
 16 × 10 ms = **160 ms**. La carte est donc très grossière en fréquence : elle dit « plutôt dans les
 graves » ou « plutôt dans les aigus », mais pas « à 440 Hz ». Il faut le dire au jury avant qu'il
 le demande.
@@ -110,14 +107,16 @@ le demande.
 | --- | --- | --- |
 | Spectrogramme log-Mel (entrée du CNN et image affichée) | `src/echolens/core/features.py:log_mel_spectrogram` | Fait. Forme `(n_mels, n_frames)` = `(64, T)`. À savoir lire : étape 1 (STFT + filtres Mel HTK), étape 2 (dB absolus, plancher −100 dB) |
 | Paramètres | `configs/features.yaml` | Fait. 25 ms de fenêtre, 10 ms de pas, 64 bandes de 0 à 8 kHz |
-| Emplacement du spectrogramme dans l'interface | `web/src/components/analyze/SpectrogramPlaceholder.tsx` | Cadre provisoire, en attente de la route du serveur |
-| CNN et CRNN de la famille A | `training/notebooks/` puis `configs/registry.yaml` | **Non fait** : dossier vide, registre vide |
-| Calcul de la carte Grad-CAM | Proposition : un module de `src/echolens/core/` (calcul pur, sans Flask), utilisé à la fois par le notebook d'évaluation et par le service | **Non fait.** Emplacement à valider avec Luciano |
-| Exposition par l'API | Champ dans `GET /api/v1/analyses/{id}` ou route dédiée | **Non fait.** Contrat à définir (flask-smorest, sous `/api/v1`) |
-| Superposition activable | Page Analyser / Résultat | **Non fait** (EF-13) |
-| Test de fidélité par masquage | Notebook d'évaluation (brique 5) | **Non fait** |
+| Image du spectrogramme dans l'interface | `web/src/components/analyze/SpectrogramView.tsx` | Fait |
+| CNN et CRNN de la famille A | `configs/registry.yaml` (CRNN des émotions et des événements, profil Temps réel) | Fait (C9, C12) |
+| Calcul de la carte d'une fenêtre | `src/echolens/core/models/grad_cam.py` (`grad_cam`) | Fait (C14) |
+| Carte de tout l'audio (fenêtres réunies sur l'axe du temps) | `src/echolens/core/explain.py` (`combine_window_maps`, calcul pur) | Fait (C14) |
+| Même entrée que la prédiction | `src/echolens/services/model_predictor.py` (`explain`) | Fait (C14) |
+| Exposition par l'API | `GET /api/v1/analyses/{id}/gradcam?task=sound_event\|emotion` : PNG transparent de la taille du spectrogramme, 409 avec un message si pas de carte | Fait (C14) |
+| Superposition activable | Page Résultat, sous le spectrogramme : « Carte Grad-CAM : Aucune / Événement / Émotion » | Fait (C14, EF-13) |
+| Test de fidélité par masquage | `src/echolens/training/grad_cam_fidelity.py` (calcul pur), `grad_cam_fidelity_models.py` (avec le réseau), `configs/grad_cam_fidelity.yaml`, notebook `training/notebooks/c14_grad_cam_fidelity.ipynb` | Code testé (C14b) ; résultats à produire sur Kaggle |
 
-Ce qu'il faudra savoir lire dans le calcul de la carte, quand il existera :
+Ce qu'il faut savoir lire dans `grad_cam` (les étapes sont numérotées dans le code) :
 
 1. l'endroit où l'on récupère les activations $A^k$ et leurs gradients ;
 2. la moyenne des gradients, qui donne $\alpha_k^c$ ;
@@ -126,8 +125,26 @@ Ce qu'il faudra savoir lire dans le calcul de la carte, quand il existera :
 
 ## 6. Résultats
 
-**Aucun résultat pour l'instant** : il n'existe encore ni modèle entraîné, ni carte, ni mesure de
-fidélité.
+**Pas encore de résultat chiffré** : la mesure de fidélité attend l'exécution de son notebook
+Kaggle (`c14_grad_cam_fidelity.ipynb`). Protocole retenu (C14b) :
+
+- une case masquée = un point de la carte du bloc 4 (16 bandes × 16 trames), remplie par 0 ;
+- 13 parts masquées de 0 à 100 % ; deux ordres par extrait : les plus chaudes d'abord, et un
+  ordre tiré au hasard (graine fixe) ;
+- on suit la probabilité (softmax, sans température) de la classe prédite au départ ; mesure =
+  aire sous la courbe, écart « hasard − carte » par extrait, IC à 95 % par bootstrap (P8) ;
+- données jamais vues par le réseau testé : pour ESC-50, le CRNN de production a appris les
+  5 folds, donc on prend le CRNN de C9 du tour k sur le fold k (même recette, P3) ; pour les
+  émotions, le CRNN de production sur le test (acteurs jamais vus, P1).
+
+Essai local (27 nov., CRNN de production des événements, 5 fenêtres d'un seul enregistrement,
+donc sans valeur statistique) : aire 0,13 avec la carte contre 0,21 au hasard.
+
+Première observation, à confirmer sur plus d'extraits (essai du 27 nov., extrait « pluie et
+parole » de 15,5 s, profil Temps réel) : la carte du CRNN des **événements** s'allume aussi sur un
+passage de silence numérique, alors que celle du CRNN des **émotions** reste sur les morceaux de
+parole. C'est le genre de raccourci que la section 7 annonçait, à vérifier avec le test de
+fidélité avant d'en tirer une conclusion.
 
 À produire (brique 5, script unique des figures, E8) :
 
@@ -159,8 +176,8 @@ fidélité.
    d'autres classes.
 
 5. **Quelle est la précision de la carte ?**
-   Celle de la dernière couche de convolution. Avec des MaxPool 2 × 2 (**à confirmer**), on
-   obtient environ 4 bandes en fréquence et 160 ms en temps : c'est grossier. L'agrandissement
+   Celle de la dernière couche de convolution. Avec les MaxPool 2 × 2 du CRNN, on
+   obtient 4 bandes en fréquence et 160 ms en temps : c'est grossier. L'agrandissement
    lisse l'image mais n'ajoute pas d'information.
 
 6. **Pourquoi pas de Grad-CAM pour wav2vec 2.0, HuBERT ou Whisper ?**
@@ -173,9 +190,9 @@ fidélité.
    score, comparée à un masquage au hasard. Si les deux baisses se valent, la carte n'explique rien.
 
 8. **Par quoi remplacez-vous une zone masquée ?**
-   **À trancher** : −100 dB (le silence absolu de R2) ou la moyenne du train (0 après la
-   standardisation R4). Le choix compte, car une valeur trop extrême crée une entrée que le modèle
-   n'a jamais vue.
+   Par la moyenne du train (0 après la standardisation R4), décision de C14. Le choix compte : une
+   valeur extrême, comme le silence à −100 dB de R2, ferait réagir le modèle au silence lui-même
+   plutôt qu'à la perte d'information.
 
 9. **Le spectrogramme affiché est-il bien celui que voit le modèle ?**
    Oui, par construction : tous deux viennent de `log_mel_spectrogram` avec `configs/features.yaml`

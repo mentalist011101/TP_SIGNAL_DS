@@ -55,7 +55,7 @@ function RunResult({ task, run }: { task: ComparedTask; run: ModelRun }) {
   const topClasses = result.probabilities.slice(0, TOP_CLASS_COUNT)
   return (
     <>
-      <MainResultValue result={result} leading="leading-none" />
+      <MainResultValue task={task} result={result} leading="leading-none" />
       <ProbabilityBars probabilities={topClasses} />
     </>
   )

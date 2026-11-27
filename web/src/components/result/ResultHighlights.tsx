@@ -38,7 +38,7 @@ function HighlightTile({ task, result }: Highlight) {
   return (
     <div className="space-y-1 bg-card px-6 py-5">
       <p className="label-mono text-ink-faint">{TASK_LABELS[task]}</p>
-      <MainResultValue result={result} leading="leading-tight" />
+      <MainResultValue task={task} result={result} leading="leading-tight" />
     </div>
   )
 }
