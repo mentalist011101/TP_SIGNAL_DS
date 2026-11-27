@@ -95,8 +95,8 @@ class AnalysisService:
         # Étape 1 : extension lue sur le nom envoyé, avant tout nettoyage, car secure_filename
         # efface les caractères non latins et peut emporter le nom entier ; puis nom nettoyé (S6).
         sent_name = upload.filename or ""
-        extension = self._check_extension(sent_name)
-        filename = _clean_filename(sent_name, extension)
+        extension = self.check_extension(sent_name)
+        filename = clean_filename(sent_name, extension)
 
         # Étape 2 : copie sur disque, puis contrôles qui demandent de décoder l'audio (D6).
         analysis_id = str(uuid.uuid4())
@@ -105,7 +105,7 @@ class AnalysisService:
         original = folder / f"original.{extension}"
         upload.save(original)
         try:
-            self._check_audio(original)
+            self.check_audio(original)
         except AnalysisRejectedError:
             shutil.rmtree(folder)
             raise
@@ -191,7 +191,11 @@ class AnalysisService:
             session.execute(statement)
             session.commit()
 
-    def _check_extension(self, sent_name: str) -> str:
+    def check_extension(self, sent_name: str) -> str:
+        """Extension du nom envoyé, si elle est acceptée (S6) ; sinon AnalysisRejectedError.
+
+        Sert aussi à la comparaison de modèles (EF-15), qui importe un fichier de la même façon.
+        """
         suffix = Path(sent_name).suffix
         extension = suffix.lower().removeprefix(".")
         if extension in self.settings.allowed_extensions:
@@ -204,7 +208,8 @@ class AnalysisService:
             f"Format non pris en charge : « {shown_name} ». Formats acceptés : {allowed}."
         )
 
-    def _check_audio(self, path: Path) -> None:
+    def check_audio(self, path: Path) -> None:
+        """Refuse un audio trop long, illisible ou silencieux (D6), avec un message en français."""
         max_seconds = self.settings.max_audio_seconds
         try:
             signal = load_audio(path, max_seconds=max_seconds)
@@ -353,7 +358,8 @@ def warm_up_models(context: ResultContext) -> None:
     context.speech_detector.detect(window)
 
 
-def _clean_filename(sent_name: str, extension: str) -> str:
+def clean_filename(sent_name: str, extension: str) -> str:
+    """Nom nettoyé (S6) avec l'extension acceptée ; « audio.<ext> » s'il ne reste rien."""
     cleaned = secure_filename(sent_name)
     # « 音声メモ.wav » devient « wav » : il ne reste plus de nom avant l'extension,
     # on en donne un neutre.

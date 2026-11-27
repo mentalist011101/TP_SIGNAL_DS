@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import Layout from './components/Layout.tsx'
 import AnalyzePage from './pages/AnalyzePage.tsx'
 import ComparePage from './pages/ComparePage.tsx'
+import ComparisonPage from './pages/ComparisonPage.tsx'
 import HomePage from './pages/HomePage.tsx'
 import HistoryPage from './pages/HistoryPage.tsx'
 import LivePage from './pages/LivePage.tsx'
@@ -19,6 +20,7 @@ export default function App() {
         <Route path="analyser" element={<AnalyzePage />} />
         <Route path="direct" element={<LivePage />} />
         <Route path="comparer" element={<ComparePage />} />
+        <Route path="comparer/:comparisonId" element={<ComparisonPage />} />
         <Route path="historique" element={<HistoryPage />} />
         <Route path="analyses/:analysisId" element={<ResultPage />} />
         <Route path="locuteurs" element={<SpeakersPage />} />

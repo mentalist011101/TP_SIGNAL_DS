@@ -312,6 +312,68 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/analyses/{analysis_id}/gradcam": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                analysis_id: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * Carte Grad-CAM d'une tâche (E7, EF-13), à poser sur l'image du spectrogramme.
+         * @description Blanc plus ou moins opaque : plus une zone est claire, plus elle a poussé le modèle vers
+         *     la classe prédite. Seulement pour les CRNN de la famille A (profil Temps réel) ;
+         *     calculée à la première demande, puis gardée.
+         */
+        get: {
+            parameters: {
+                query: {
+                    /** @description emotion ou sound_event. */
+                    task: "emotion" | "sound_event";
+                };
+                header?: never;
+                path: {
+                    analysis_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Carte Grad-CAM en PNG transparent, de la taille du spectrogramme. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                400: components["responses"]["BAD_REQUEST"];
+                /** @description Analyse introuvable. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Pas de carte possible : analyse pas terminée, tâche sans résultat, profil Qualité (têtes Whisper) ou mode démonstration. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                default: components["responses"]["DEFAULT_ERROR"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/analyses/{analysis_id}/spectrogram": {
         parameters: {
             query?: never;
@@ -383,6 +445,204 @@ export interface paths {
                     content: {
                         "application/json": components["schemas"]["Model"][];
                     };
+                };
+                default: components["responses"]["DEFAULT_ERROR"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/compare": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Comparaisons passées, les plus récentes d'abord, sans leurs résultats. */
+        get: {
+            parameters: {
+                query?: {
+                    limit?: number;
+                    offset?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ComparisonSummary"][];
+                    };
+                };
+                400: components["responses"]["BAD_REQUEST"];
+                default: components["responses"]["DEFAULT_ERROR"];
+            };
+        };
+        put?: never;
+        /**
+         * Fait tourner chaque modèle du registre des tâches choisies sur le même fichier.
+         * @description Répond 202 ; suivre le calcul avec GET /api/v1/compare/{id}.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "multipart/form-data": components["schemas"]["ComparisonFile"];
+                };
+            };
+            responses: {
+                /** @description Accepted */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Comparison"];
+                    };
+                };
+                /** @description Fichier refusé : format, décodage, durée ou silence. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                default: components["responses"]["DEFAULT_ERROR"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/compare/{comparison_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                comparison_id: string;
+            };
+            cookie?: never;
+        };
+        /** Statut et résultats d'une comparaison. */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    comparison_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Comparison"];
+                    };
+                };
+                /** @description Comparaison introuvable. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                default: components["responses"]["DEFAULT_ERROR"];
+            };
+        };
+        put?: never;
+        post?: never;
+        /** Supprime une comparaison et son audio. */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    comparison_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description No Content */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Comparaison introuvable. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                default: components["responses"]["DEFAULT_ERROR"];
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/compare/{comparison_id}/audio": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                comparison_id: string;
+            };
+            cookie?: never;
+        };
+        /** Audio converti de la comparaison, pour la réécoute. */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    comparison_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Audio WAV 16 kHz mono. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Comparaison introuvable ou audio pas encore converti. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
                 };
                 default: components["responses"]["DEFAULT_ERROR"];
             };
@@ -758,6 +1018,51 @@ export interface components {
             /** @description Révision figée des poids (hash de commit). */
             revision?: string | null;
             description: string;
+        };
+        ComparisonSummary: {
+            id: string;
+            /** Format: date-time */
+            created_at: string;
+            original_filename: string;
+            /** @enum {string} */
+            status: "pending" | "processing" | "done" | "failed";
+            error_message?: string | null;
+            duration_s?: number | null;
+            tasks: string[];
+        };
+        ComparisonFile: {
+            /**
+             * Format: binary
+             * @description Fichier audio : wav, mp3, flac, ogg, webm ou m4a, 5 min maximum.
+             */
+            file: string;
+        };
+        ModelRun: {
+            /** @description Identifiant au registre. */
+            model_id: string;
+            model_version: string;
+            /** @description Profils qui utilisent ce modèle : quality, realtime. */
+            profiles: string[];
+            /** @description Temps de calcul du modèle sur tout le fichier, en secondes (CPU du serveur), détection de parole exclue : elle tourne une fois pour tous. */
+            compute_s: number;
+            /** @description Résultat au format d'une analyse (global et segments). */
+            result: components["schemas"]["TaskResult"];
+        };
+        Comparison: {
+            id: string;
+            /** Format: date-time */
+            created_at: string;
+            original_filename: string;
+            /** @enum {string} */
+            status: "pending" | "processing" | "done" | "failed";
+            error_message?: string | null;
+            duration_s?: number | null;
+            tasks: string[];
+            /** @description Pour chaque tâche demandée, les modèles du registre dans l'ordre des profils (quality puis realtime) ; null tant que le calcul n'est pas fini. */
+            results?: {
+                [key: string]: components["schemas"]["ModelRun"][];
+            } | null;
+            readonly audio_url?: unknown;
         };
         Speaker: {
             id: string;
