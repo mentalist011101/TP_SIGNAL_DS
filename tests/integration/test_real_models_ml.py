@@ -19,9 +19,9 @@ import soundfile as sf
 pytest.importorskip("torch")
 pytest.importorskip("transformers")
 
-from echolens.api import create_app  # noqa: E402
-from echolens.config import CONFIG_DIR, AppSettings  # noqa: E402
-from echolens.core.models.registry import ModelRegistry  # noqa: E402
+from echolens.api import create_app
+from echolens.config import CONFIG_DIR, AppSettings
+from echolens.core.models.registry import ModelRegistry
 
 pytestmark = [pytest.mark.ml, pytest.mark.slow, pytest.mark.ffmpeg]
 
