@@ -31,13 +31,46 @@
 \subsection{Identification du locuteur}
 \label{sec:res-locuteur}
 
-\aRediger{Lynn, après le nouveau passage de C15 sur Kaggle}{Tableau ECAPA-TDNN contre
-  mHuBERT sur le groupe d'évaluation : accuracy en ensemble fermé et EER avec leurs intervalles
-  à 95\,\% (bootstrap sur les locuteurs, P8), voix connues acceptées et justes, imposteurs
-  rejetés au seuil de la calibration, accuracy par sous-corpus, couche choisie pour mHuBERT et
-  EER de calibration par couche. Source :
-  \texttt{training/results/c15\_speaker\_openslr57.json}. Le premier passage (seuil pris sur des
-  paires isolées) est abandonné : il acceptait à tort 72\,\% des inconnus.}
+% Chiffres : training/results/c15_speaker_openslr57.json (C15, GPU T4 de Kaggle, 26 nov. 2026).
+Deux encodeurs gelés sont comparés : ECAPA-TDNN, entraîné pour la vérification du locuteur sur
+VoxCeleb, et mHuBERT-147, entraîné pour représenter la parole. La voix enregistrée d'un
+locuteur est la moyenne de ses cinq vecteurs d'enregistrement, et le score d'une phrase est sa
+similarité cosinus avec chaque voix enregistrée. Les scores sont mesurés sur le groupe
+d'évaluation (57 locuteurs, 4\,246 phrases de test) et sur ses imposteurs (55 locuteurs,
+3\,770 phrases), avec le seuil choisi sur la calibration (section~\ref{sec:p11}). Pour mHuBERT,
+la couche est aussi choisie sur la calibration : c'est la couche 0, et l'EER de calibration
+augmente de couche en couche (9,7\,\% à la couche 0, 20,8\,\% à la couche 12).
+
+\begin{table}[ht]
+  \centering
+  \small
+  \begin{tabular}{@{}lrrrrr@{}}
+    \toprule
+    Encodeur & Accuracy & EER & Connus acceptés & Inconnus & EER ensemble \\
+             & [IC 95\,\%] & [IC 95\,\%] & et justes & rejetés & ouvert \\
+    \midrule
+    ECAPA-TDNN & \textbf{97,9\,\%} [96,6 ; 98,8] & \textbf{3,0\,\%} [1,9 ; 4,4] & \textbf{90,6\,\%} & \textbf{93,8\,\%} & \textbf{8,1\,\%} \\
+    mHuBERT-147 (couche 0) & 74,2\,\% [67,7 ; 79,9] & 11,7\,\% [9,4 ; 13,9] & 56,0\,\% & 71,0\,\% & 31,7\,\% \\
+    \bottomrule
+  \end{tabular}
+  \caption{Identification du locuteur sur OpenSLR~57. Intervalles à 95\,\% par bootstrap sur
+    les locuteurs (P8). « Connus acceptés et justes » et « inconnus rejetés » : au seuil choisi
+    sur la calibration ; « EER ensemble ouvert » : décision connu ou inconnu sur le meilleur
+    score, mesurée sur l'évaluation.}
+  \label{tab:locuteur}
+\end{table}
+
+ECAPA-TDNN reconnaît la bonne personne dans 97,9\,\% des cas, sans grand écart entre
+sous-corpus (\texttt{ca16} 96,7\,\%, Niger 97,5\,\%, Yaoundé 99,2\,\%). Les intervalles des deux
+encodeurs ne se recouvrent pas : l'écart est net. mHuBERT garde surtout, dans ses couches
+profondes, ce qui est dit plutôt que qui parle, ce que montre la hausse régulière de l'EER de
+couche en couche.
+
+En ensemble ouvert, au seuil fixé sur d'autres voix, ECAPA accepte et identifie correctement
+90,6\,\% des phrases de voix connues et rejette 93,8\,\% des phrases de voix inconnues. Un
+premier protocole, qui prenait le seuil à l'EER sur des paires (phrase, voix) isolées, ne
+rejetait que 27,7\,\% des inconnus : la décision compare au seuil le \emph{meilleur} de toutes
+les similarités, presque toujours plus élevé qu'une similarité isolée.
 
 \subsection{Transcription}
 \label{sec:res-wer}

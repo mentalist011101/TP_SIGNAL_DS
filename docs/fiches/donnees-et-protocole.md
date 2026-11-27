@@ -10,12 +10,11 @@ Décisions et exigences : **P1** à **P13**, **R4**, **E4**. Documents de réfé
 > - **Fait** : les découpages P1 (émotions) et P3 (ESC-50). Chacun est écrit dans le code, vérifié
 >   par des tests automatiques, et son résultat est enregistré dans un fichier du dépôt
 >   (`data/splits/emotion_split.csv` pour P1 ; pour P3, la colonne `fold` du manifeste).
-> - **En relecture** (PR #42) : le découpage P11 du locuteur, sur le même principe (fonction
->   `split_enrollment`, tests, fichier `data/splits/openslr57_speakers.csv`). Ses résultats sont
->   à refaire sur Kaggle après les corrections de la relecture.
-> - **Pas encore fait** : l'évaluation des émotions sur CaFE, le WER sur OpenSLR 57 (C17), le
->   jeu ACE (accès non obtenu), nos enregistrements (T6), l'analyse des biais par genre et de
->   la robustesse au bruit (E3, E4).
+> - **Fait** (PR #42) : le découpage P11 du locuteur, sur le même principe (fonction
+>   `split_enrollment`, tests, fichier `data/splits/openslr57_speakers.csv`), et ses résultats.
+> - **Fait** (PR #47, Luciano) : le WER sur OpenSLR 57 (C17a).
+> - **Pas encore fait** : l'évaluation des émotions sur CaFE, le jeu ACE (accès non obtenu), nos
+>   enregistrements (T6), l'analyse des biais par genre et de la robustesse au bruit (E3, E4).
 
 ## 1. L'idée en trois phrases
 
@@ -158,19 +157,33 @@ chaque classe pèse autant dans le score, quel que soit son nombre d'exemples.
   et B (`training/results/emotions_*.json`).
 - OpenSLR 57 : les 515 phrases du test officiel ont toutes leur transcription ; il en manque
   dans `ca16` (devtest 481 / 761, train 3 063 / 5 997), faute de ligne dans l'archive. Le WER
-  (C17) se fera donc sur le test officiel et sur `yaounde`, qui sont complets.
+  (C17a) est donc mesuré sur le test officiel et sur `yaounde/read` (6 299 phrases) ;
+  `yaounde/answers` est exclu, car sa transcription est la question posée, pas la réponse
+  enregistrée.
+- WER de faster-whisper (C17a, `training/results/c17_transcription.json`) : small 14,4 %
+  [11,4 ; 17,1] sur le test officiel et 34,5 % [32,9 ; 36,1] sur `yaounde/read` ; base 27,9 %
+  et 50,5 %.
 - Le genre d'OpenSLR 57 n'est connu que pour les 12 locuteurs du test officiel : l'analyse des
   biais par genre (E4) y sera très limitée.
 
-**Locuteur (C15, PR #42).** Un premier passage avait donné 97,7 % d'accuracy pour ECAPA-TDNN,
-mais la relecture a montré deux défauts dans la mesure du rejet des inconnus : un seuil pris sur
-des paires isolées (72 % des inconnus acceptés à tort) et des inconnus qui avaient servi à
-choisir ce seuil. Le protocole est corrigé (quatre groupes, seuil sur le meilleur score,
-intervalles par bootstrap) ; **les résultats sont à refaire sur Kaggle**.
+**Locuteur (C15, `training/results/c15_speaker_openslr57.json`).** Groupe d'évaluation :
+57 locuteurs, 4 246 phrases de test, et 55 imposteurs (3 770 phrases).
 
-**Pas encore disponible** : résultats du locuteur corrigés (C15), F1 sur CaFE (hors domaine),
-WER (C17), résultats sur nos enregistrements (T6), robustesse au bruit et biais par genre
-(E3, E4).
+| Encodeur | Accuracy [IC 95 %] | EER [IC 95 %] | Connus acceptés et justes | Inconnus rejetés |
+| --- | --- | --- | --- | --- |
+| ECAPA-TDNN | **97,9 %** [96,6 ; 98,8] | **3,0 %** [1,9 ; 4,4] | 90,6 % | 93,8 % |
+| mHuBERT (couche 0) | 74,2 % [67,7 ; 79,9] | 11,7 % [9,4 ; 13,9] | 56,0 % | 71,0 % |
+
+- ECAPA, fait pour reconnaître des voix, dépasse nettement mHuBERT, fait pour représenter la
+  parole : les intervalles ne se recouvrent pas.
+- Pour mHuBERT, plus la couche est profonde, moins elle garde la voix (EER de calibration de
+  9,7 % à la couche 0 à 20,8 % à la couche 12).
+- Le premier protocole (seuil pris sur des paires isolées) ne rejetait que 27,7 % des
+  inconnus ; prendre le seuil sur le meilleur score, comme l'application, donne 93,8 %.
+
+**Pas encore disponible** : F1 sur CaFE (hors domaine), WER des phrases camerounaises du test
+(C17c, en cours), résultats sur nos enregistrements (T6), robustesse au bruit et biais par
+genre (E3, E4).
 
 ## 7. Dix questions probables du jury
 

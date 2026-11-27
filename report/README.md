@@ -33,7 +33,7 @@ finie.
 | 6. Application | `06_application.tex` | Nicole | à rédiger |
 | 7.1 Métriques | `07_resultats.tex` | Steve | à rédiger |
 | 7.2 à 7.3 Émotions, ESC-50 ; 7.7 explicabilité | `07_resultats.tex` | Nicole | à rédiger |
-| 7.4 Locuteur | `07_resultats.tex` | Lynn | à refaire après le nouveau passage de C15 |
+| 7.4 Locuteur | `07_resultats.tex` | Lynn | rédigée (C15) |
 | 7.5 Transcription ; 7.6 analyse des erreurs | `07_resultats.tex` | Lynn | après C17 ; E3 et E4 à produire |
 | 8. Discussion et limites | `08_discussion.tex` | toute l'équipe | à rédiger |
 | 9. Conclusion | `09_conclusion.tex` | Luciano | à rédiger |
