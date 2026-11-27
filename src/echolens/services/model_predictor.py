@@ -11,8 +11,9 @@ Pour chaque fenêtre, la chaîne est exactement celle de l'entraînement (R5) :
 Puis probabilités calibrées : softmax(scores / T) (E2, ENF-06). Tout se fait en mode eval et
 sous torch.no_grad().
 
-La transcription (EF-10, C17b) passe par faster-whisper (services.whisper_transcriber),
-importé seulement à la première transcription ou au préchargement.
+La transcription (EF-10, C17b) passe par faster-whisper (services.whisper_transcriber), et
+les vecteurs de voix (EF-11, C15) par SpeechBrain (services.speaker_encoder) : chacun importé
+seulement à sa première utilisation ou au préchargement.
 """
 
 from __future__ import annotations
@@ -48,9 +49,11 @@ from echolens.core.models.whisper_encoder import (
     load_whisper_encoder,
     whisper_useful_layer_means,
 )
+from echolens.core.speaker_id import VoiceVector
 from echolens.services.predictor import ExplanationUnavailableError, ModelInfo, WindowExplanation
 
 if TYPE_CHECKING:
+    from echolens.services.speaker_encoder import SpeakerEncoder
     from echolens.services.whisper_transcriber import WhisperTranscriber
 
 HF_PREFIX = "hf://"
@@ -87,6 +90,7 @@ class ModelPredictor:
         features_path: Path,
         models_dir: Path | None,
         transcription_settings: TranscriptionSettings,
+        cache_dir: Path,
     ) -> None:
         self.registry = registry
         self.labels = labels
@@ -102,6 +106,10 @@ class ModelPredictor:
         # Transcription : réglages du décodage, et transcripteur créé à la première utilisation.
         self.transcription_settings = transcription_settings
         self._whisper: WhisperTranscriber | None = None
+        # Locuteur : copie des fichiers du modèle pour SpeechBrain, encodeur créé à la première
+        # utilisation.
+        self.cache_dir = cache_dir
+        self._speaker_encoder: SpeakerEncoder | None = None
 
     def supports(self, task: Task, profile: Profile) -> bool:
         """Vrai si le registre a un modèle pour cette tâche dans ce profil."""
@@ -109,9 +117,9 @@ class ModelPredictor:
 
     def model_info(self, task: Task, profile: Profile) -> ModelInfo:
         """Identifiant et version du registre ; probabilités calibrées par la température
-        (la transcription n'a pas de probabilités : calibrated vaut faux)."""
+        (la transcription et le locuteur n'ont pas de probabilités : calibrated vaut faux)."""
         entry = self._entry(task, profile)
-        calibrated = task != Task.TRANSCRIPTION
+        calibrated = task in (Task.EMOTION, Task.SOUND_EVENT)
         return ModelInfo(model_id=entry.id, model_version=entry.version, calibrated=calibrated)
 
     def predict(
@@ -141,14 +149,23 @@ class ModelPredictor:
         whisper = self._whisper_transcriber()
         return whisper.transcribe(entry, windows)
 
+    def embed_voices(self, profile: Profile, windows: list[FloatArray]) -> list[VoiceVector]:
+        """Un vecteur de voix par morceau de parole, avec le modèle de locuteur de ce profil."""
+        entry = self._entry(Task.SPEAKER, profile)
+        encoder = self._speaker_encoder_instance()
+        return encoder.embed(entry, windows)
+
     def preload(self) -> None:
-        """Charge tous les modèles du registre : classification et transcription (S1)."""
+        """Charge tous les modèles du registre : classification, transcription, locuteur (S1)."""
         for entry in self.registry.models:
             if entry.task in (Task.EMOTION, Task.SOUND_EVENT):
                 self.load(entry)
             if entry.task == Task.TRANSCRIPTION:
                 whisper = self._whisper_transcriber()
                 whisper.load(entry)
+            if entry.task == Task.SPEAKER:
+                encoder = self._speaker_encoder_instance()
+                encoder.load(entry)
 
     def _whisper_transcriber(self) -> WhisperTranscriber:
         # faster-whisper n'est importé qu'ici : les modèles de classification n'en dépendent pas.
@@ -158,6 +175,15 @@ class ModelPredictor:
             if self._whisper is None:
                 self._whisper = WhisperTranscriber(self.transcription_settings, self.models_dir)
             return self._whisper
+
+    def _speaker_encoder_instance(self) -> SpeakerEncoder:
+        # speechbrain n'est importé qu'ici : les autres modèles n'en dépendent pas.
+        from echolens.services.speaker_encoder import SpeakerEncoder
+
+        with self._lock:
+            if self._speaker_encoder is None:
+                self._speaker_encoder = SpeakerEncoder(self.cache_dir)
+            return self._speaker_encoder
 
     def _entry(self, task: Task, profile: Profile) -> ModelEntry:
         entry = self.registry.model_for(task, profile)

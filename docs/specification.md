@@ -187,7 +187,8 @@ deux profils, « qualité » (fichiers) et « temps réel » (flux).
 | GET | `/api/v1/analyses/{id}/export` | Export `json`, `csv` ou `pdf` |
 | GET | `/api/v1/models` | Registre et métriques |
 | POST | `/api/v1/compare` | Même fichier dans plusieurs modèles |
-| POST | `/api/v1/speakers` | Enregistrement d'un locuteur |
+| GET, POST | `/api/v1/speakers` | Liste des locuteurs ; enregistrement d'un locuteur (nom, consentement, un ou plusieurs extraits) |
+| DELETE | `/api/v1/speakers/{id}` | Suppression d'un locuteur : sa voix et ses extraits |
 | POST | `/api/v1/tts` | Clonage de voix (P3) |
 | WS | `/ws/stream` | Flux micro |
 

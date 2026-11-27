@@ -15,6 +15,7 @@ from echolens.api.analyses import blp as analyses_blp
 from echolens.api.errors import handle_http_error
 from echolens.api.health import blp as health_blp
 from echolens.api.models import blp as models_blp
+from echolens.api.speakers import blp as speakers_blp
 from echolens.api.stream import sock
 from echolens.config import AppSettings, load_settings
 from echolens.services.analysis_service import AnalysisService
@@ -45,12 +46,15 @@ def create_app(settings: AppSettings | None = None, **overrides: Any) -> Flask:
     # Base de données et service des analyses, partagés par toutes les requêtes (S2, S3).
     settings.data_dir.mkdir(parents=True, exist_ok=True)
     session_factory = create_session_factory(settings.resolved_database_url())
-    app.extensions["analysis_service"] = AnalysisService(settings, session_factory)
+    analysis_service = AnalysisService(settings, session_factory)
+    app.extensions["analysis_service"] = analysis_service
+    app.extensions["speaker_service"] = analysis_service.speakers
 
     api = Api(app)
     api.register_blueprint(health_blp)
     api.register_blueprint(analyses_blp)
     api.register_blueprint(models_blp)
+    api.register_blueprint(speakers_blp)
     # Enregistré après Api(app) pour remplacer le gestionnaire de flask-smorest : toute erreur
     # porte ainsi un « message » en français (format décrit dans echolens.api.errors).
     app.register_error_handler(HTTPException, handle_http_error)

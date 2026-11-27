@@ -395,6 +395,125 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/speakers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Liste les locuteurs enregistrés, par ordre alphabétique. */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Speaker"][];
+                    };
+                };
+                default: components["responses"]["DEFAULT_ERROR"];
+            };
+        };
+        put?: never;
+        /**
+         * Enregistre la voix d'un locuteur, avec son consentement (EF-11, S6).
+         * @description La VAD garde les morceaux de parole de 1 à 5 s ; la voix est la moyenne normée de
+         *     leurs vecteurs (C15). Il faut au moins 10 s de parole, extraits réunis.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "multipart/form-data": components["schemas"]["SpeakerFiles"];
+                };
+            };
+            responses: {
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Speaker"];
+                    };
+                };
+                /** @description Consentement absent, nom refusé, extrait refusé, ou trop peu de parole. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                default: components["responses"]["DEFAULT_ERROR"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/speakers/{speaker_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                speaker_id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Supprime un locuteur : sa voix et ses extraits. */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    speaker_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description No Content */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Locuteur introuvable. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                default: components["responses"]["DEFAULT_ERROR"];
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -517,10 +636,12 @@ export interface components {
             probabilities?: components["schemas"]["ClassProbability"][];
             /** @description Transcription : texte dit sur ce segment (chaîne vide si Whisper n'y a rien entendu). null pour les autres tâches. */
             text?: string | null;
+            /** @description Locuteur : similarité cosinus (−1 à 1) avec la voix enregistrée la plus proche, même si elle reste sous le seuil « inconnu » (EF-11). label est l'identifiant du locuteur (ou « unknown »), label_fr son nom (ou « Inconnu »). null pour les autres tâches. */
+            score?: number | null;
         };
         TaskResult: {
             /**
-             * @description done : résultat calculé ; no_speech : émotion ou transcription demandée mais aucune parole détectée, rien n'est inventé ; unavailable : tâche pas encore branchée, l'analyse réussit quand même.
+             * @description done : résultat calculé ; no_speech : émotion, transcription ou locuteur demandé mais aucune parole détectée, rien n'est inventé ; unavailable : pas de modèle pour cette tâche, ou locuteur demandé sans voix enregistrée ; l'analyse réussit quand même.
              * @enum {string}
              */
             status?: "done" | "no_speech" | "unavailable";
@@ -530,7 +651,7 @@ export interface components {
             label?: string | null;
             /** @description Libellé français de cette classe ; null si status ≠ done et pour la transcription. */
             label_fr?: string | null;
-            /** @description Résultat global : toutes les classes, de la plus probable à la moins probable, somme 1. Il est calculé à partir des segments : moyenne des fenêtres pour les événements, moyenne pondérée par la durée pour les émotions. Liste vide si status ≠ done, et toujours pour la transcription. */
+            /** @description Résultat global : toutes les classes, de la plus probable à la moins probable, somme 1. Il est calculé à partir des segments : moyenne des fenêtres pour les événements, moyenne pondérée par la durée pour les émotions, part du temps de parole de chacun pour le locuteur. Liste vide si status ≠ done, et toujours pour la transcription. */
             probabilities?: components["schemas"]["ClassProbability"][];
             /** @description Identifiant du modèle (registre) ; « demo » pour le faux prédicteur ; null si la tâche n'est pas branchée. */
             model_id?: string | null;
@@ -637,6 +758,30 @@ export interface components {
             /** @description Révision figée des poids (hash de commit). */
             revision?: string | null;
             description: string;
+        };
+        Speaker: {
+            id: string;
+            name: string;
+            /**
+             * Format: date-time
+             * @description Date d'enregistrement.
+             */
+            created_at: string;
+            /** @description Secondes de parole qui forment la voix. */
+            speech_s: number;
+            /** @description Nombre de morceaux de parole (1 à 5 s). */
+            segment_count: number;
+            /** @description Nombre d'extraits envoyés et gardés. */
+            audio_count: number;
+            /** @description Modèle qui a calculé la voix (registre) ; « demo » pour le faux prédicteur. Une voix n'est comparée qu'aux analyses faites avec ce modèle. */
+            model_id: string;
+            model_version: string;
+            /** @description Version du texte de consentement accepté. */
+            consent_version: string;
+        };
+        SpeakerFiles: {
+            /** @description Un ou plusieurs extraits (micro ou fichiers : wav, mp3, flac, ogg, webm ou m4a) ; répéter le champ ; au moins 10 s de parole au total. */
+            files: string[];
         };
     };
     responses: {

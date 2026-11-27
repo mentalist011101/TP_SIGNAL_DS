@@ -113,6 +113,31 @@ class RecordingConsentRecord(Base):
     analysis: Mapped[AnalysisRecord] = relationship(back_populates="consent_row")
 
 
+class SpeakerRecord(Base):
+    """Un locuteur enregistré sur la page Locuteurs, avec son consentement (EF-11, S6).
+
+    La voix est la moyenne normée des vecteurs de ses morceaux de parole (C15), stockée en JSON.
+    Elle n'a de sens qu'avec le modèle qui l'a calculée : model_id et model_version sont gardés,
+    et l'audio d'enregistrement est gardé sur disque pour pouvoir la recalculer avec un autre
+    modèle (décision de Luciano, 27 nov. 2026). Supprimer le locuteur supprime les deux.
+    """
+
+    __tablename__ = "speakers"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    name: Mapped[str] = mapped_column(String(80), unique=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utc_now)
+    voice: Mapped[list[float]] = mapped_column(JSON)
+    model_id: Mapped[str] = mapped_column(String(64))
+    model_version: Mapped[str] = mapped_column(String(32))
+    # Parole réellement utilisée (morceaux gardés par la VAD) et nombre de morceaux.
+    speech_s: Mapped[float]
+    segment_count: Mapped[int]
+    audio_count: Mapped[int]
+    # Version du texte de consentement accepté (configs/inference.yaml, speaker).
+    consent_version: Mapped[str] = mapped_column(String(32))
+
+
 def create_session_factory(database_url: str) -> sessionmaker[Session]:
     """Ouvre la base, crée les tables manquantes et renvoie une fabrique de sessions.
 
