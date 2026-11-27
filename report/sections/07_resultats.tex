@@ -62,13 +62,17 @@ augmente de couche en couche (9,7\,\% à la couche 0, 20,8\,\% à la couche 12).
 
 ECAPA-TDNN reconnaît la bonne personne dans 97,9\,\% des cas, sans grand écart entre
 sous-corpus (\texttt{ca16} 96,7\,\%, Niger 97,5\,\%, Yaoundé 99,2\,\%). Les intervalles des deux
-encodeurs ne se recouvrent pas : l'écart est net. mHuBERT garde surtout, dans ses couches
-profondes, ce qui est dit plutôt que qui parle, ce que montre la hausse régulière de l'EER de
-couche en couche.
+encodeurs ne se recouvrent pas : l'écart est net. Pour mHuBERT, l'EER de calibration monte
+régulièrement de couche en couche : les couches profondes séparent moins bien les voix. C'est
+cohérent avec l'idée qu'elles gardent surtout ce qui est dit plutôt que qui parle, sans que
+cette mesure le démontre.
 
 En ensemble ouvert, au seuil fixé sur d'autres voix, ECAPA accepte et identifie correctement
 90,6\,\% des phrases de voix connues et rejette 93,8\,\% des phrases de voix inconnues. Un
 premier protocole, qui prenait le seuil à l'EER sur des paires (phrase, voix) isolées, ne
+% 27,7 % : unknown_rejected d'ECAPA dans la première version de
+% training/results/c15_speaker_openslr57.json (commit f019855, 24 nov. 2026), avant la
+% correction du protocole (quatre groupes de locuteurs, seuil sur le meilleur score).
 rejetait que 27,7\,\% des inconnus : la décision compare au seuil le \emph{meilleur} de toutes
 les similarités, presque toujours plus élevé qu'une similarité isolée.
 
