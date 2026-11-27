@@ -15,6 +15,7 @@ from echolens.api.analyses import blp as analyses_blp
 from echolens.api.errors import handle_http_error
 from echolens.api.health import blp as health_blp
 from echolens.api.models import blp as models_blp
+from echolens.api.stream import sock
 from echolens.config import AppSettings, load_settings
 from echolens.services.analysis_service import AnalysisService
 from echolens.services.storage import create_session_factory
@@ -53,6 +54,8 @@ def create_app(settings: AppSettings | None = None, **overrides: Any) -> Flask:
     # Enregistré après Api(app) pour remplacer le gestionnaire de flask-smorest : toute erreur
     # porte ainsi un « message » en français (format décrit dans echolens.api.errors).
     app.register_error_handler(HTTPException, handle_http_error)
+    # Flux micro en direct (EF-14, D8) : WebSocket /ws/stream, hors de l'OpenAPI.
+    sock.init_app(app)
 
     _register_frontend(app, settings.web_dist_dir)
     return app

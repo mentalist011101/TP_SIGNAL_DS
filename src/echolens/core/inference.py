@@ -54,12 +54,27 @@ class TranscriptionSettings(BaseModel):
     temperature: list[float] = Field(min_length=1)
 
 
+class StreamSettings(BaseModel):
+    """Flux micro en direct (EF-14, D8) : fenêtres, limites et enregistrement consenti."""
+
+    window_s: float = Field(gt=0)
+    hop_s: float = Field(gt=0)
+    max_message_s: float = Field(gt=0)
+    latency_history: int = Field(gt=0)
+    silent_level_dbfs: float
+    tasks: list[str] = Field(min_length=1)
+    recording_tasks: list[str] = Field(min_length=1)
+    recording_profile: str
+    consent_version: str = Field(min_length=1)
+
+
 class InferenceConfig(BaseModel):
     """Contenu de configs/inference.yaml."""
 
     sound_event: SoundEventWindows
     emotion: EmotionWindows
     transcription: TranscriptionSettings
+    stream: StreamSettings
 
 
 class RankedProbability(BaseModel):

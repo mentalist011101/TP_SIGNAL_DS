@@ -32,12 +32,22 @@ from echolens.core.audio.io import TARGET_SAMPLE_RATE
 from echolens.core.data.class_labels import load_class_labels
 from echolens.core.features import FeatureConfig, log_mel_spectrogram
 from echolens.core.inference import load_inference_config
+from echolens.core.models.registry import Profile, Task
 from echolens.services.predictor import make_predictor
 from echolens.services.results import ResultContext, build_results, summarize_results
 from echolens.services.spectrogram_image import save_spectrogram_png
 from echolens.services.speech_detection import make_speech_detector
-from echolens.services.storage import AnalysisRecord, AnalysisStatus, AnalysisSummaryRecord
+from echolens.services.storage import (
+    AnalysisRecord,
+    AnalysisStatus,
+    AnalysisSummaryRecord,
+    RecordingConsentRecord,
+)
 
+# Chauffe des modèles au préchargement : 2 s d'un son de 440 Hz.
+WARM_UP_SECONDS = 2.0
+WARM_UP_FREQUENCY_HZ = 440.0
+WARM_UP_AMPLITUDE = 0.1
 # Format de l'audio conservé : WAV PCM 16 bits, mono 16 kHz (D2).
 CONVERTED_AUDIO_NAME = "audio.wav"
 CONVERTED_AUDIO_SUBTYPE = "PCM_16"
@@ -66,10 +76,16 @@ class AnalysisService:
         self._fail_interrupted_analyses()
 
     def create_analysis(
-        self, upload: FileStorage, tasks: list[str], profile: str
+        self,
+        upload: FileStorage,
+        tasks: list[str],
+        profile: str,
+        consent_version: str | None = None,
     ) -> AnalysisRecord:
         """Contrôle le fichier, enregistre l'analyse au statut pending et lance son traitement.
 
+        consent_version : pour une session du flux micro, la version du consentement accepté ;
+        il est enregistré dans le même commit que l'analyse (ENF-10). None pour un fichier.
         Lève AnalysisRejectedError (message en français) si un contrôle échoue ; dans ce cas,
         rien n'est enregistré.
         """
@@ -99,6 +115,11 @@ class AnalysisService:
             tasks=tasks,
             profile=profile,
         )
+        if consent_version is not None:
+            consent = RecordingConsentRecord(
+                analysis_id=analysis_id, consent_version=consent_version
+            )
+            record.consent_row = consent
         with self.session_factory() as session:
             session.add(record)
             session.commit()
@@ -293,12 +314,36 @@ def _make_result_context(settings: AppSettings) -> ResultContext:
     # Classes, prédicteur, découpage et VAD préparés une seule fois, au démarrage.
     labels = load_class_labels()
     predictor = make_predictor(settings, labels)
-    return ResultContext(
+    context = ResultContext(
         predictor=predictor,
         labels=labels,
         inference_config=load_inference_config(),
         speech_detector=make_speech_detector(load_preprocess_config().vad),
     )
+    # Démo : modèles chargés ET chauffés au démarrage, pour que la première fenêtre du
+    # direct ne paie pas l'initialisation de torch (environ 8 s mesurées sans chauffe).
+    if settings.preload_models:
+        warm_up_models(context)
+    return context
+
+
+def warm_up_models(context: ResultContext) -> None:
+    """Une inférence de chaque modèle de classification, dans chaque profil, puis la VAD.
+
+    La transcription n'est pas chauffée : sur un son sans parole, Whisper enchaîne ses replis
+    de température et la chauffe durerait plus d'une minute ; son modèle est déjà chargé.
+    """
+    # Étape 1 : une fenêtre de 2 s, un son de 440 Hz assez fort pour ne pas être du silence.
+    times = np.arange(int(WARM_UP_SECONDS * TARGET_SAMPLE_RATE)) / TARGET_SAMPLE_RATE
+    tone = WARM_UP_AMPLITUDE * np.sin(2 * np.pi * WARM_UP_FREQUENCY_HZ * times)
+    window = tone.astype(np.float32)
+    # Étape 2 : chaque modèle de classification, dans chaque profil où il existe.
+    for task in (Task.EMOTION, Task.SOUND_EVENT):
+        for profile in (Profile.QUALITY, Profile.REALTIME):
+            if context.predictor.supports(task, profile):
+                context.predictor.predict(task, profile, [window])
+    # Étape 3 : la VAD, utilisée par l'émotion, la transcription et le direct.
+    context.speech_detector.detect(window)
 
 
 def _clean_filename(sent_name: str, extension: str) -> str:
