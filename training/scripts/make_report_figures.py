@@ -387,7 +387,9 @@ def ablation_assets() -> list[Path]:
                 values.append(value)
                 lows.append(value - low)
                 highs.append(high - value)
-            label = "sans" if strength is None else f"force {strength}"
+            label = "sans"
+            if strength is not None:
+                label = f"force {decimal_fr(strength, 1)}"
             axis.errorbar(
                 positions + (index - 1.5) * 0.06,
                 values,
@@ -416,9 +418,9 @@ def cafe_assets() -> list[Path]:
     positions = np.arange(len(names))
     axis.bar(
         positions - 0.2,
-        [models[n]["in_domain_f1_mean"] for n in names],
+        [models[n]["in_domain_f1"] for n in names],
         0.4,
-        label="en domaine",
+        label="en domaine (même réseau)",
         color=INK_SOFT,
     )
     cafe = [models[n]["macro_f1"] for n in names]
@@ -437,7 +439,8 @@ def cafe_assets() -> list[Path]:
     )
     axis.set_xticks(positions, names, rotation=30, ha="right")
     axis.set_ylabel("F1 macro")
-    axis.legend()
+    axis.set_ylim(0, 1)
+    axis.legend(ncol=2, loc="upper center", frameon=False)
     axis.spines["top"].set_visible(False)
     axis.spines["right"].set_visible(False)
     paths = [save_figure(figure, "fig_cafe_f1.png")]
