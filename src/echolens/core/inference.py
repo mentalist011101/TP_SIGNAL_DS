@@ -7,7 +7,9 @@ modèle donne des probabilités par fenêtre, puis on en déduit le résultat gl
 - émotions : segments de parole de la VAD, coupés en morceaux de 5 s au plus ; global =
   moyenne pondérée par la durée, pour qu'un morceau de 0,5 s pèse dix fois moins qu'un de 5 s ;
 - transcription : segments de parole de la VAD, coupés en morceaux de 30 s au plus ; un texte
-  par morceau, sans probabilités.
+  par morceau, sans probabilités ;
+- locuteur : segments de parole de la VAD, coupés en morceaux de 5 s au plus, ceux de moins
+  de 1 s écartés ; un vecteur de voix par morceau (EF-11).
 Une moyenne de distributions de probabilité somme encore à 1 (combinaison convexe).
 """
 
@@ -54,12 +56,53 @@ class TranscriptionSettings(BaseModel):
     temperature: list[float] = Field(min_length=1)
 
 
+class SpeakerSettings(BaseModel):
+    """Identification du locuteur (EF-11, C15) : seuil, morceaux de parole, enregistrement."""
+
+    threshold: float = Field(ge=-1, le=1)
+    max_window_s: float = Field(gt=0)
+    min_window_s: float = Field(gt=0)
+    min_enrollment_speech_s: float = Field(gt=0)
+    consent_version: str = Field(min_length=1)
+
+
+class VoiceCloningSettings(BaseModel):
+    """Clonage de voix (EF-18, C35) : texte, modèle à la demande, bip de marquage."""
+
+    language: str
+    max_text_chars: int = Field(gt=0)
+    temperature: float = Field(gt=0)
+    idle_unload_s: float = Field(gt=0)
+    marker_frequency_hz: float = Field(gt=0)
+    marker_duration_s: float = Field(gt=0)
+    marker_amplitude: float = Field(gt=0, le=1)
+    marker_gap_s: float = Field(ge=0)
+    consent_version: str = Field(min_length=1)
+
+
+class StreamSettings(BaseModel):
+    """Flux micro en direct (EF-14, D8) : fenêtres, limites et enregistrement consenti."""
+
+    window_s: float = Field(gt=0)
+    hop_s: float = Field(gt=0)
+    max_message_s: float = Field(gt=0)
+    latency_history: int = Field(gt=0)
+    silent_level_dbfs: float
+    tasks: list[str] = Field(min_length=1)
+    recording_tasks: list[str] = Field(min_length=1)
+    recording_profile: str
+    consent_version: str = Field(min_length=1)
+
+
 class InferenceConfig(BaseModel):
     """Contenu de configs/inference.yaml."""
 
     sound_event: SoundEventWindows
     emotion: EmotionWindows
     transcription: TranscriptionSettings
+    speaker: SpeakerSettings
+    voice_cloning: VoiceCloningSettings
+    stream: StreamSettings
 
 
 class RankedProbability(BaseModel):
@@ -131,6 +174,21 @@ def transcription_windows(speech_segments: list[Segment], config: InferenceConfi
     for segment in speech_segments:
         pieces = split_long_segment(segment, config.transcription.max_window_s)
         windows.extend(pieces)
+    return windows
+
+
+def speaker_windows(speech_segments: list[Segment], settings: SpeakerSettings) -> list[Segment]:
+    """Morceaux de parole dont on reconnaît la voix (EF-11), dans l'ordre du temps.
+
+    Coupés en morceaux égaux de max_window_s au plus, pour suivre les tours de parole ; ceux de
+    moins de min_window_s sont écartés : trop courts pour une voix fiable.
+    """
+    windows: list[Segment] = []
+    for segment in speech_segments:
+        pieces = split_long_segment(segment, settings.max_window_s)
+        for piece in pieces:
+            if piece.duration_s >= settings.min_window_s:
+                windows.append(piece)
     return windows
 
 

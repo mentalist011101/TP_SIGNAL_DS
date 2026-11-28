@@ -1,7 +1,8 @@
-import type { TaskResult } from '../../api/client.ts'
+import type { AnalysisTask, TaskResult } from '../../api/client.ts'
 import { findHesitation, formatProbability, mainProbability } from './taskResult.ts'
 
 interface MainResultValueProps {
+  task: AnalysisTask
   result: TaskResult
   // Interligne du titre : serré dans une carte, un peu plus large dans les chiffres clés.
   leading: 'leading-none' | 'leading-tight'
@@ -9,9 +10,13 @@ interface MainResultValueProps {
 
 // Résultat principal d'une tâche, en grand : la classe la plus probable et sa probabilité,
 // ou « Hésite entre X et Y » avec les deux probabilités quand elles sont trop proches
-// (findHesitation). Sert à la carte de la tâche et aux chiffres clés.
-export default function MainResultValue({ result, leading }: MainResultValueProps) {
-  const hesitation = findHesitation(result)
+// (findHesitation). Sert à la carte de la tâche et aux chiffres clés. Locuteur : des parts du
+// temps de parole, pas des probabilités, donc jamais d'hésitation.
+export default function MainResultValue({ task, result, leading }: MainResultValueProps) {
+  let hesitation = findHesitation(result)
+  if (task === 'speaker') {
+    hesitation = null
+  }
   if (hesitation !== null) {
     const firstPercent = formatProbability(hesitation.first.probability)
     const secondPercent = formatProbability(hesitation.second.probability)

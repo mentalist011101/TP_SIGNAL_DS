@@ -15,7 +15,7 @@ from echolens.core.models.registry import Profile, Task
 from echolens.services.predictor import DemoPredictor, class_counts
 from echolens.services.results import (
     NO_SPEECH_MESSAGE,
-    UNAVAILABLE_MESSAGE,
+    NO_VOICE_MESSAGE,
     ResultContext,
     build_results,
 )
@@ -85,7 +85,8 @@ def test_demo_predictor_says_demo_and_not_calibrated() -> None:
     assert (info.model_id, info.model_version, info.calibrated) == ("demo", "0", False)
     assert predictor.supports(Task.EMOTION, Profile.REALTIME)
     assert predictor.supports(Task.TRANSCRIPTION, Profile.QUALITY)
-    assert not predictor.supports(Task.SPEAKER, Profile.QUALITY)
+    assert predictor.supports(Task.SPEAKER, Profile.QUALITY)
+    assert not predictor.supports(Task.VOICE_CLONING, Profile.QUALITY)
 
 
 def test_demo_transcription_is_a_fixed_text_per_window() -> None:
@@ -173,10 +174,10 @@ def test_emotion_global_is_the_duration_weighted_mean_of_segments(
         assert entry["probability"] == pytest.approx(expected, abs=1e-3)
 
 
-def test_speaker_not_plugged_in_is_unavailable(context: ResultContext) -> None:
+def test_speaker_without_enrolled_voice_is_unavailable(context: ResultContext) -> None:
     results = build_results(tone(3.0), ["speaker"], "realtime", context)
     assert results["speaker"]["status"] == "unavailable"
-    assert results["speaker"]["message"] == UNAVAILABLE_MESSAGE
+    assert results["speaker"]["message"] == NO_VOICE_MESSAGE
     assert results["speaker"]["model_id"] is None
     assert results["speaker"]["text"] is None
 

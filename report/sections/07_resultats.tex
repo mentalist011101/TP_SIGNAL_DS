@@ -62,21 +62,67 @@ augmente de couche en couche (9,7\,\% à la couche 0, 20,8\,\% à la couche 12).
 
 ECAPA-TDNN reconnaît la bonne personne dans 97,9\,\% des cas, sans grand écart entre
 sous-corpus (\texttt{ca16} 96,7\,\%, Niger 97,5\,\%, Yaoundé 99,2\,\%). Les intervalles des deux
-encodeurs ne se recouvrent pas : l'écart est net. mHuBERT garde surtout, dans ses couches
-profondes, ce qui est dit plutôt que qui parle, ce que montre la hausse régulière de l'EER de
-couche en couche.
+encodeurs ne se recouvrent pas : l'écart est net. Pour mHuBERT, l'EER de calibration monte
+régulièrement de couche en couche : les couches profondes séparent moins bien les voix. C'est
+cohérent avec l'idée qu'elles gardent surtout ce qui est dit plutôt que qui parle, sans que
+cette mesure le démontre.
 
 En ensemble ouvert, au seuil fixé sur d'autres voix, ECAPA accepte et identifie correctement
 90,6\,\% des phrases de voix connues et rejette 93,8\,\% des phrases de voix inconnues. Un
 premier protocole, qui prenait le seuil à l'EER sur des paires (phrase, voix) isolées, ne
+% 27,7 % : unknown_rejected d'ECAPA dans la première version de
+% training/results/c15_speaker_openslr57.json (commit f019855, 24 nov. 2026), avant la
+% correction du protocole (quatre groupes de locuteurs, seuil sur le meilleur score).
 rejetait que 27,7\,\% des inconnus : la décision compare au seuil le \emph{meilleur} de toutes
 les similarités, presque toujours plus élevé qu'une similarité isolée.
 
 \subsection{Transcription}
 \label{sec:res-wer}
 
-\aRediger{Lynn, après C17}{WER et CER de Whisper base et small (français forcé) sur le test
-  officiel d'OpenSLR~57 et sur Yaoundé, avec intervalles de confiance et RTF.}
+% Chiffres : training/results/c17_transcription.json (C17a, GPU float16) et
+% training/results/c17c_wer_cameroun.json (C17c, CPU int8, par pays).
+faster-whisper base et small sont évalués en français forcé, recherche en faisceau de largeur 5,
+sans VAD, sur le test officiel d'OpenSLR~57 (515 phrases, 12 locuteurs, 0,31\,h) et sur la partie
+lue du sous-corpus de Yaoundé (6\,299 phrases, 84 locuteurs, 8,53\,h). Référence et transcription
+sont normalisées de la même façon (P12). Les intervalles à 95\,\% viennent d'un bootstrap sur les
+locuteurs (tableau~\ref{tab:wer}).
+
+\begin{table}[ht]
+  \centering
+  \small
+  \begin{tabular}{@{}lrrrr@{}}
+    \toprule
+    Modèle & WER test & CER test & WER Yaoundé (lu) & RTF (CPU int8) \\
+    \midrule
+    base  & 27,9\,\% [23,5 ; 32,0] & 13,3\,\% & 50,5\,\% [48,7 ; 52,3] & 0,17 \\
+    small & \textbf{14,4\,\%} [11,4 ; 17,1] & \textbf{6,7\,\%} & \textbf{34,5\,\%} [32,9 ; 36,1] & 0,52 \\
+    \bottomrule
+  \end{tabular}
+  \caption{Transcription sur OpenSLR~57 (GPU, float16). RTF : temps de calcul divisé par la
+    durée du son, mesuré sur un ordinateur portable (Core i5-6200U, 4 fils).}
+  \label{tab:wer}
+\end{table}
+
+small divise environ par deux les erreurs de base : $-13{,}5$ points sur le test
+[$-16{,}5$ ; $-10{,}5$] et $-16{,}0$ points sur Yaoundé [$-16{,}9$ ; $-15{,}1$], deux écarts
+significatifs. Il reste
+assez rapide pour l'application (RTF 0,52 : trente secondes de son sont transcrites en environ
+quinze secondes). Le WER est bien plus élevé sur Yaoundé que sur le test (34,5\,\% contre
+14,4\,\% pour small, 50,5\,\% contre 27,9\,\% pour base). Les deux corpus diffèrent par le
+contenu, la longueur des phrases, l'enregistrement et les locuteurs, et le test contient aussi
+des locuteurs camerounais : cette mesure ne permet pas d'isoler l'effet de l'accent.
+
+\paragraph{Par pays.} Le test officiel ne contient que 72 phrases camerounaises, dites par trois
+hommes. En les retranscrivant avec le reste du test (CPU, int8 ; le WER global obtenu,
+14,3\,\% pour small, est celui de C17a à 0,1 point près), small donne 13,8\,\%
+[7,0 ; 18,7] au Cameroun contre 14,9\,\% [10,7 ; 18,4] au Gabon (410 phrases, 7 locuteurs) :
+pas d'écart mesurable entre ces deux pays, avec seulement trois locuteurs camerounais, tous des
+hommes. base est moins bon sur les phrases camerounaises (34,6\,\% [23,1 ; 45,3] contre
+25,6\,\%), mais les intervalles se recouvrent. Le Tchad et le Congo n'ont qu'un locuteur
+chacun : leur WER ne se généralise pas. Deux des 72 phrases camerounaises font partie des
+phrases du test où les deux modèles se trompent sur tous les mots : après vérification, ce sont
+des erreurs de reconnaissance et non des références fausses ; elles restent donc dans le calcul.
+
 
 \subsection{Analyse des erreurs}
 \label{sec:res-erreurs}

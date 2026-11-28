@@ -9,9 +9,12 @@
 #   profiles  quality | realtime (EF-07) : un seul modèle par tâche et par profil
 #   weights   hf://<utilisateur>/<dépôt> ; revision : hash de commit du dépôt (40 caractères)
 #   metrics   F1 macro et accuracy de test : ESC-50, moyenne des 5 tours (P3) ; émotions,
-#             moyenne des 3 graines sur le test de CREMA-D et RAVDESS (P1)
+#             moyenne des 3 graines sur le test de CREMA-D et RAVDESS (P1) ; locuteur,
+#             accuracy entre voix enregistrées sur l'évaluation d'OpenSLR 57 (C15, P11)
 #   temperature  T de la calibration (E2, ENF-06), calibration.temperature du config.json du
 #             dépôt arrondie au millième ; sert à l'affichage (page Modèles, page Résultat)
+#   ece_before, ece_after  ECE avant et après la calibration (E2), calibration.ece_before et
+#             ece_after du même config.json, arrondies au dix-millième (fiche du modèle, EF-16)
 #   engine    transcription seulement : moteur d'inférence (faster-whisper, CTranslate2) ;
 #             compute_type (int8 sur CPU) et cpu_threads (fils de calcul) vont avec
 #
@@ -28,6 +31,8 @@ models:
     labels: [neutral, happy, sad, angry, fear, disgust]
     metrics: {f1_macro: 0.7535, accuracy: 0.7495}
     temperature: 1.109
+    ece_before: 0.0302
+    ece_after: 0.0223
     description: Tête sur l'encodeur gelé de Whisper base (somme pondérée des couches, MLP), calibrée (T = 1,109)
   - id: echolens-sound-event-whisper-base
     task: sound_event
@@ -38,6 +43,8 @@ models:
     revision: 27f3e6a28eb5f1a809ed8ddb32fc177f08afce11
     metrics: {f1_macro: 0.8303, accuracy: 0.8347}
     temperature: 1.461
+    ece_before: 0.0442
+    ece_after: 0.0331
     description: Tête sur l'encodeur gelé de Whisper base, entraînée sur les 5 folds d'ESC-50, calibrée (T = 1,461)
   - id: echolens-sound-event-crnn
     task: sound_event
@@ -48,6 +55,8 @@ models:
     revision: f3be3ad0d1a9cf719a79ad9076d2322cd6dd2115
     metrics: {f1_macro: 0.8266, accuracy: 0.8322}
     temperature: 0.786
+    ece_before: 0.0660
+    ece_after: 0.0155
     description: CRNN (4 blocs conv, BiGRU, attention) sur log-Mel 64 bandes, 5 folds d'ESC-50, calibré (T = 0,786)
   - id: echolens-emotion-crnn
     task: emotion
@@ -59,6 +68,8 @@ models:
     labels: [neutral, happy, sad, angry, fear, disgust]
     metrics: {f1_macro: 0.6680, accuracy: 0.6664}
     temperature: 1.088
+    ece_before: 0.0501
+    ece_after: 0.0331
     description: CRNN (4 blocs conv, BiGRU, attention) sur log-Mel 64 bandes, fenêtre de 3 s, CREMA-D et RAVDESS, calibré (T = 1,088)
   - id: echolens-transcription-whisper-small
     task: transcription
@@ -82,3 +93,20 @@ models:
     compute_type: int8
     cpu_threads: 4
     description: Whisper base (OpenAI), converti pour faster-whisper (CTranslate2), int8 sur CPU, français imposé ; WER 0,279 [0,235 ; 0,320] sur le test d'OpenSLR 57 et 0,505 [0,487 ; 0,523] sur yaounde/read, CER 0,133 et 0,253 (C17a), écart int8/float16 non significatif
+  - id: ecapa-voxceleb
+    task: speaker
+    family: pretrained
+    profiles: [quality, realtime]
+    version: 1.0.0
+    weights: hf://speechbrain/spkrec-ecapa-voxceleb
+    revision: 0f99f2d0ebe89ac095bcc5903c4dd8f72b367286
+    metrics: {accuracy: 0.979}
+    description: ECAPA-TDNN de SpeechBrain (VoxCeleb), gelé, vecteur de voix de 192 valeurs, similarité cosinus ; sur OpenSLR 57 (C15), accuracy 0,979 [0,966 ; 0,988] entre voix enregistrées, EER 0,030 [0,019 ; 0,044], seuil « inconnu » 0,5485 (90,6 % des voix connues reconnues, 93,8 % des inconnus rejetés)
+  - id: xtts-v2
+    task: voice_cloning
+    family: pretrained
+    profiles: [quality]
+    version: 2.0.3
+    weights: hf://coqui/XTTS-v2
+    revision: 6c2b0d75eae4b7047358e3b6bd9325f857d43f77
+    description: XTTS-v2 de Coqui (Coqui Public Model License, usage non commercial), clonage à partir de quelques secondes de voix, français imposé ; chargé seulement au premier clonage, sortie marquée « voix synthétique » (bip, nom de fichier, métadonnées) ; voix consentantes seulement (ENF-10)

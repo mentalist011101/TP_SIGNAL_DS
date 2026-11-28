@@ -33,3 +33,68 @@ transcription:
   vad_filter: false                     # la VAD de l'application a déjà découpé la parole
   condition_on_previous_text: false     # chaque segment est transcrit seul
   temperature: [0.0, 0.2, 0.4, 0.6, 0.8, 1.0]   # replis de faster-whisper, écrits explicitement
+
+# Locuteur (EF-11, C15) : ECAPA-TDNN donne un vecteur de voix (192 valeurs) par morceau de
+# parole de la VAD (D5). La voix d'un locuteur enregistré est la moyenne de ses vecteurs, ramenée
+# à une norme 1. Chaque morceau d'une analyse est comparé à chaque voix par similarité cosinus :
+# le meilleur score désigne le locuteur s'il atteint le seuil, sinon « Inconnu ». C'est la règle
+# exacte de l'évaluation C15 (P11).
+speaker:
+  # Seuil « inconnu » de C15 (training/results/c15_speaker_openslr57.json, ecapa-voxceleb), au
+  # dix-millième : EER de la décision en ensemble ouvert sur le groupe de calibration. Mesuré
+  # ensuite sur l'évaluation : 90,6 % des voix connues acceptées ET bien reconnues, 93,8 % des
+  # inconnus rejetés. Le test test_speaker_threshold_is_the_c15_one vérifie la recopie.
+  threshold: 0.5485
+  # Un long tour de parole est coupé en morceaux égaux de 5 s au plus ; un morceau de moins de
+  # 1 s est écarté, trop court pour une voix fiable (médiane des phrases de C15 : 3,6 s).
+  max_window_s: 5.0
+  min_window_s: 1.0
+  # Enregistrement d'une voix : au moins 10 s de parole au total, extraits réunis (en C15, la
+  # voix était la moyenne de 5 phrases, soit environ 18 s en médiane).
+  min_enrollment_speech_s: 10.0
+  # Version du texte de consentement de la page Locuteurs (S6), enregistrée avec la voix.
+  # Changer le texte oblige à changer la version, ici et dans le front.
+  consent_version: locuteurs-v1
+
+# Clonage de voix (EF-18, ENF-10, C35) : XTTS-v2 parle avec la voix d'un locuteur enregistré qui
+# a accepté le clonage (seconde case de la page Locuteurs). Ses extraits d'enregistrement servent
+# de référence. Le modèle n'est chargé qu'au premier clonage (environ 2,5 Go de mémoire) et libéré
+# après idle_unload_s secondes sans usage. Chaque extrait produit est marqué « voix synthétique » :
+# un bip audible au début, le nom du fichier et les métadonnées du WAV.
+voice_cloning:
+  language: fr                  # XTTS-v2 sait le français ; langue imposée, comme la transcription
+  max_text_chars: 300           # environ 20 s de parole : une synthèse sur CPU reste raisonnable
+  temperature: 0.7              # valeur conseillée par Coqui pour XTTS-v2, écrite explicitement
+  idle_unload_s: 300            # 5 min sans clonage : le modèle quitte la mémoire
+  # Bip de marquage, avant la voix : 1 kHz pendant 0,25 s, puis 0,25 s de silence. Un son pur,
+  # bien distinct d'une voix, qui reste dans le fichier même copié sans ses métadonnées.
+  marker_frequency_hz: 1000.0
+  marker_duration_s: 0.25
+  marker_amplitude: 0.3
+  marker_gap_s: 0.25
+  # Version du texte de consentement au clonage (page Locuteurs), gardée avec la voix.
+  consent_version: clonage-v1
+
+# Flux micro en direct (EF-14, C23, D8) : le navigateur envoie du PCM Int16 mono à 16 kHz par
+# WebSocket. Toutes les hop_s secondes, le serveur analyse les window_s dernières secondes, en
+# profil temps réel (CRNN des événements, CRNN des émotions, VAD Silero). Un calcul plus long
+# que hop_s fait sauter les fenêtres en retard : on analyse toujours le son le plus récent, et la
+# latence reste bornée (ENF-01 : calcul < hop_s au p95, soit RTF < hop_s / window_s = 0,25).
+stream:
+  window_s: 2.0                 # W (D8)
+  hop_s: 0.5                    # H (D8)
+  max_message_s: 1.0            # un message binaire plus long est refusé (S6)
+  latency_history: 600          # p50 et p95 calculés sur les 600 dernières fenêtres (5 min)
+  # Sous ce niveau RMS (dBFS), la fenêtre reçue est considérée comme muette : un micro coupé
+  # ou mal choisi envoie des zéros, et les modèles rendent alors toujours le même résultat.
+  # Le moindre bruit de fond d'un micro réel est bien au-dessus.
+  silent_level_dbfs: -80.0
+  tasks: [emotion, sound_event]
+  # Enregistrement dans l'historique (avec consentement) : à l'arrêt, l'audio complet de la
+  # session devient une analyse ordinaire, faite avec ces tâches et ce profil, et limitée à
+  # max_audio_seconds (configs/app.yaml, comme un fichier importé).
+  recording_tasks: [emotion, sound_event, transcription]
+  recording_profile: quality
+  # Version du texte de consentement affiché par la page Direct (ENF-10) : elle est enregistrée
+  # avec l'analyse. Changer le texte oblige à changer la version, ici et dans le front.
+  consent_version: direct-v1

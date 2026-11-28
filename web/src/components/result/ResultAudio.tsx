@@ -1,6 +1,8 @@
 import { useRef, useState } from 'react'
-import type { Analysis } from '../../api/client.ts'
+import { useModels, type Analysis } from '../../api/client.ts'
 import SpectrogramView from '../analyze/SpectrogramView.tsx'
+import GradCamControls, { RealtimeOnlyNote } from './GradCamControls.tsx'
+import { gradCamTasks, gradCamUrl, needsRealtimeNote, type GradCamTask } from './gradCam.ts'
 import SegmentDetails from './SegmentDetails.tsx'
 import Timeline from './Timeline.tsx'
 import type { SelectedSegment } from './timeline.ts'
@@ -12,6 +14,15 @@ export default function ResultAudio({ analysis }: { analysis: Analysis }) {
   const audioRef = useRef<HTMLAudioElement>(null)
   const [currentTimeS, setCurrentTimeS] = useState(0)
   const [selected, setSelected] = useState<SelectedSegment | null>(null)
+  // Carte Grad-CAM posée sur le spectrogramme (EF-13) : aucune au départ.
+  const [gradCamTask, setGradCamTask] = useState<GradCamTask | null>(null)
+  const models = useModels()
+  const catalog = models.data ?? []
+  const availableGradCams = gradCamTasks(analysis, catalog)
+  let overlayUrl: string | null = null
+  if (gradCamTask !== null) {
+    overlayUrl = gradCamUrl(analysis.id, gradCamTask)
+  }
 
   // La tête de lecture de la frise suit l'audio.
   function handleTimeUpdate() {
@@ -47,7 +58,15 @@ export default function ResultAudio({ analysis }: { analysis: Analysis }) {
         />
       )}
       <h2 className="text-base font-semibold">Spectrogramme et frise</h2>
-      <SpectrogramView analysis={analysis} />
+      <SpectrogramView analysis={analysis} overlayUrl={overlayUrl} />
+      {availableGradCams.length > 0 && (
+        <GradCamControls
+          tasks={availableGradCams}
+          selected={gradCamTask}
+          onSelect={setGradCamTask}
+        />
+      )}
+      {availableGradCams.length === 0 && needsRealtimeNote(analysis) && <RealtimeOnlyNote />}
       {hasTimeline && (
         <div className="space-y-4 border-t border-rule pt-4">
           <Timeline

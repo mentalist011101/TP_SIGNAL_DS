@@ -312,6 +312,68 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/analyses/{analysis_id}/gradcam": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                analysis_id: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * Carte Grad-CAM d'une tâche (E7, EF-13), à poser sur l'image du spectrogramme.
+         * @description Blanc plus ou moins opaque : plus une zone est claire, plus elle a poussé le modèle vers
+         *     la classe prédite. Seulement pour les CRNN de la famille A (profil Temps réel) ;
+         *     calculée à la première demande, puis gardée.
+         */
+        get: {
+            parameters: {
+                query: {
+                    /** @description emotion ou sound_event. */
+                    task: "emotion" | "sound_event";
+                };
+                header?: never;
+                path: {
+                    analysis_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Carte Grad-CAM en PNG transparent, de la taille du spectrogramme. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                400: components["responses"]["BAD_REQUEST"];
+                /** @description Analyse introuvable. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Pas de carte possible : analyse pas terminée, tâche sans résultat, profil Qualité (têtes Whisper) ou mode démonstration. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                default: components["responses"]["DEFAULT_ERROR"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/analyses/{analysis_id}/spectrogram": {
         parameters: {
             query?: never;
@@ -383,6 +445,587 @@ export interface paths {
                     content: {
                         "application/json": components["schemas"]["Model"][];
                     };
+                };
+                default: components["responses"]["DEFAULT_ERROR"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/models/{model_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                model_id: string;
+            };
+            cookie?: never;
+        };
+        /** Fiche d'un modèle : scores, calibration, matrice de confusion, F1 par classe. */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    model_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ModelCard"];
+                    };
+                };
+                /** @description Modèle absent du registre. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                default: components["responses"]["DEFAULT_ERROR"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/compare": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Comparaisons passées, les plus récentes d'abord, sans leurs résultats. */
+        get: {
+            parameters: {
+                query?: {
+                    limit?: number;
+                    offset?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ComparisonSummary"][];
+                    };
+                };
+                400: components["responses"]["BAD_REQUEST"];
+                default: components["responses"]["DEFAULT_ERROR"];
+            };
+        };
+        put?: never;
+        /**
+         * Fait tourner chaque modèle du registre des tâches choisies sur le même fichier.
+         * @description Répond 202 ; suivre le calcul avec GET /api/v1/compare/{id}.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "multipart/form-data": components["schemas"]["ComparisonFile"];
+                };
+            };
+            responses: {
+                /** @description Accepted */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Comparison"];
+                    };
+                };
+                /** @description Fichier refusé : format, décodage, durée ou silence. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                default: components["responses"]["DEFAULT_ERROR"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/compare/{comparison_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                comparison_id: string;
+            };
+            cookie?: never;
+        };
+        /** Statut et résultats d'une comparaison. */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    comparison_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Comparison"];
+                    };
+                };
+                /** @description Comparaison introuvable. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                default: components["responses"]["DEFAULT_ERROR"];
+            };
+        };
+        put?: never;
+        post?: never;
+        /** Supprime une comparaison et son audio. */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    comparison_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description No Content */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Comparaison introuvable. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                default: components["responses"]["DEFAULT_ERROR"];
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/compare/{comparison_id}/audio": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                comparison_id: string;
+            };
+            cookie?: never;
+        };
+        /** Audio converti de la comparaison, pour la réécoute. */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    comparison_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Audio WAV 16 kHz mono. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Comparaison introuvable ou audio pas encore converti. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                default: components["responses"]["DEFAULT_ERROR"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/speakers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Liste les locuteurs enregistrés, par ordre alphabétique. */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Speaker"][];
+                    };
+                };
+                default: components["responses"]["DEFAULT_ERROR"];
+            };
+        };
+        put?: never;
+        /**
+         * Enregistre la voix d'un locuteur, avec son consentement (EF-11, S6).
+         * @description La VAD garde les morceaux de parole de 1 à 5 s ; la voix est la moyenne normée de
+         *     leurs vecteurs (C15). Il faut au moins 10 s de parole, extraits réunis.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "multipart/form-data": components["schemas"]["SpeakerFiles"];
+                };
+            };
+            responses: {
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Speaker"];
+                    };
+                };
+                /** @description Consentement absent, nom refusé, extrait refusé, ou trop peu de parole. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                default: components["responses"]["DEFAULT_ERROR"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/speakers/{speaker_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                speaker_id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Supprime un locuteur : sa voix et ses extraits. */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    speaker_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description No Content */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Locuteur introuvable. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                default: components["responses"]["DEFAULT_ERROR"];
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Extraits synthétiques gardés, les plus récents d'abord. */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Synthesis"][];
+                    };
+                };
+                default: components["responses"]["DEFAULT_ERROR"];
+            };
+        };
+        put?: never;
+        /**
+         * Fait dire un texte à une voix consentante (XTTS-v2), en arrière-plan.
+         * @description Répond 202 ; suivre le calcul avec GET /api/v1/tts/{id}. L'audio commence par un bip
+         *     et ses métadonnées disent « voix synthétique ».
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["SynthesisRequest"];
+                };
+            };
+            responses: {
+                /** @description Accepted */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Synthesis"];
+                    };
+                };
+                /** @description Texte vide ou trop long. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Le locuteur n'a pas accepté le clonage. */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Locuteur introuvable. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Clonage indisponible. */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                default: components["responses"]["DEFAULT_ERROR"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tts/{synthesis_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                synthesis_id: string;
+            };
+            cookie?: never;
+        };
+        /** Statut d'un extrait synthétique. */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    synthesis_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Synthesis"];
+                    };
+                };
+                /** @description Extrait introuvable. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                default: components["responses"]["DEFAULT_ERROR"];
+            };
+        };
+        put?: never;
+        post?: never;
+        /** Supprime un extrait synthétique et son audio. */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    synthesis_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description No Content */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Extrait introuvable. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                default: components["responses"]["DEFAULT_ERROR"];
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tts/{synthesis_id}/audio": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                synthesis_id: string;
+            };
+            cookie?: never;
+        };
+        /** Audio de l'extrait, avec le bip de marquage et ses métadonnées. */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    synthesis_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description WAV marqué « voix synthétique ». */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Extrait introuvable ou pas encore prêt. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
                 };
                 default: components["responses"]["DEFAULT_ERROR"];
             };
@@ -517,10 +1160,12 @@ export interface components {
             probabilities?: components["schemas"]["ClassProbability"][];
             /** @description Transcription : texte dit sur ce segment (chaîne vide si Whisper n'y a rien entendu). null pour les autres tâches. */
             text?: string | null;
+            /** @description Locuteur : similarité cosinus (−1 à 1) avec la voix enregistrée la plus proche, même si elle reste sous le seuil « inconnu » (EF-11). label est l'identifiant du locuteur (ou « unknown »), label_fr son nom (ou « Inconnu »). null pour les autres tâches. */
+            score?: number | null;
         };
         TaskResult: {
             /**
-             * @description done : résultat calculé ; no_speech : émotion ou transcription demandée mais aucune parole détectée, rien n'est inventé ; unavailable : tâche pas encore branchée, l'analyse réussit quand même.
+             * @description done : résultat calculé ; no_speech : émotion, transcription ou locuteur demandé mais aucune parole détectée, rien n'est inventé ; unavailable : pas de modèle pour cette tâche, ou locuteur demandé sans voix enregistrée ; l'analyse réussit quand même.
              * @enum {string}
              */
             status?: "done" | "no_speech" | "unavailable";
@@ -530,7 +1175,7 @@ export interface components {
             label?: string | null;
             /** @description Libellé français de cette classe ; null si status ≠ done et pour la transcription. */
             label_fr?: string | null;
-            /** @description Résultat global : toutes les classes, de la plus probable à la moins probable, somme 1. Il est calculé à partir des segments : moyenne des fenêtres pour les événements, moyenne pondérée par la durée pour les émotions. Liste vide si status ≠ done, et toujours pour la transcription. */
+            /** @description Résultat global : toutes les classes, de la plus probable à la moins probable, somme 1. Il est calculé à partir des segments : moyenne des fenêtres pour les événements, moyenne pondérée par la durée pour les émotions, part du temps de parole de chacun pour le locuteur. Liste vide si status ≠ done, et toujours pour la transcription. */
             probabilities?: components["schemas"]["ClassProbability"][];
             /** @description Identifiant du modèle (registre) ; « demo » pour le faux prédicteur ; null si la tâche n'est pas branchée. */
             model_id?: string | null;
@@ -637,6 +1282,153 @@ export interface components {
             /** @description Révision figée des poids (hash de commit). */
             revision?: string | null;
             description: string;
+        };
+        Confusion: {
+            /** @description Noms des lignes et des colonnes, dans l'ordre de la matrice. */
+            labels: string[];
+            /** @description matrix[i][j] : part des extraits de la classe i prédits j. */
+            matrix: number[][];
+        };
+        ClassF1: {
+            label: string;
+            label_fr: string;
+            f1: number;
+        };
+        ModelCard: {
+            /** @description Identifiant, aussi nom du dépôt Hugging Face. */
+            id: string;
+            /** @description emotion, sound_event, transcription, speaker ou voice_cloning. */
+            task: string;
+            /** @description Famille comparée : baseline, A, B ou pretrained. */
+            family: string;
+            /** @description Profils qui utilisent ce modèle : quality, realtime (EF-07). */
+            profiles: string[];
+            version: string;
+            /** @description F1 macro de test (ESC-50 : moyenne des 5 tours, P3 ; émotions : moyenne des 3 graines, P1) ; null si non mesuré. */
+            f1_macro?: number | null;
+            /** @description Accuracy de test. */
+            accuracy?: number | null;
+            /** @description Température T de la calibration (ENF-06) ; null sinon. */
+            temperature?: number | null;
+            /** @description Vrai si les probabilités sont calibrées. */
+            calibrated: boolean;
+            /** @description Page du dépôt des poids sur Hugging Face. */
+            huggingface_url?: string | null;
+            /** @description Révision figée des poids (hash de commit). */
+            revision?: string | null;
+            description: string;
+            /** @description ECE avant la calibration (E2) ; null sans calibration. */
+            ece_before?: number | null;
+            /** @description ECE après la calibration par température (ENF-06). */
+            ece_after?: number | null;
+            /** @description Sur quoi les chiffres ont été mesurés. */
+            evaluation?: string | null;
+            /** @description Fichier de résultats du dépôt d'où viennent les chiffres. */
+            results_file?: string | null;
+            /** @description Commit du code qui a produit ces résultats. */
+            results_commit?: string | null;
+            confusion?: (Record<string, never> | null) | components["schemas"]["Confusion"];
+            /** @description F1 de chaque classe, du plus haut au plus bas ; vide hors classification. */
+            per_class_f1: components["schemas"]["ClassF1"][];
+        };
+        ComparisonSummary: {
+            id: string;
+            /** Format: date-time */
+            created_at: string;
+            original_filename: string;
+            /** @enum {string} */
+            status: "pending" | "processing" | "done" | "failed";
+            error_message?: string | null;
+            duration_s?: number | null;
+            tasks: string[];
+        };
+        ComparisonFile: {
+            /**
+             * Format: binary
+             * @description Fichier audio : wav, mp3, flac, ogg, webm ou m4a, 5 min maximum.
+             */
+            file: string;
+        };
+        ModelRun: {
+            /** @description Identifiant au registre. */
+            model_id: string;
+            model_version: string;
+            /** @description Profils qui utilisent ce modèle : quality, realtime. */
+            profiles: string[];
+            /** @description Temps de calcul du modèle sur tout le fichier, en secondes (CPU du serveur), détection de parole exclue : elle tourne une fois pour tous. */
+            compute_s: number;
+            /** @description Résultat au format d'une analyse (global et segments). */
+            result: components["schemas"]["TaskResult"];
+        };
+        Comparison: {
+            id: string;
+            /** Format: date-time */
+            created_at: string;
+            original_filename: string;
+            /** @enum {string} */
+            status: "pending" | "processing" | "done" | "failed";
+            error_message?: string | null;
+            duration_s?: number | null;
+            tasks: string[];
+            /** @description Pour chaque tâche demandée, les modèles du registre dans l'ordre des profils (quality puis realtime) ; null tant que le calcul n'est pas fini. */
+            results?: {
+                [key: string]: components["schemas"]["ModelRun"][];
+            } | null;
+            readonly audio_url?: unknown;
+        };
+        Speaker: {
+            id: string;
+            name: string;
+            /**
+             * Format: date-time
+             * @description Date d'enregistrement.
+             */
+            created_at: string;
+            /** @description Secondes de parole qui forment la voix. */
+            speech_s: number;
+            /** @description Nombre de morceaux de parole (1 à 5 s). */
+            segment_count: number;
+            /** @description Nombre d'extraits envoyés et gardés. */
+            audio_count: number;
+            /** @description Modèle qui a calculé la voix (registre) ; « demo » pour le faux prédicteur. Une voix n'est comparée qu'aux analyses faites avec ce modèle. */
+            model_id: string;
+            model_version: string;
+            /** @description Version du texte de consentement accepté. */
+            consent_version: string;
+            /** @description Vrai si la personne a aussi accepté que sa voix soit clonée (seconde case, C35) : seule une telle voix est proposée par la page Cloner. */
+            cloning_allowed: boolean;
+        };
+        SpeakerFiles: {
+            /** @description Un ou plusieurs extraits (micro ou fichiers : wav, mp3, flac, ogg, webm ou m4a) ; répéter le champ ; au moins 10 s de parole au total. */
+            files: string[];
+        };
+        Synthesis: {
+            id: string;
+            /** Format: date-time */
+            created_at: string;
+            speaker_id: string;
+            /** @description Voix clonée. */
+            speaker_name: string;
+            /** @description Texte dit par la voix. */
+            text: string;
+            /** @enum {string} */
+            status: "pending" | "processing" | "done" | "failed";
+            error_message?: string | null;
+            model_id: string;
+            model_version: string;
+            /** @description Durée de l'extrait marqué (bip compris). */
+            duration_s?: number | null;
+            /** @description Temps de synthèse sur le serveur, en s. */
+            compute_s?: number | null;
+            readonly audio_url?: unknown;
+            /** @description Nom de fichier proposé, qui commence par voix_synthetique. */
+            readonly download_name?: unknown;
+        };
+        SynthesisRequest: {
+            /** @description Locuteur enregistré qui a accepté le clonage. */
+            speaker_id: string;
+            /** @description Texte en français, 300 caractères au plus. */
+            text: string;
         };
     };
     responses: {

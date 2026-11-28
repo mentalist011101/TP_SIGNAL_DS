@@ -1,0 +1,38 @@
+{
+  "task": "C23",
+  "machine": "Intel Core i5-6200U 2,30 GHz (2 cœurs, 4 fils), 8 Go, Windows 10",
+  "torch_threads": 1,
+  "torch": "2.15.0+cpu",
+  "speech_detector": "silero",
+  "models": [
+    "echolens-emotion-crnn",
+    "echolens-sound-event-crnn"
+  ],
+  "audio": [
+    "cremad_1001_DFA_ANG.wav",
+    "cremad_1001_DFA_FEA_XX.wav",
+    "cremad_1001_IEO_DIS_LO.wav",
+    "cremad_1001_IEO_FEA_LO.wav",
+    "cremad_1001_IEO_HAP_LO.wav",
+    "cremad_1001_IEO_NEU_XX.wav",
+    "cremad_1001_IEO_SAD_LO.wav"
+  ],
+  "seconds": 120.0,
+  "window_s": 2.0,
+  "hop_s": 0.5,
+  "windows": 237,
+  "windows_with_speech": 237,
+  "skipped": 0,
+  "compute": {
+    "p50_ms": 152.9,
+    "p95_ms": 221.4,
+    "max_ms": 421.2
+  },
+  "rtf_p95": 0.11,
+  "perceived_latency": {
+    "p50_ms": 200.1,
+    "p95_ms": 300.0,
+    "max_ms": 512.7
+  },
+  "enf01_met": true
+}

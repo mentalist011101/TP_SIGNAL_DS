@@ -204,7 +204,7 @@ def test_vad_does_not_run_without_a_speech_task() -> None:
     detector = FixedDetector([Segment(start_s=0.5, end_s=3.0)])
     context = demo_context(detector)
 
-    build_results(silence(4.0), ["sound_event", "speaker"], "quality", context)
+    build_results(silence(4.0), ["sound_event"], "quality", context)
 
     assert detector.call_count == 0
 

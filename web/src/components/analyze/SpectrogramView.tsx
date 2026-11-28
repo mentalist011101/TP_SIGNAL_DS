@@ -22,6 +22,8 @@ interface TimeTick {
 
 interface SpectrogramViewProps {
   analysis: Analysis | undefined
+  // Carte Grad-CAM à poser sur l'image (EF-13) ; null pour le spectrogramme seul.
+  overlayUrl?: string | null
 }
 
 // « 250 Hz », « 1 kHz », « 1,5 kHz » : au-delà de 1 000 Hz on passe en kHz.
@@ -96,9 +98,42 @@ function timeLabelStyle(tick: TimeTick): CSSProperties {
   return { left: `${tick.percent}%`, transform: `translateX(${shift})` }
 }
 
+// Carte Grad-CAM du serveur, de la même taille que le spectrogramme : posée dessus, chaque
+// pixel tombe sur la case qu'il explique. Le premier calcul peut prendre quelques secondes.
+function GradCamOverlay({ url }: { url: string }) {
+  const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading')
+  return (
+    <>
+      <img
+        src={url}
+        alt="Carte Grad-CAM posée sur le spectrogramme"
+        className="pointer-events-none absolute inset-0 h-40 w-full rounded-card"
+        onLoad={() => setState('ready')}
+        onError={() => setState('error')}
+      />
+      {state === 'loading' && (
+        <span className={`${FREQUENCY_LABEL_CLASSES} top-1 right-1 left-auto`}>
+          Calcul de la carte…
+        </span>
+      )}
+      {state === 'error' && (
+        <span className={`${FREQUENCY_LABEL_CLASSES} top-1 right-1 left-auto`}>
+          Carte indisponible pour cette analyse
+        </span>
+      )}
+    </>
+  )
+}
+
+interface SpectrogramImageProps {
+  url: string
+  info: SpectrogramInfo
+  overlayUrl: string | null
+}
+
 // Image du serveur étirée à toute la largeur, avec l'axe des fréquences posé sur son bord gauche.
 // Une analyse importée avant l'ajout du spectrogramme n'a pas d'image : le serveur répond 404.
-function SpectrogramImage({ url, info }: { url: string; info: SpectrogramInfo }) {
+function SpectrogramImage({ url, info, overlayUrl }: SpectrogramImageProps) {
   const [hasError, setHasError] = useState(false)
   if (hasError) {
     return <div className={MESSAGE_CLASSES}>Spectrogramme indisponible pour cette analyse</div>
@@ -111,6 +146,8 @@ function SpectrogramImage({ url, info }: { url: string; info: SpectrogramInfo })
         className="h-40 w-full rounded-card"
         onError={() => setHasError(true)}
       />
+      {/* key : une nouvelle carte repart de l'état « calcul en cours ». */}
+      {overlayUrl !== null && <GradCamOverlay key={overlayUrl} url={overlayUrl} />}
       {info.frequency_ticks.map((tick) => (
         <span key={tick.hz} className={FREQUENCY_LABEL_CLASSES} style={frequencyLabelStyle(tick)}>
           {formatHz(tick.hz)}
@@ -155,14 +192,17 @@ interface SpectrogramFigureProps {
   url: string
   info: SpectrogramInfo
   durationSeconds: number
+  overlayUrl?: string | null
 }
 
 // Spectrogramme complet : image, axe des fréquences, axe du temps et légende. Exporté pour
 // l'exemple réel de l'accueil, dont l'image est figée dans public/exemple/.
-export function SpectrogramFigure({ url, info, durationSeconds }: SpectrogramFigureProps) {
+export function SpectrogramFigure(props: SpectrogramFigureProps) {
+  const { url, info, durationSeconds } = props
+  const overlayUrl = props.overlayUrl ?? null
   return (
     <div className="space-y-1">
-      <SpectrogramImage url={url} info={info} />
+      <SpectrogramImage url={url} info={info} overlayUrl={overlayUrl} />
       <TimeAxis durationSeconds={durationSeconds} />
       <ColorLegend info={info} />
     </div>
@@ -171,7 +211,7 @@ export function SpectrogramFigure({ url, info, durationSeconds }: SpectrogramFig
 
 // Spectrogramme log-Mel calculé par le serveur (EF-04, U6) : message d'attente tant que
 // l'analyse n'est pas terminée, rien en cas d'échec (le statut en donne déjà la raison).
-export default function SpectrogramView({ analysis }: SpectrogramViewProps) {
+export default function SpectrogramView({ analysis, overlayUrl }: SpectrogramViewProps) {
   if (analysis === undefined) {
     return <div className={MESSAGE_CLASSES}>Le spectrogramme apparaîtra après l’analyse</div>
   }
@@ -188,5 +228,12 @@ export default function SpectrogramView({ analysis }: SpectrogramViewProps) {
   if (url === null || info === null || durationSeconds === null) {
     return <div className={MESSAGE_CLASSES}>Spectrogramme indisponible pour cette analyse</div>
   }
-  return <SpectrogramFigure url={url} info={info} durationSeconds={durationSeconds} />
+  return (
+    <SpectrogramFigure
+      url={url}
+      info={info}
+      durationSeconds={durationSeconds}
+      overlayUrl={overlayUrl}
+    />
+  )
 }

@@ -64,6 +64,16 @@ class SegmentResultSchema(Schema):
             "n'y a rien entendu). null pour les autres tâches."
         },
     )
+    score = fields.Float(
+        allow_none=True,
+        dump_default=None,
+        metadata={
+            "description": "Locuteur : similarité cosinus (−1 à 1) avec la voix enregistrée la "
+            "plus proche, même si elle reste sous le seuil « inconnu » (EF-11). label est "
+            "l'identifiant du locuteur (ou « unknown »), label_fr son nom (ou « Inconnu »). "
+            "null pour les autres tâches."
+        },
+    )
 
 
 class TaskResultSchema(Schema):
@@ -72,9 +82,10 @@ class TaskResultSchema(Schema):
     status = fields.String(
         validate=validate.OneOf(TASK_RESULT_STATUSES),
         metadata={
-            "description": "done : résultat calculé ; no_speech : émotion ou transcription "
-            "demandée mais aucune parole détectée, rien n'est inventé ; unavailable : tâche "
-            "pas encore branchée, l'analyse réussit quand même."
+            "description": "done : résultat calculé ; no_speech : émotion, transcription ou "
+            "locuteur demandé mais aucune parole détectée, rien n'est inventé ; unavailable : "
+            "pas de modèle pour cette tâche, ou locuteur demandé sans voix enregistrée ; "
+            "l'analyse réussit quand même."
         },
     )
     message = fields.String(
@@ -103,8 +114,9 @@ class TaskResultSchema(Schema):
         metadata={
             "description": "Résultat global : toutes les classes, de la plus probable à la "
             "moins probable, somme 1. Il est calculé à partir des segments : moyenne des "
-            "fenêtres pour les événements, moyenne pondérée par la durée pour les émotions. "
-            "Liste vide si status ≠ done, et toujours pour la transcription."
+            "fenêtres pour les événements, moyenne pondérée par la durée pour les émotions, "
+            "part du temps de parole de chacun pour le locuteur. Liste vide si status ≠ done, "
+            "et toujours pour la transcription."
         },
     )
     model_id = fields.String(

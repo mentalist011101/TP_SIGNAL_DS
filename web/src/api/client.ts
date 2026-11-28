@@ -63,6 +63,20 @@ export async function apiPostForm<T>(path: string, form: FormData): Promise<T> {
   return (await response.json()) as T
 }
 
+// Envoi d'un corps JSON (POST) : lève une ApiError lisible si la réponse n'est pas 2xx.
+export async function apiPostJson<T>(path: string, body: unknown): Promise<T> {
+  const response = await fetch(`${API_BASE}${path}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  if (!response.ok) {
+    const message = await readErrorMessage(response, path)
+    throw new ApiError(response.status, message)
+  }
+  return (await response.json()) as T
+}
+
 // Suppression : l'API répond 204 (sans corps) ; on ne lit donc pas de JSON en retour.
 export async function apiDelete(path: string): Promise<void> {
   const response = await fetch(`${API_BASE}${path}`, { method: 'DELETE' })
@@ -126,7 +140,9 @@ export interface ClassProbability {
 
 // Résultat d'un morceau de l'audio, pour la frise temporelle (EF-12). Transcription : label et
 // label_fr à null, probabilities vide, et le texte dit sur ce morceau dans text (null pour les
-// autres tâches).
+// autres tâches). Locuteur (EF-11) : label = identifiant du locuteur (« unknown » s'il est
+// inconnu), label_fr = son nom (« Inconnu »), probabilities vide, et score = cosinus avec la
+// voix la plus proche (absent ou null pour les autres tâches).
 export interface SegmentResult {
   start_s: number
   end_s: number
@@ -134,6 +150,7 @@ export interface SegmentResult {
   label_fr: string | null
   probabilities: ClassProbability[]
   text: string | null
+  score?: number | null
 }
 
 // Résultat d'une tâche. Les probabilités arrivent triées de la plus probable à la moins
@@ -341,11 +358,302 @@ export interface ModelInfo {
   description: string
 }
 
+// Matrice de confusion normalisée (EF-16) : lignes = vraie classe, chaque ligne somme à 1.
+export interface ConfusionMatrix {
+  labels: string[]
+  matrix: number[][]
+}
+
+// F1 de test d'une classe.
+export interface ClassF1 {
+  label: string
+  label_fr: string
+  f1: number
+}
+
+// Fiche d'un modèle (GET /api/v1/models/{id}, EF-16) : le catalogue, la calibration et, pour la
+// classification, la matrice et le F1 par classe, recopiés des résultats des notebooks.
+export interface ModelCard extends ModelInfo {
+  ece_before: number | null
+  ece_after: number | null
+  evaluation: string | null
+  results_file: string | null
+  results_commit: string | null
+  confusion: ConfusionMatrix | null
+  per_class_f1: ClassF1[]
+}
+
+// Fiche d'un modèle : elle ne change qu'avec le registre et les résultats, une lecture suffit.
+export function useModelCard(modelId: string | undefined) {
+  return useQuery({
+    queryKey: ['model-card', modelId],
+    queryFn: () => apiGet<ModelCard>(`/models/${modelId}`),
+    enabled: modelId !== undefined,
+    staleTime: Infinity,
+  })
+}
+
 // Catalogue des modèles : il ne change qu'avec le registre, donc une seule lecture suffit.
 export function useModels() {
   return useQuery({
     queryKey: ['models'],
     queryFn: () => apiGet<ModelInfo[]>('/models'),
     staleTime: Infinity,
+  })
+}
+
+// Un locuteur enregistré (GET /api/v1/speakers, EF-11), sans sa voix : le vecteur reste sur
+// le serveur. Écrit à la main d'après SpeakerSchema (api/speakers.py).
+export interface Speaker {
+  id: string
+  name: string
+  created_at: string
+  speech_s: number
+  segment_count: number
+  audio_count: number
+  model_id: string
+  model_version: string
+  consent_version: string
+  // Vrai si la personne a aussi accepté le clonage de sa voix (C35, seconde case).
+  cloning_allowed: boolean
+}
+
+// Clé du cache des locuteurs, partagée par la lecture, l'ajout et la suppression.
+const SPEAKERS_QUERY_KEY = ['speakers']
+
+// Liste des locuteurs enregistrés, par ordre alphabétique.
+export function useSpeakers() {
+  return useQuery({
+    queryKey: SPEAKERS_QUERY_KEY,
+    queryFn: () => apiGet<Speaker[]>('/speakers'),
+  })
+}
+
+export interface SpeakerRequest {
+  name: string
+  // Vrai seulement si la case de consentement est cochée (S6).
+  consent: boolean
+  // Vrai seulement si la seconde case (clonage, C35) est cochée.
+  cloningConsent: boolean
+  // Extraits de voix : enregistrements du micro ou fichiers choisis.
+  files: File[]
+}
+
+// Formulaire de POST /speakers : le champ « files » est répété une fois par extrait.
+function buildSpeakerForm(request: SpeakerRequest): FormData {
+  const form = new FormData()
+  form.append('name', request.name)
+  form.append('consent', String(request.consent))
+  form.append('cloning_consent', String(request.cloningConsent))
+  for (const file of request.files) {
+    form.append('files', file)
+  }
+  return form
+}
+
+// Enregistrement d'une voix, puis rechargement de la liste des locuteurs.
+export function useEnrollSpeaker() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (request: SpeakerRequest) => {
+      const form = buildSpeakerForm(request)
+      return apiPostForm<Speaker>('/speakers', form)
+    },
+    onSuccess: () => {
+      return queryClient.invalidateQueries({ queryKey: SPEAKERS_QUERY_KEY })
+    },
+  })
+}
+
+// Suppression d'un locuteur (sa voix et ses extraits), puis rechargement de la liste.
+export function useDeleteSpeaker() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (speakerId: string) => {
+      const path = `/speakers/${speakerId}`
+      return apiDelete(path)
+    },
+    onSuccess: () => {
+      return queryClient.invalidateQueries({ queryKey: SPEAKERS_QUERY_KEY })
+    },
+  })
+}
+
+// Tâches comparables (EF-15) : celles qui ont plusieurs modèles au registre.
+export type ComparedTask = 'emotion' | 'sound_event' | 'transcription'
+
+// Passage d'un modèle sur le fichier comparé (ModelRunSchema, api/compare.py) : son identité,
+// ses profils, son temps de calcul (VAD exclue) et son résultat au format d'une analyse.
+export interface ModelRun {
+  model_id: string
+  model_version: string
+  profiles: AnalysisProfile[]
+  compute_s: number
+  result: TaskResult
+}
+
+// Comparaison telle que la liste de l'Historique l'affiche, sans les résultats.
+export interface ComparisonSummary {
+  id: string
+  created_at: string
+  original_filename: string
+  status: AnalysisStatusValue
+  error_message: string | null
+  duration_s: number | null
+  tasks: ComparedTask[]
+}
+
+// Comparaison complète : pour chaque tâche, un passage par modèle (null tant que le calcul
+// tourne).
+export interface Comparison extends ComparisonSummary {
+  results: Partial<Record<ComparedTask, ModelRun[]>> | null
+  audio_url: string | null
+}
+
+export interface ComparisonRequest {
+  file: File
+  tasks: ComparedTask[]
+}
+
+// Clé du cache de la liste des comparaisons, partagée par la lecture et la suppression.
+const COMPARISONS_QUERY_KEY = ['comparisons']
+
+// Formulaire de POST /compare : le champ « tasks » est répété une fois par tâche.
+function buildComparisonForm(request: ComparisonRequest): FormData {
+  const form = new FormData()
+  form.append('file', request.file)
+  for (const task of request.tasks) {
+    form.append('tasks', task)
+  }
+  return form
+}
+
+// Envoi d'un audio à comparer : l'API répond 202 avec la comparaison en attente.
+export function useCreateComparison() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (request: ComparisonRequest) => {
+      const form = buildComparisonForm(request)
+      return apiPostForm<Comparison>('/compare', form)
+    },
+    onSuccess: () => {
+      return queryClient.invalidateQueries({ queryKey: COMPARISONS_QUERY_KEY })
+    },
+  })
+}
+
+// Vrai tant que le serveur n'a pas fini (en attente ou en cours).
+function isComparisonRunning(comparison: ComparisonSummary | undefined): boolean {
+  if (comparison === undefined) {
+    return false
+  }
+  return comparison.status === 'pending' || comparison.status === 'processing'
+}
+
+// Suivi d'une comparaison : interroge GET /compare/{id} chaque seconde jusqu'à la fin.
+export function useComparison(comparisonId: string | null) {
+  return useQuery({
+    queryKey: ['comparison', comparisonId],
+    queryFn: () => apiGet<Comparison>(`/compare/${comparisonId}`),
+    enabled: comparisonId !== null,
+    refetchInterval: (query) => {
+      if (isComparisonRunning(query.state.data)) {
+        return POLL_INTERVAL_MS
+      }
+      return false
+    },
+  })
+}
+
+// Comparaisons passées, les plus récentes d'abord (Historique).
+export function useComparisons() {
+  return useQuery({
+    queryKey: COMPARISONS_QUERY_KEY,
+    queryFn: () => apiGet<ComparisonSummary[]>(`/compare?limit=${HISTORY_LIMIT}`),
+  })
+}
+
+// Suppression d'une comparaison et de son audio, puis rechargement de la liste.
+export function useDeleteComparison() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (comparisonId: string) => apiDelete(`/compare/${comparisonId}`),
+    onSuccess: () => {
+      return queryClient.invalidateQueries({ queryKey: COMPARISONS_QUERY_KEY })
+    },
+  })
+}
+
+// Un extrait de voix synthétique (SynthesisSchema, api/tts.py, C35) : quelle voix a dit quel
+// texte, avec quel modèle ; audio_url une fois la synthèse terminée.
+export interface Synthesis {
+  id: string
+  created_at: string
+  speaker_id: string
+  speaker_name: string
+  text: string
+  status: AnalysisStatusValue
+  error_message: string | null
+  model_id: string
+  model_version: string
+  duration_s: number | null
+  compute_s: number | null
+  audio_url: string | null
+  download_name: string
+}
+
+export interface SynthesisRequest {
+  speaker_id: string
+  text: string
+}
+
+// Clé du cache des extraits synthétiques, partagée par la lecture, l'ajout et la suppression.
+const SYNTHESES_QUERY_KEY = ['syntheses']
+
+// Vrai si au moins un extrait est encore en cours de synthèse.
+function hasRunningSynthesis(syntheses: Synthesis[]): boolean {
+  for (const synthesis of syntheses) {
+    if (synthesis.status === 'pending' || synthesis.status === 'processing') {
+      return true
+    }
+  }
+  return false
+}
+
+// Extraits synthétiques, les plus récents d'abord ; rafraîchis chaque seconde tant qu'une
+// synthèse tourne.
+export function useSyntheses() {
+  return useQuery({
+    queryKey: SYNTHESES_QUERY_KEY,
+    queryFn: () => apiGet<Synthesis[]>('/tts'),
+    refetchInterval: (query) => {
+      const syntheses = query.state.data
+      if (syntheses !== undefined && hasRunningSynthesis(syntheses)) {
+        return POLL_INTERVAL_MS
+      }
+      return false
+    },
+  })
+}
+
+// Demande de clonage : l'API répond 202, la liste suit ensuite la synthèse.
+export function useCreateSynthesis() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (request: SynthesisRequest) => apiPostJson<Synthesis>('/tts', request),
+    onSuccess: () => {
+      return queryClient.invalidateQueries({ queryKey: SYNTHESES_QUERY_KEY })
+    },
+  })
+}
+
+// Suppression d'un extrait synthétique et de son audio.
+export function useDeleteSynthesis() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (synthesisId: string) => apiDelete(`/tts/${synthesisId}`),
+    onSuccess: () => {
+      return queryClient.invalidateQueries({ queryKey: SYNTHESES_QUERY_KEY })
+    },
   })
 }

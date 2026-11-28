@@ -44,7 +44,8 @@ finie.
 | 7.1 Métriques | `07_resultats.tex` | Steve | à rédiger |
 | 7.2 à 7.3 Émotions, ESC-50 ; 7.7 explicabilité | `07_resultats.tex` | Nicole | à rédiger |
 | 7.4 Locuteur | `07_resultats.tex` | Lynn | rédigée (C15) |
-| 7.5 Transcription ; 7.6 analyse des erreurs | `07_resultats.tex` | Lynn | après C17 ; E3 et E4 à produire |
+| 7.5 Transcription | `07_resultats.tex` | Lynn | rédigée (C17a, C17c) |
+| 7.6 Analyse des erreurs | `07_resultats.tex` | Lynn, Steve (E4) | E3 et E4 à produire |
 | 8. Discussion et limites | `08_discussion.tex` | toute l'équipe | à rédiger |
 | 9. Conclusion | `09_conclusion.tex` | Luciano | à rédiger |
 | Annexes | `annexes.tex` | selon les besoins | à rédiger |

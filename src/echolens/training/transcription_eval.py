@@ -231,6 +231,23 @@ def suspect_sentences(
     return suspects
 
 
+def country_of_speaker(speaker: str) -> str:
+    """Pays d'un locuteur du test officiel d'OpenSLR 57 : « cameroon_m_006 » → « cameroon »."""
+    fields = speaker.split("_")
+    if len(fields) != 3:
+        raise ValueError(f"Locuteur sans pays (attendu pays_genre_numéro) : {speaker}")
+    return fields[0]
+
+
+def scores_by_country(scores: list[SentenceScore]) -> dict[str, list[SentenceScore]]:
+    """Range les phrases notées par pays du locuteur (test officiel d'OpenSLR 57 seulement)."""
+    grouped: dict[str, list[SentenceScore]] = {}
+    for score in scores:
+        country = country_of_speaker(score.speaker)
+        grouped.setdefault(country, []).append(score)
+    return grouped
+
+
 def _in_folder(path: str, folder: str) -> bool:
     # Le chemin du manifeste s'écrit avec des « / » (ex. speech/train/yaounde/read/…).
     parts = PurePosixPath(path).parts
