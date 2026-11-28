@@ -1,21 +1,19 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Navigate } from 'react-router-dom'
 import { describeApiError, useCreateComparison, type ComparedTask } from '../api/client.ts'
-import AudioPanel from '../components/analyze/AudioPanel.tsx'
-import { COMPARED_TASKS } from '../components/compare/compareFormat.ts'
+import AudioPicker, { RecordingIndicator } from '../components/analyze/AudioPicker.tsx'
+import { useMicrophone } from '../components/analyze/microphone.ts'
+import DuelPicker from '../components/compare/DuelPicker.tsx'
+import WaveRibbon from '../components/WaveRibbon.tsx'
 
-// Page Comparer (EF-15) : un audio et des tâches ; chaque modèle du registre de ces tâches
-// tourne sur le même fichier. Dès que la comparaison est acceptée, sa page s'ouvre et suit
-// le calcul.
+// Page Comparer (EF-15), pensée comme un tournoi plutôt qu'une analyse : 1. un son, 2. les
+// duels (chaque modèle du registre d'une tâche contre les autres), 3. le lancement. Dès que la
+// comparaison est acceptée, sa page s'ouvre et suit le calcul.
 
 const DEFAULT_TASKS: ComparedTask[] = ['emotion', 'sound_event']
 
 const BUTTON_CLASSES =
-  'w-full rounded-btn bg-accent px-5 py-2.5 font-semibold text-on-accent transition-colors duration-200 ease-out-soft hover:bg-accent-deep disabled:cursor-not-allowed disabled:opacity-50'
-const SETTINGS_CLASSES = 'space-y-5 rounded-card border border-rule bg-card p-5 lg:sticky lg:top-10'
-const LAYOUT_CLASSES = 'grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_21rem]'
-const TILE_CLASSES =
-  'flex cursor-pointer items-center gap-3 rounded-2xl border border-rule bg-card p-3 transition-colors duration-200 ease-out-soft hover:bg-paper-alt has-checked:border-accent has-checked:bg-paper-alt'
+  'rounded-btn bg-accent px-7 py-3 font-semibold text-on-accent transition-colors duration-200 ease-out-soft hover:bg-accent-deep disabled:cursor-not-allowed disabled:opacity-50'
 
 // Coche ou décoche une tâche : renvoie une nouvelle liste, sans modifier l'ancienne.
 function toggleTask(tasks: ComparedTask[], task: ComparedTask): ComparedTask[] {
@@ -25,50 +23,59 @@ function toggleTask(tasks: ComparedTask[], task: ComparedTask): ComparedTask[] {
   return [...tasks, task]
 }
 
-interface TaskPickerProps {
-  tasks: ComparedTask[]
-  onTasksChange: (tasks: ComparedTask[]) => void
-}
-
-// Une tuile par tâche comparable, avec les modèles qui s'affronteront.
-function TaskPicker({ tasks, onTasksChange }: TaskPickerProps) {
+// Une étape numérotée : le numéro dans un rond, le titre, puis son contenu.
+function Step({ number, title, children }: { number: number; title: string; children: ReactNode }) {
   return (
-    <fieldset className="space-y-2">
-      <legend className="label-mono mb-2 text-ink-faint">Tâches à comparer</legend>
-      {COMPARED_TASKS.map((option) => (
-        <label key={option.value} className={TILE_CLASSES}>
-          <span className="min-w-0 flex-1">
-            <span className="block text-sm font-semibold">{option.label}</span>
-            <span className="block text-xs text-ink-soft">{option.detail}</span>
-          </span>
-          <input
-            type="checkbox"
-            className="h-4 w-4 accent-accent"
-            checked={tasks.includes(option.value)}
-            onChange={() => onTasksChange(toggleTask(tasks, option.value))}
-          />
-        </label>
-      ))}
-    </fieldset>
+    <section className="grid grid-cols-[2.75rem_minmax(0,1fr)] items-center gap-4">
+      <span className="flex h-11 w-11 items-center justify-center rounded-full border border-rule-strong font-display text-xl">
+        {number}
+      </span>
+      <h2 className="text-xl font-semibold">{title}</h2>
+      <div className="col-span-2 min-w-0 md:col-span-1 md:col-start-2">{children}</div>
+    </section>
   )
 }
 
-// Ce qui manque pour lancer la comparaison ; null quand tout est prêt.
-function compareHint(hasFile: boolean, hasTasks: boolean): string | null {
-  if (!hasFile) {
-    return 'Importez un fichier ou enregistrez-vous au micro pour commencer.'
+// Étape 1 : le son, en bandeau compact (fichier, ou micro avec son ruban).
+function SoundStep({ file, onFile }: { file: File | null; onFile: (file: File) => void }) {
+  const microphone = useMicrophone(onFile)
+  return (
+    <div className="space-y-3 rounded-card border border-rule bg-card p-5">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="min-w-0">
+          <p className="label-mono text-ink-faint">Son à comparer</p>
+          {file === null && <p className="text-ink-soft">Aucun son choisi pour l’instant.</p>}
+          {file !== null && <p className="font-mono break-all">{file.name}</p>}
+        </div>
+        <AudioPicker onAudioSelected={onFile} microphone={microphone} />
+      </div>
+      {microphone.isRecording && (
+        <div className="space-y-2 text-center">
+          <RecordingIndicator elapsedS={microphone.elapsedS} />
+          <WaveRibbon className="h-20" readLevel={microphone.readLevel} />
+        </div>
+      )}
+    </div>
+  )
+}
+
+// « 2 duels · 4 modèles » : ce qui va tourner, avant de lancer.
+function launchSummary(tasks: ComparedTask[]): string {
+  if (tasks.length === 0) {
+    return 'Choisissez au moins un duel.'
   }
-  if (!hasTasks) {
-    return 'Cochez au moins une tâche.'
+  let duels = `${tasks.length} duels`
+  if (tasks.length === 1) {
+    duels = '1 duel'
   }
-  return null
+  return `${duels} : chaque modèle de ces tâches tourne sur le même son, avec son temps de calcul.`
 }
 
 export default function ComparePage() {
   const [audioFile, setAudioFile] = useState<File | null>(null)
   const [tasks, setTasks] = useState<ComparedTask[]>(DEFAULT_TASKS)
   const creation = useCreateComparison()
-  const hint = compareHint(audioFile !== null, tasks.length > 0)
+  const isReady = audioFile !== null && tasks.length > 0
 
   function handleCompare() {
     if (audioFile !== null) {
@@ -80,39 +87,43 @@ export default function ComparePage() {
   if (creation.data !== undefined) {
     return <Navigate to={`/comparer/${creation.data.id}`} />
   }
-  let buttonText = 'Comparer les modèles'
+  let buttonText = 'Lancer les duels'
   if (creation.isPending) {
     buttonText = 'Envoi…'
   }
   return (
-    <section className="space-y-6">
+    <section className="space-y-10">
       <div className="space-y-2">
         <h1 className="text-5xl leading-tight">Comparer les modèles</h1>
         <p className="max-w-3xl text-ink-soft">
-          Un même fichier passé dans chaque modèle du registre : résultat principal, premières
-          classes et temps de calcul, côte à côte. La comparaison est gardée dans l’Historique.
+          Un même son, plusieurs modèles face à face : résultat principal, premières classes et
+          temps de calcul, côte à côte. La comparaison est gardée dans l’Historique.
         </p>
       </div>
-      <div className={LAYOUT_CLASSES}>
-        <AudioPanel file={audioFile} onAudioSelected={setAudioFile} />
-        <aside className={SETTINGS_CLASSES} aria-label="Réglages de la comparaison">
-          <TaskPicker tasks={tasks} onTasksChange={setTasks} />
-          <div className="space-y-2 border-t border-rule pt-5">
-            <button
-              type="button"
-              className={BUTTON_CLASSES}
-              disabled={hint !== null || creation.isPending}
-              onClick={handleCompare}
-            >
-              {buttonText}
-            </button>
-            {hint !== null && <p className="text-sm text-ink-soft">{hint}</p>}
-            {creation.error !== null && (
-              <p className="text-sm text-danger">{describeApiError(creation.error)}</p>
-            )}
-          </div>
-        </aside>
-      </div>
+      <Step number={1} title="Le son">
+        <SoundStep file={audioFile} onFile={setAudioFile} />
+      </Step>
+      <Step number={2} title="Les duels">
+        <DuelPicker tasks={tasks} onToggle={(task) => setTasks(toggleTask(tasks, task))} />
+      </Step>
+      <Step number={3} title="Le verdict">
+        <div className="flex flex-wrap items-center gap-4">
+          <button
+            type="button"
+            className={BUTTON_CLASSES}
+            disabled={!isReady || creation.isPending}
+            onClick={handleCompare}
+          >
+            {buttonText}
+          </button>
+          <p className="text-sm text-ink-soft">
+            {audioFile === null ? 'Choisissez d’abord un son.' : launchSummary(tasks)}
+          </p>
+        </div>
+        {creation.error !== null && (
+          <p className="text-sm text-danger">{describeApiError(creation.error)}</p>
+        )}
+      </Step>
     </section>
   )
 }

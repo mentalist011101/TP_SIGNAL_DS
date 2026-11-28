@@ -191,6 +191,9 @@
     }
   }
 
+  /* Cachet du projet : son texte tourne lentement, un tour en 30 s. */
+  --animate-spin-slow: spin 30s linear infinite;
+
   /* Barre de score qui pousse depuis l'axe quand le diagramme apparaît. */
   --animate-bar-grow: bar-grow 1.2s cubic-bezier(0.22, 1, 0.36, 1) both;
   @keyframes bar-grow {

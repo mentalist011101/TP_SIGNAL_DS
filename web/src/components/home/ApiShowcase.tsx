@@ -57,7 +57,7 @@ export default function ApiShowcase() {
       <Reveal className="min-w-0 space-y-6">
         <p className="label-mono text-ink-faint">Pour les développeurs</p>
         <h2 className="font-display text-5xl leading-tight">
-          Une API ouverte, <em className="text-ink-soft">rien de caché</em>.
+          Une API <em className="text-ink-soft">ouverte</em>.
         </h2>
         <p className="text-lg leading-relaxed text-ink-soft">
           L’interface n’invente rien : elle affiche ce que l’API renvoie. Vos outils peuvent lire
