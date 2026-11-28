@@ -1,4 +1,5 @@
 import { STREAM_SAMPLE_RATE } from '../../api/stream.ts'
+import { createLevelMeter } from '../analyze/audioLevel.ts'
 // no-inline : un vrai fichier .js, pas une URL data: intégrée au bundle, pour addModule.
 import workletUrl from './pcm-capture.worklet.js?url&no-inline'
 
@@ -8,6 +9,8 @@ import workletUrl from './pcm-capture.worklet.js?url&no-inline'
 
 export interface AudioCapture {
   stop: () => void
+  // Niveau du micro entre 0 et 1, pour le ruban qui suit la voix (affichage seulement).
+  readLevel: () => number
 }
 
 // Erreur de capture, avec un message en français affichable tel quel.
@@ -63,6 +66,8 @@ export async function startCapture(onChunk: (chunk: ArrayBuffer) => void): Promi
   }
   source.connect(processor)
   processor.connect(context.destination)
+  // Mesure du niveau, sur la même source : la page montre que le micro entend.
+  const meter = createLevelMeter(context, source)
   // Étape 3 : l'arrêt coupe tout, micro compris.
   function stop(): void {
     source.disconnect()
@@ -70,5 +75,5 @@ export async function startCapture(onChunk: (chunk: ArrayBuffer) => void): Promi
     stopTracks(stream)
     void context.close()
   }
-  return { stop }
+  return { stop, readLevel: meter.read }
 }

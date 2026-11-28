@@ -1,23 +1,23 @@
 import type { ChangeEvent } from 'react'
 
-// Choix d'enregistrer la session dans l'Historique, avec le consentement écrit (ENF-10). Le
-// texte a une version (CONSENT_VERSION, api/stream.ts) : le modifier oblige à changer la
-// version, ici et dans configs/inference.yaml.
+// Enregistrer la session dans l'Historique, avec le consentement écrit (ENF-10). Une seule case
+// accepte tout ; le texte complet se déplie pour le lire. Le texte a une version
+// (CONSENT_VERSION, api/stream.ts) : le modifier oblige à changer la version, ici et dans
+// configs/inference.yaml.
 
 const CHECKBOX_CLASSES = 'mt-0.5 h-4 w-4 shrink-0 accent-accent'
 
 interface RecordingConsentProps {
-  record: boolean
+  // Vrai si la session sera enregistrée : la case cochée vaut aussi consentement.
   accepted: boolean
   disabled: boolean
-  onRecordChange: (record: boolean) => void
   onAcceptedChange: (accepted: boolean) => void
 }
 
 // Texte du consentement, version direct-v1.
 function ConsentText() {
   return (
-    <div className="space-y-2 rounded-xl border border-rule bg-paper p-4 text-sm text-ink-soft">
+    <div className="space-y-2 text-sm text-ink-soft">
       <p>
         Si vous acceptez, le son capté par votre micro pendant cette session est enregistré dans la
         base de données d’EchoLens, puis analysé comme un fichier importé : émotion, événements
@@ -31,42 +31,39 @@ function ConsentText() {
   )
 }
 
-export default function RecordingConsent(props: RecordingConsentProps) {
-  function handleRecordChange(event: ChangeEvent<HTMLInputElement>) {
-    props.onRecordChange(event.target.checked)
-  }
-
-  function handleAcceptedChange(event: ChangeEvent<HTMLInputElement>) {
-    props.onAcceptedChange(event.target.checked)
+export default function RecordingConsent({
+  accepted,
+  disabled,
+  onAcceptedChange,
+}: RecordingConsentProps) {
+  function handleChange(event: ChangeEvent<HTMLInputElement>) {
+    onAcceptedChange(event.target.checked)
   }
 
   return (
-    <div className="space-y-3">
-      <label className="flex items-start gap-3 text-sm font-semibold">
+    <div className="space-y-3 rounded-xl border border-rule bg-paper p-4">
+      <label className="flex items-start gap-3 text-sm">
         <input
           type="checkbox"
           className={CHECKBOX_CLASSES}
-          checked={props.record}
-          disabled={props.disabled}
-          onChange={handleRecordChange}
+          checked={accepted}
+          disabled={disabled}
+          onChange={handleChange}
         />
-        Enregistrer cette session dans l’Historique
+        <span>
+          <span className="font-semibold">Enregistrer cette session dans l’Historique.</span> J’ai
+          lu les conditions et j’accepte que ma voix soit enregistrée.
+        </span>
       </label>
-      {props.record && (
-        <div className="space-y-3 pl-7">
+      <details className="group pl-7">
+        <summary className="cursor-pointer list-none text-sm font-semibold text-accent-ink hover:underline">
+          <span className="group-open:hidden">Lire les conditions</span>
+          <span className="hidden group-open:inline">Masquer les conditions</span>
+        </summary>
+        <div className="mt-3">
           <ConsentText />
-          <label className="flex items-start gap-3 text-sm">
-            <input
-              type="checkbox"
-              className={CHECKBOX_CLASSES}
-              checked={props.accepted}
-              disabled={props.disabled}
-              onChange={handleAcceptedChange}
-            />
-            J’ai lu ce texte et j’accepte que ma voix soit enregistrée.
-          </label>
         </div>
-      )}
+      </details>
     </div>
   )
 }

@@ -3,6 +3,7 @@ import Brand from '../components/Brand.tsx'
 import ApiShowcase from '../components/home/ApiShowcase.tsx'
 import Limits from '../components/home/Limits.tsx'
 import Pipeline from '../components/home/Pipeline.tsx'
+import ProjectSeal from '../components/home/ProjectSeal.tsx'
 import RealExample from '../components/home/RealExample.tsx'
 import Results from '../components/home/Results.tsx'
 import Reveal from '../components/home/Reveal.tsx'
@@ -80,7 +81,11 @@ function HomeHeader() {
 function Hero() {
   return (
     <section className="pt-10 sm:pt-16">
-      <Reveal className={`${CONTAINER_CLASSES} flex flex-col items-center gap-8 text-center`}>
+      <Reveal
+        className={`${CONTAINER_CLASSES} relative flex flex-col items-center gap-8 text-center`}
+      >
+        {/* Cachet du projet : à côté du titre sur grand écran, sous les boutons sur téléphone. */}
+        <ProjectSeal className="absolute top-0 right-6 hidden w-32 rotate-6 lg:block xl:-right-4 xl:w-36" />
         <h1 className="max-w-6xl text-5xl leading-[0.95] break-words sm:text-7xl lg:text-[6.5rem]">
           Écoutez ce que vos audios <em className="text-brand">racontent</em>.
         </h1>
@@ -100,6 +105,7 @@ function Hero() {
         <p className="font-mono text-xs text-ink-faint">
           wav, mp3, flac, ogg, webm, m4a · jusqu’à 5 minutes · fichier ou micro
         </p>
+        <ProjectSeal className="relative w-28 lg:hidden" />
       </Reveal>
       <div className="mt-6">
         <WaveRibbon />

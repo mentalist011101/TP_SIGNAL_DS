@@ -6,6 +6,7 @@ import LiveResults from '../components/live/LiveResults.tsx'
 import RecordingConsent from '../components/live/RecordingConsent.tsx'
 import { useLiveStream, type LiveStatus } from '../components/live/useLiveStream.ts'
 import DemoNotice from '../components/result/DemoNotice.tsx'
+import WaveRibbon from '../components/WaveRibbon.tsx'
 
 // Page Direct (C23, EF-14) : le micro est analysé en continu par le serveur, par fenêtres de
 // 2 s toutes les 0,5 s (D8), avec les modèles du profil Temps réel. La page affiche les
@@ -65,18 +66,12 @@ function SavedNotice({ saved }: { saved: SavedMessage }) {
 }
 
 export default function LivePage() {
-  const { state, start, stop } = useLiveStream()
+  const { state, start, stop, readLevel } = useLiveStream()
+  // Une seule case : cochée, la session est enregistrée ET le consentement est donné (ENF-10).
   const [record, setRecord] = useState(false)
-  const [accepted, setAccepted] = useState(false)
   const running = isRunning(state.status)
-  // Pour enregistrer, le consentement doit être coché avant de démarrer (ENF-10).
-  const canStart = !running && (!record || accepted)
+  const canStart = !running
   const hopS = state.ready?.hop_s ?? 0.5
-
-  function handleRecordChange(nextRecord: boolean) {
-    setRecord(nextRecord)
-    setAccepted(false)
-  }
 
   return (
     <section className="space-y-8">
@@ -89,13 +84,13 @@ export default function LivePage() {
         </p>
       </div>
       <div className="space-y-5 rounded-card border border-rule bg-card p-5">
-        <RecordingConsent
-          record={record}
-          accepted={accepted}
-          disabled={running}
-          onRecordChange={handleRecordChange}
-          onAcceptedChange={setAccepted}
-        />
+        {/* Pendant la session, le ruban suit le niveau du micro : on voit qu'il entend. */}
+        {state.status === 'live' && (
+          <div className="rounded-xl border border-rule bg-paper py-2">
+            <WaveRibbon className="h-28" readLevel={readLevel} />
+          </div>
+        )}
+        <RecordingConsent accepted={record} disabled={running} onAcceptedChange={setRecord} />
         {!record && (
           <p className="text-sm text-ink-soft">
             Sans enregistrement, rien n’est conservé : le serveur ne garde que les 2 dernières

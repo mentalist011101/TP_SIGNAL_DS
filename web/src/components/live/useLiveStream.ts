@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   CONSENT_VERSION,
   streamUrl,
@@ -168,5 +168,14 @@ export function useLiveStream() {
     }
   }, [])
 
-  return { state, start, stop }
+  // Niveau du micro pour le ruban ; 0 hors session. Fonction stable d'un rendu à l'autre.
+  const readLevel = useCallback((): number => {
+    const capture = captureRef.current
+    if (capture === null) {
+      return 0
+    }
+    return capture.readLevel()
+  }, [])
+
+  return { state, start, stop, readLevel }
 }

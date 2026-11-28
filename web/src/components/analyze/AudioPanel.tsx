@@ -1,6 +1,7 @@
 import { useEffect, useRef, type DragEvent } from 'react'
 import WaveRibbon from '../WaveRibbon.tsx'
-import AudioPicker from './AudioPicker.tsx'
+import AudioPicker, { RecordingIndicator } from './AudioPicker.tsx'
+import { useMicrophone } from './microphone.ts'
 import WaveformCanvas from './WaveformCanvas.tsx'
 
 const CARD_CLASSES = 'rounded-card border border-rule bg-card p-5'
@@ -16,8 +17,12 @@ function fileKey(file: File): string {
 }
 
 // Zone d'accueil : on y dépose un fichier, ou on passe par les deux boutons. Les limites sont
-// rappelées pour éviter un refus prévisible du serveur (maquette, proposition 1).
+// rappelées pour éviter un refus prévisible du serveur (maquette, proposition 1). Pendant un
+// enregistrement, le ruban suit le niveau du micro et un chronomètre tourne, comme pour un
+// message vocal : on voit que le micro entend.
 function EmptyAudio({ onAudioSelected }: { onAudioSelected: AudioHandler }) {
+  const microphone = useMicrophone(onAudioSelected)
+
   // Sans preventDefault, le navigateur ouvrirait le fichier au lieu de le donner à la page.
   function handleDragOver(event: DragEvent<HTMLDivElement>) {
     event.preventDefault()
@@ -34,15 +39,26 @@ function EmptyAudio({ onAudioSelected }: { onAudioSelected: AudioHandler }) {
 
   return (
     <div className={DROP_ZONE_CLASSES} onDragOver={handleDragOver} onDrop={handleDrop}>
-      {/* Ruban d'ondes animé, en petit : la zone attend un son. */}
+      {/* Ruban d'ondes : décoratif en attente, il suit la voix pendant l'enregistrement. */}
       <div className="w-full max-w-md">
-        <WaveRibbon className="h-20" />
+        {microphone.isRecording && <WaveRibbon className="h-28" readLevel={microphone.readLevel} />}
+        {!microphone.isRecording && <WaveRibbon className="h-20" />}
       </div>
-      <div className="space-y-1">
-        <p className="font-display text-3xl">Déposez un fichier audio ici</p>
-        <p className="text-sm text-ink-soft">ou choisissez une source :</p>
-      </div>
-      <AudioPicker onAudioSelected={onAudioSelected} />
+      {microphone.isRecording && (
+        <div className="space-y-2">
+          <RecordingIndicator elapsedS={microphone.elapsedS} />
+          <p className="text-sm text-ink-soft">
+            Parlez : les ondes suivent votre voix. Arrêtez quand vous avez fini.
+          </p>
+        </div>
+      )}
+      {!microphone.isRecording && (
+        <div className="space-y-1">
+          <p className="font-display text-3xl">Déposez un fichier audio ici</p>
+          <p className="text-sm text-ink-soft">ou choisissez une source :</p>
+        </div>
+      )}
+      <AudioPicker onAudioSelected={onAudioSelected} microphone={microphone} />
       <p className="font-mono text-xs text-ink-soft">
         wav, mp3, flac, ogg, webm, m4a · 5 min et 100 Mo maximum
       </p>
@@ -72,8 +88,10 @@ interface AudioPreviewProps {
   onAudioSelected: AudioHandler
 }
 
-// Audio choisi : son nom, de quoi en changer, puis le lecteur et la forme d'onde.
+// Audio choisi : son nom, de quoi en changer, puis le lecteur et la forme d'onde. Un nouvel
+// enregistrement remplace l'aperçu par le ruban qui suit la voix.
 function AudioPreview({ file, onAudioSelected }: AudioPreviewProps) {
+  const microphone = useMicrophone(onAudioSelected)
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -81,10 +99,20 @@ function AudioPreview({ file, onAudioSelected }: AudioPreviewProps) {
           <p className="label-mono text-ink-faint">Audio choisi</p>
           <p className="font-mono text-lg break-all">{file.name}</p>
         </div>
-        <AudioPicker onAudioSelected={onAudioSelected} />
+        <AudioPicker onAudioSelected={onAudioSelected} microphone={microphone} />
       </div>
-      <AudioPlayer file={file} />
-      <WaveformCanvas file={file} />
+      {microphone.isRecording && (
+        <div className="space-y-3 rounded-card border border-rule bg-paper p-4 text-center">
+          <RecordingIndicator elapsedS={microphone.elapsedS} />
+          <WaveRibbon className="h-28" readLevel={microphone.readLevel} />
+        </div>
+      )}
+      {!microphone.isRecording && (
+        <>
+          <AudioPlayer file={file} />
+          <WaveformCanvas file={file} />
+        </>
+      )}
     </div>
   )
 }
