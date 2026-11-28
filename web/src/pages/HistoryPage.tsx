@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { describeApiError, useAnalysisHistory, type AnalysisSummary } from '../api/client.ts'
+import ComparisonList from '../components/history/ComparisonList.tsx'
 import HistoryFilters from '../components/history/HistoryFilters.tsx'
 import HistoryList from '../components/history/HistoryList.tsx'
 import HistoryOverview from '../components/history/HistoryOverview.tsx'
@@ -86,10 +87,12 @@ export default function HistoryPage() {
       <div className="space-y-2">
         <h1 className="text-5xl leading-tight">Historique</h1>
         <p className="text-ink-soft">
-          Vos 100 analyses les plus récentes : rouvrez un résultat, filtrez ou supprimez.
+          Vos 100 analyses les plus récentes : rouvrez un résultat, filtrez ou supprimez. Les
+          comparaisons de modèles sont listées à la suite.
         </p>
       </div>
       {content}
+      <ComparisonList />
     </section>
   )
 }

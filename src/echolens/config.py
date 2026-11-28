@@ -44,6 +44,14 @@ class AppSettings(BaseModel):
     # Dossier local de modèles (<dossier>/<id>/config.json et model.safetensors) ; vide :
     # téléchargement depuis Hugging Face à la révision figée du registre.
     models_dir: Path | None = None
+    # Clonage de voix (C35) : XTTS-v2 est sous Coqui Public Model License (usage non
+    # commercial). Il ne se charge que si la personne qui lance le serveur l'a acceptée :
+    # ECHOLENS_VOICE_CLONING_LICENSE_ACCEPTED=true (https://coqui.ai/cpml).
+    voice_cloning_license_accepted: bool = False
+    # Instance publique (Codespaces, Render) : mot de passe demandé pour tout le site (S6).
+    # Vide : aucun mot de passe, comme en local. ECHOLENS_ACCESS_PASSWORD dans l'environnement,
+    # jamais dans un fichier commité.
+    access_password: str = ""
 
     def resolved_database_url(self) -> str:
         """Renvoie l'URL SQLAlchemy ; par défaut une base SQLite dans data_dir."""

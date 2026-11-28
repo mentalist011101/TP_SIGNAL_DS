@@ -115,14 +115,15 @@ def test_csv_export_has_long_format(app: Flask, client: FlaskClient) -> None:
 
 
 def test_csv_has_one_row_for_an_unavailable_task(app: Flask, client: FlaskClient) -> None:
+    # Le locuteur (EF-11) n'est pas encore branché : unavailable.
     add_analysis(app, "terminee", AnalysisStatus.DONE)
 
     response = export(client, "terminee", "csv")
 
     _, rows = read_csv_rows(response.data)
-    transcription_rows = [row for row in rows if row["task"] == "transcription"]
-    assert len(transcription_rows) == 1
-    row = transcription_rows[0]
+    speaker_rows = [row for row in rows if row["task"] == "speaker"]
+    assert len(speaker_rows) == 1
+    row = speaker_rows[0]
     assert row["label"] == "unavailable"
     assert row["analysis_id"] == "terminee"
     for column in CSV_COLUMNS:

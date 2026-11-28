@@ -10,6 +10,7 @@ from flask import Flask
 from flask.testing import FlaskClient
 
 from echolens.services.analysis_service import AnalysisService
+from echolens.services.results import NO_VOICE_MESSAGE
 from echolens.services.storage import AnalysisRecord, AnalysisStatus
 
 ANALYSES_URL = "/api/v1/analyses"
@@ -74,13 +75,19 @@ def test_tone_gives_full_sound_event_result_and_no_speech(client: FlaskClient) -
 
 
 @pytest.mark.ffmpeg
-def test_transcription_is_unavailable_but_the_analysis_succeeds(client: FlaskClient) -> None:
-    analysis = analyse(client, ["transcription", "sound_event"])
+def test_speaker_without_voice_is_unavailable_but_the_analysis_succeeds(
+    client: FlaskClient,
+) -> None:
+    analysis = analyse(client, ["speaker", "transcription", "sound_event"])
     assert analysis["status"] == "done"
+    speaker = analysis["results"]["speaker"]
+    assert speaker["status"] == "unavailable"
+    assert speaker["message"] == NO_VOICE_MESSAGE
+    assert speaker["model_id"] is None
+    # Pas de parole dans la sinusoïde de 5 kHz : la transcription ne s'invente pas de texte.
     transcription = analysis["results"]["transcription"]
-    assert transcription["status"] == "unavailable"
-    assert transcription["message"] == "Disponible prochainement"
-    assert transcription["model_id"] is None
+    assert transcription["status"] == "no_speech"
+    assert transcription["text"] is None
     assert analysis["results"]["sound_event"]["status"] == "done"
 
 

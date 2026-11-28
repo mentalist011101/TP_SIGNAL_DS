@@ -54,10 +54,10 @@ function CodeLine({ line }: { line: JsonLine }) {
 export default function ApiShowcase() {
   return (
     <section className="mx-auto grid max-w-6xl items-center gap-12 px-6 py-24 lg:grid-cols-2">
-      <Reveal className="space-y-6">
+      <Reveal className="min-w-0 space-y-6">
         <p className="label-mono text-ink-faint">Pour les développeurs</p>
         <h2 className="font-display text-5xl leading-tight">
-          Une API ouverte, <em className="text-ink-soft">rien de caché</em>.
+          Une API <em className="text-ink-soft">ouverte</em>.
         </h2>
         <p className="text-lg leading-relaxed text-ink-soft">
           L’interface n’invente rien : elle affiche ce que l’API renvoie. Vos outils peuvent lire
@@ -75,7 +75,7 @@ export default function ApiShowcase() {
           Lire la documentation de l’API
         </a>
       </Reveal>
-      <Reveal delayMs={150}>
+      <Reveal className="min-w-0" delayMs={150}>
         <div className="overflow-hidden rounded-card border border-rule bg-night">
           <p className="border-b border-on-night/10 px-5 py-3 font-mono text-xs text-on-night/70">
             GET /api/v1/analyses/{'{id}'} · exemple « Parole »

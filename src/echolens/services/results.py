@@ -3,13 +3,17 @@
 Pour chaque tâche, on découpe l'audio en segments, le prédicteur donne des probabilités par
 segment, puis le résultat global est calculé à partir de ces segments. Les deux sont gardés :
 le global pour les cartes de la page Résultat, les segments pour la frise temporelle (EF-12).
+La transcription (EF-10) donne un texte par segment de parole au lieu de probabilités ; le
+texte complet est celui des segments mis bout à bout. Le champ text vaut null pour les
+autres tâches. Le locuteur (EF-11) donne un nom ou « Inconnu » par morceau de parole, avec
+son score cosinus ; le global est la part du temps de parole de chacun.
 
 Trois statuts par tâche :
 - done : résultat calculé ;
-- no_speech : émotion demandée, mais la VAD n'a trouvé aucune parole ; on ne prédit rien
-  plutôt que d'inventer une émotion à de la pluie ou à un moteur ;
-- unavailable : tâche pas encore branchée (transcription, locuteur) ; l'analyse réussit quand
-  même.
+- no_speech : émotion ou transcription demandée, mais la VAD n'a trouvé aucune parole ; on ne
+  prédit rien plutôt que d'inventer une émotion ou un texte à de la pluie ou à un moteur ;
+- unavailable : pas de modèle pour cette tâche dans ce profil, ou locuteur demandé sans
+  aucune voix enregistrée ; l'analyse réussit quand même.
 """
 
 from __future__ import annotations
@@ -30,8 +34,11 @@ from echolens.core.inference import (
     ranked_probabilities,
     segment_samples,
     sound_event_windows,
+    speaker_windows,
+    transcription_windows,
 )
 from echolens.core.models.registry import Profile, Task
+from echolens.core.speaker_id import VoiceVector, best_match, speaking_shares
 from echolens.services.predictor import ModelInfo, Predictor
 from echolens.services.speech_detection import SpeechDetector
 
@@ -40,8 +47,13 @@ STATUS_NO_SPEECH = "no_speech"
 STATUS_UNAVAILABLE = "unavailable"
 NO_SPEECH_MESSAGE = "Aucune parole détectée"
 UNAVAILABLE_MESSAGE = "Disponible prochainement"
+NO_VOICE_MESSAGE = "Aucune voix enregistrée : ajoutez des locuteurs dans la page Locuteurs"
+UNKNOWN_SPEAKER = "unknown"
+UNKNOWN_SPEAKER_FR = "Inconnu"
 # Bornes des segments arrondies à la milliseconde : 11,559999999 s devient 11,56 s.
 TIME_DECIMALS = 3
+# Tâches qui lisent les zones de parole de la VAD (D5).
+SPEECH_TASKS = (Task.EMOTION, Task.TRANSCRIPTION, Task.SPEAKER)
 
 
 @dataclass(frozen=True)
@@ -55,30 +67,72 @@ class ResultContext:
     speech_detector: SpeechDetector
 
 
+@dataclass(frozen=True)
+class EnrolledVoice:
+    """Voix d'un locuteur enregistré (EF-11), avec le modèle qui l'a calculée."""
+
+    speaker_id: str
+    name: str
+    voice: VoiceVector
+    model_id: str
+
+
 def build_results(
-    signal: FloatArray, tasks: list[str], profile: str, context: ResultContext
+    signal: FloatArray,
+    tasks: list[str],
+    profile: str,
+    context: ResultContext,
+    voices: list[EnrolledVoice] | None = None,
 ) -> dict[str, Any]:
     """Un objet par tâche demandée, prêt à être stocké en JSON et renvoyé par l'API.
 
-    Le profil (EF-07) choisit le modèle de chaque tâche : qualité ou temps réel.
+    Le profil (EF-07) choisit le modèle de chaque tâche : qualité ou temps réel. La VAD ne
+    tourne qu'une fois par analyse : l'émotion, la transcription et le locuteur lisent les
+    mêmes zones de parole. voices : locuteurs enregistrés, pour la tâche speaker.
     """
+    if voices is None:
+        voices = []
+    requested = [Task(task_name) for task_name in tasks]
+    # Étape 1 : zones de parole, une seule fois, si une tâche en a besoin (D5).
+    speech_segments: list[Segment] = []
+    if needs_speech_segments(requested):
+        speech_segments = context.speech_detector.detect(signal)
+    # Étape 2 : un résultat par tâche demandée.
     results: dict[str, Any] = {}
-    for task_name in tasks:
-        task = Task(task_name)
-        results[task.value] = task_result(signal, task, Profile(profile), context)
+    for task in requested:
+        result = task_result(signal, speech_segments, task, Profile(profile), context, voices)
+        results[task.value] = result
     return results
 
 
+def needs_speech_segments(tasks: list[Task]) -> bool:
+    """Vrai si l'émotion, la transcription ou le locuteur est demandé : il faut la VAD."""
+    speech_tasks = [task for task in tasks if task in SPEECH_TASKS]
+    return len(speech_tasks) > 0
+
+
 def task_result(
-    signal: FloatArray, task: Task, profile: Profile, context: ResultContext
+    signal: FloatArray,
+    speech_segments: list[Segment],
+    task: Task,
+    profile: Profile,
+    context: ResultContext,
+    voices: list[EnrolledVoice],
 ) -> dict[str, Any]:
-    """Résultat d'une tâche : calculé, « aucune parole » ou « disponible prochainement »."""
+    """Résultat d'une tâche : calculé, « aucune parole » ou indisponible.
+
+    speech_segments : zones de parole de la VAD, calculées une fois par build_results.
+    """
     if not context.predictor.supports(task, profile):
         return unavailable_result()
     if task == Task.SOUND_EVENT:
         return sound_event_result(signal, profile, context)
     if task == Task.EMOTION:
-        return emotion_result(signal, profile, context)
+        return emotion_result(signal, speech_segments, profile, context)
+    if task == Task.TRANSCRIPTION:
+        return transcription_result(signal, speech_segments, profile, context)
+    if task == Task.SPEAKER:
+        return speaker_result(signal, speech_segments, profile, context, voices)
     return unavailable_result()
 
 
@@ -102,11 +156,12 @@ def sound_event_result(
     return done_result(windows, probabilities, overall, classes, info)
 
 
-def emotion_result(signal: FloatArray, profile: Profile, context: ResultContext) -> dict[str, Any]:
+def emotion_result(
+    signal: FloatArray, speech_segments: list[Segment], profile: Profile, context: ResultContext
+) -> dict[str, Any]:
     """Émotions : segments de parole de la VAD, 5 s au plus, global pondéré par la durée (D5)."""
     info = context.predictor.model_info(Task.EMOTION, profile)
     # Étape 1 : zones de parole, coupées en morceaux de 5 s au plus.
-    speech_segments = context.speech_detector.detect(signal)
     windows = emotion_windows(speech_segments, context.inference_config)
     # Étape 2 : pas de parole, pas d'émotion. On le dit au lieu d'inventer une prédiction.
     if not windows:
@@ -121,6 +176,89 @@ def emotion_result(signal: FloatArray, profile: Profile, context: ResultContext)
     overall = duration_weighted_mean(probabilities, durations_s)
     classes = context.labels.emotions
     return done_result(windows, probabilities, overall, classes, info)
+
+
+def transcription_result(
+    signal: FloatArray, speech_segments: list[Segment], profile: Profile, context: ResultContext
+) -> dict[str, Any]:
+    """Transcription : segments de parole de la VAD, 30 s au plus, un texte par segment (EF-10).
+
+    Le détecteur de parole est le même que pour les émotions (D5) ; aucune parole : no_speech.
+    """
+    info = context.predictor.model_info(Task.TRANSCRIPTION, profile)
+    # Étape 1 : zones de parole, coupées en morceaux égaux de 30 s au plus.
+    windows = transcription_windows(speech_segments, context.inference_config)
+    # Étape 2 : pas de parole, pas de texte inventé.
+    if not windows:
+        return no_speech_result(info)
+    window_signals = []
+    for window in windows:
+        samples = segment_samples(signal, window)
+        window_signals.append(samples)
+    # Étape 3 : un texte par morceau, puis le texte complet.
+    texts = context.predictor.transcribe(profile, window_signals)
+    return text_result(windows, texts, info)
+
+
+def speaker_result(
+    signal: FloatArray,
+    speech_segments: list[Segment],
+    profile: Profile,
+    context: ResultContext,
+    voices: list[EnrolledVoice],
+) -> dict[str, Any]:
+    """Locuteur : un nom ou « Inconnu » par morceau de parole, puis la part de chacun (EF-11).
+
+    Seules comptent les voix calculées par le modèle de ce profil : un vecteur n'a de sens
+    qu'avec le modèle qui l'a produit.
+    """
+    info = context.predictor.model_info(Task.SPEAKER, profile)
+    usable = [voice for voice in voices if voice.model_id == info.model_id]
+    if not usable:
+        return unavailable_result(NO_VOICE_MESSAGE)
+    # Étape 1 : morceaux de parole de 1 à 5 s ; sans parole, on ne nomme personne.
+    windows = speaker_windows(speech_segments, context.inference_config.speaker)
+    if not windows:
+        return no_speech_result(info)
+    window_signals = []
+    for window in windows:
+        samples = segment_samples(signal, window)
+        window_signals.append(samples)
+    # Étape 2 : un vecteur par morceau, comparé à chaque voix (cosinus, seuil de C15).
+    vectors = context.predictor.embed_voices(profile, window_signals)
+    threshold = context.inference_config.speaker.threshold
+    segments = []
+    for window, vector in zip(windows, vectors, strict=True):
+        segments.append(_speaker_segment(window, vector, usable, threshold))
+    return _speaker_done_result(segments, info)
+
+
+def text_result(windows: list[Segment], texts: list[str], info: ModelInfo) -> dict[str, Any]:
+    """Transcription calculée : un texte par segment (bornes = celles du segment), texte complet
+    = textes des segments joints par une espace. Pas de classe ni de probabilités.
+    """
+    segments = []
+    for window, text in zip(windows, texts, strict=True):
+        segments.append(_text_segment(window, text))
+    return {
+        "status": STATUS_DONE,
+        "message": None,
+        "label": None,
+        "label_fr": None,
+        "probabilities": [],
+        "model_id": info.model_id,
+        "model_version": info.model_version,
+        "calibrated": info.calibrated,
+        "segments": segments,
+        "text": join_texts(texts),
+    }
+
+
+def join_texts(texts: list[str]) -> str:
+    """Textes des segments mis bout à bout, séparés par une espace ; un segment sans texte
+    (Whisper n'y a rien entendu) est sauté, pour ne pas laisser de double espace."""
+    non_empty = [text for text in texts if text != ""]
+    return " ".join(non_empty)
 
 
 def done_result(
@@ -146,11 +284,13 @@ def done_result(
         "model_version": info.model_version,
         "calibrated": info.calibrated,
         "segments": segments,
+        "text": None,
     }
 
 
 def no_speech_result(info: ModelInfo) -> dict[str, Any]:
-    """Émotion demandée sur un audio sans parole : aucune prédiction, un message."""
+    """Émotion ou transcription demandée sur un audio sans parole : aucune prédiction, un
+    message."""
     return {
         "status": STATUS_NO_SPEECH,
         "message": NO_SPEECH_MESSAGE,
@@ -161,14 +301,16 @@ def no_speech_result(info: ModelInfo) -> dict[str, Any]:
         "model_version": info.model_version,
         "calibrated": info.calibrated,
         "segments": [],
+        "text": None,
     }
 
 
-def unavailable_result() -> dict[str, Any]:
-    """Tâche pas encore branchée : aucun modèle, un message, et l'analyse continue."""
+def unavailable_result(message: str = UNAVAILABLE_MESSAGE) -> dict[str, Any]:
+    """Tâche indisponible : aucun modèle (ou aucune voix enregistrée), un message, et
+    l'analyse continue."""
     return {
         "status": STATUS_UNAVAILABLE,
-        "message": UNAVAILABLE_MESSAGE,
+        "message": message,
         "label": None,
         "label_fr": None,
         "probabilities": [],
@@ -176,6 +318,7 @@ def unavailable_result() -> dict[str, Any]:
         "model_version": None,
         "calibrated": None,
         "segments": [],
+        "text": None,
     }
 
 
@@ -190,6 +333,75 @@ def _segment_result(
         "label": best.label,
         "label_fr": best.label_fr,
         "probabilities": [entry.model_dump() for entry in ranking],
+        "text": None,
+    }
+
+
+def _speaker_segment(
+    window: Segment, vector: VoiceVector, voices: list[EnrolledVoice], threshold: float
+) -> dict[str, Any]:
+    # Meilleure voix si elle atteint le seuil, sinon « Inconnu » ; le score est gardé dans
+    # les deux cas, pour montrer à quel point la décision était serrée.
+    voice_vectors = [voice.voice for voice in voices]
+    match = best_match(vector, voice_vectors, threshold)
+    label = UNKNOWN_SPEAKER
+    label_fr = UNKNOWN_SPEAKER_FR
+    if match.index is not None:
+        label = voices[match.index].speaker_id
+        label_fr = voices[match.index].name
+    return {
+        "start_s": round(window.start_s, TIME_DECIMALS),
+        "end_s": round(window.end_s, TIME_DECIMALS),
+        "label": label,
+        "label_fr": label_fr,
+        "probabilities": [],
+        "text": None,
+        "score": match.score,
+    }
+
+
+def _speaker_done_result(segments: list[dict[str, Any]], info: ModelInfo) -> dict[str, Any]:
+    # Global : part du temps de parole de chaque locuteur (somme 1), du plus présent au moins
+    # présent ; le premier est le résultat principal.
+    labels = [segment["label"] for segment in segments]
+    durations_s = [segment["end_s"] - segment["start_s"] for segment in segments]
+    shares = speaking_shares(labels, durations_s)
+    names: dict[str, str] = {}
+    for segment in segments:
+        names[segment["label"]] = segment["label_fr"]
+    ranking = []
+    for label, share in shares.items():
+        ranking.append({"label": label, "label_fr": names[label], "probability": share})
+    ranking.sort(key=_share_of, reverse=True)
+    best = ranking[0]
+    return {
+        "status": STATUS_DONE,
+        "message": None,
+        "label": best["label"],
+        "label_fr": best["label_fr"],
+        "probabilities": ranking,
+        "model_id": info.model_id,
+        "model_version": info.model_version,
+        "calibrated": info.calibrated,
+        "segments": segments,
+        "text": None,
+    }
+
+
+def _share_of(entry: dict[str, Any]) -> float:
+    share: float = entry["probability"]
+    return share
+
+
+def _text_segment(window: Segment, text: str) -> dict[str, Any]:
+    # Même forme qu'un segment de classification, sans classe ni probabilités.
+    return {
+        "start_s": round(window.start_s, TIME_DECIMALS),
+        "end_s": round(window.end_s, TIME_DECIMALS),
+        "label": None,
+        "label_fr": None,
+        "probabilities": [],
+        "text": text,
     }
 
 

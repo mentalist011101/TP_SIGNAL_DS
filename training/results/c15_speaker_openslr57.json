@@ -1,0 +1,90 @@
+{
+  "protocol": "P11",
+  "dataset": "openslr57",
+  "seed": 42,
+  "enrollment_per_speaker": 5,
+  "min_utterances_per_speaker": 10,
+  "max_seconds": 20.0,
+  "speakers_kept": 225,
+  "speakers_by_group": {
+    "impostor_evaluation": 55,
+    "evaluation": 57,
+    "calibration": 57,
+    "impostor_calibration": 56
+  },
+  "threshold_rule": "EER de la décision en ensemble ouvert (meilleur score), calibration seule",
+  "bootstrap": "locuteurs tirés avec remise, 95 %, graine de configs/evaluation.yaml",
+  "gpu": "Tesla T4",
+  "encoders": {
+    "ecapa-voxceleb": {
+      "revision": "0f99f2d0ebe89ac095bcc5903c4dd8f72b367286",
+      "compute_seconds": 2188.2,
+      "speaker_count": 57,
+      "test_utterance_count": 4246,
+      "impostor_speaker_count": 55,
+      "impostor_utterance_count": 3770,
+      "closed_set_accuracy": 0.9790390956194065,
+      "closed_set_accuracy_ci": [
+        0.9662317328078323,
+        0.9882836217147994
+      ],
+      "eer": 0.030146019783325456,
+      "eer_ci": [
+        0.01852790795576303,
+        0.044464984822292906
+      ],
+      "threshold": 0.5485237563165223,
+      "known_accepted_and_correct": 0.9062647197362224,
+      "unknown_rejected": 0.9379310344827586,
+      "open_set_eer": 0.08146041023475366,
+      "accuracy_by_subset": {
+        "ca16": 0.9666832421680756,
+        "niger": 0.975,
+        "yaounde": 0.9919799498746867
+      }
+    },
+    "mhubert-147": {
+      "revision": "7ad3fc0bc5106c58c9c13526abccad527150d135",
+      "layer": 0,
+      "calibration_eer_by_layer": [
+        0.09691876750700279,
+        0.10307623049219686,
+        0.11316526610644259,
+        0.12237895158063225,
+        0.1302220888355342,
+        0.1409288715486195,
+        0.15320128051220488,
+        0.16050420168067225,
+        0.17310924369747901,
+        0.1778711484593838,
+        0.17759103641456586,
+        0.19361494597839135,
+        0.20790566226490598
+      ],
+      "compute_seconds": 2672.0,
+      "speaker_count": 57,
+      "test_utterance_count": 4246,
+      "impostor_speaker_count": 55,
+      "impostor_utterance_count": 3770,
+      "closed_set_accuracy": 0.74234573716439,
+      "closed_set_accuracy_ci": [
+        0.6769489128265388,
+        0.7992150891143092
+      ],
+      "eer": 0.116580310880829,
+      "eer_ci": [
+        0.0944976264494041,
+        0.13936959700431908
+      ],
+      "threshold": 0.9060899285689044,
+      "known_accepted_and_correct": 0.560292039566651,
+      "unknown_rejected": 0.710079575596817,
+      "open_set_eer": 0.31749095107144065,
+      "accuracy_by_subset": {
+        "ca16": 0.6469418199900547,
+        "niger": 0.7166666666666667,
+        "yaounde": 0.8416040100250627
+      }
+    }
+  }
+}

@@ -18,6 +18,9 @@ import {
 const MIN_EVENT_OPACITY = 0.35
 const MAX_FILL_OPACITY = 0.45
 
+// Étiquette d'un morceau dont la voix n'est proche d'aucune voix enregistrée (API, EF-11).
+const UNKNOWN_SPEAKER = 'unknown'
+
 // Les fenêtres d'événements se chevauchent de moitié (5 s, pas de 2,5 s, D5) : elles
 // alternent entre deux voies pour rester lisibles.
 const EVENT_LANES = 2
@@ -112,6 +115,50 @@ function EmotionRow(props: TimelineProps & { segments: SegmentResult[] }) {
   )
 }
 
+// « Locuteur Awa, de 5,3 s à 6,8 s » : ce que lit un lecteur d'écran.
+function speakerLabel(segment: SegmentResult): string {
+  const start = formatSeconds(segment.start_s)
+  const end = formatSeconds(segment.end_s)
+  return `Locuteur ${segment.label_fr}, de ${start} à ${end}`
+}
+
+// Bloc d'un morceau de locuteur : « Inconnu » en gris, un nom sur fond de carte.
+function speakerBackground(segment: SegmentResult): string {
+  if (segment.label === UNKNOWN_SPEAKER) {
+    return 'bg-paper-alt text-ink-soft'
+  }
+  return 'bg-card'
+}
+
+// Rangée « Locuteur » (EF-11, EF-12) : le nom reconnu sur chaque morceau de parole de 1 à 5 s ;
+// un clic le choisit et place la lecture au début du morceau.
+function SpeakerRow(props: TimelineProps & { segments: SegmentResult[] }) {
+  return (
+    <div className="space-y-1">
+      <p className={ROW_TITLE_CLASSES}>Locuteur</p>
+      <div className="relative h-8">
+        {props.segments.map((segment, index) => {
+          const isChosen = isSelected(props.selected, 'speaker', index)
+          return (
+            <button
+              key={index}
+              type="button"
+              aria-pressed={isChosen}
+              aria-label={speakerLabel(segment)}
+              title={speakerLabel(segment)}
+              className={`${BLOCK_CLASSES} ${speakerBackground(segment)} ${blockBorder(isChosen)}`}
+              style={segmentStyle(segment, props.durationS)}
+              onClick={() => props.onSelect({ task: 'speaker', index }, segment.start_s)}
+            >
+              {segment.label_fr}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 // Fond d'une fenêtre d'événement : d'autant plus opaque que le modèle est sûr de lui. Le
 // pourcentage est aussi écrit dans le bloc : la couleur ne porte jamais seule l'information.
 function eventFillStyle(segment: SegmentResult): CSSProperties {
@@ -165,6 +212,45 @@ function EventRow(props: TimelineProps & { segments: SegmentResult[] }) {
   )
 }
 
+// « Texte, de 0,5 s à 3 s : Bonjour à tous » : ce qu'affiche le survol et ce que lit un
+// lecteur d'écran.
+function textLabel(segment: SegmentResult): string {
+  const start = formatSeconds(segment.start_s)
+  const end = formatSeconds(segment.end_s)
+  const text = segment.text ?? ''
+  return `Texte, de ${start} à ${end} : ${text}`
+}
+
+// Rangée « Texte » (EF-10, EF-12) : un bloc par segment de transcription, à sa place dans le
+// temps. Le bloc montre le début du texte ; le texte entier s'affiche au survol. Un clic
+// place la lecture au début du segment.
+function TextRow(props: TimelineProps & { segments: SegmentResult[] }) {
+  return (
+    <div className="space-y-1">
+      <p className={ROW_TITLE_CLASSES}>Texte</p>
+      <div className="relative h-8">
+        {props.segments.map((segment, index) => {
+          const isChosen = isSelected(props.selected, 'transcription', index)
+          return (
+            <button
+              key={index}
+              type="button"
+              aria-pressed={isChosen}
+              aria-label={textLabel(segment)}
+              title={textLabel(segment)}
+              className={`${BLOCK_CLASSES} truncate bg-paper-alt ${blockBorder(isChosen)}`}
+              style={segmentStyle(segment, props.durationS)}
+              onClick={() => props.onSelect({ task: 'transcription', index }, segment.start_s)}
+            >
+              {segment.text}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 // Tête de lecture : un trait vertical à l'instant joué, sur toutes les rangées.
 function Playhead({ currentTimeS, durationS }: { currentTimeS: number; durationS: number }) {
   const left = percentOfDuration(currentTimeS, durationS)
@@ -201,8 +287,11 @@ function hasNoSpeech(analysis: Analysis): boolean {
 export default function Timeline(props: TimelineProps) {
   const emotion = doneResult(props.analysis, 'emotion')
   const soundEvent = doneResult(props.analysis, 'sound_event')
+  const transcription = doneResult(props.analysis, 'transcription')
+  const speaker = doneResult(props.analysis, 'speaker')
   const noSpeech = hasNoSpeech(props.analysis)
-  if (emotion === null && soundEvent === null && !noSpeech) {
+  const hasRows = emotion !== null || soundEvent !== null || transcription !== null
+  if (!hasRows && speaker === null && !noSpeech) {
     return null
   }
   return (
@@ -211,6 +300,8 @@ export default function Timeline(props: TimelineProps) {
       {emotion !== null && <SpeechRow segments={emotion.segments} durationS={props.durationS} />}
       {emotion !== null && <EmotionRow {...props} segments={emotion.segments} />}
       {soundEvent !== null && <EventRow {...props} segments={soundEvent.segments} />}
+      {speaker !== null && <SpeakerRow {...props} segments={speaker.segments} />}
+      {transcription !== null && <TextRow {...props} segments={transcription.segments} />}
       {/* Tête de lecture seulement une fois la lecture lancée ou un segment choisi. */}
       {props.currentTimeS > 0 && (
         <Playhead currentTimeS={props.currentTimeS} durationS={props.durationS} />

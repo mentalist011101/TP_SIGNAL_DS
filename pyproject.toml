@@ -45,6 +45,10 @@ training = [
     "pandas>=2.2",
     "jiwer>=4.0.0",
 ]
+tts = [
+    "coqui-tts[codec]>=0.27",
+    "six>=1.16",
+]
 
 [dependency-groups]
 dev = [
@@ -129,3 +133,14 @@ markers = [
 
 [tool.coverage.run]
 source = ["echolens"]
+
+# torch en version CPU sous Linux (image Docker, Codespaces) : la version de PyPI embarque CUDA
+# et plus de 3 Go de bibliothèques NVIDIA, inutiles sur un serveur sans GPU (ENF-01, ENF-08).
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux'" }]
+torchaudio = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux'" }]

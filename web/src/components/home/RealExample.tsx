@@ -50,7 +50,9 @@ function ModelLine({ example }: { example: HomeExample }) {
 function ExampleResult({ example }: { example: HomeExample }) {
   const top = example.result.probabilities[0]
   return (
-    <div className="space-y-4 rounded-card border border-rule bg-card p-5">
+    // Hauteur minimale : celle des 6 émotions. Les 5 événements y tiennent aussi, et la carte
+    // garde la même taille quand on change d'exemple.
+    <div className="flex h-full min-h-[22rem] flex-col gap-4 rounded-card border border-rule bg-card p-5">
       <div>
         <p className="label-mono text-ink-faint">{TASK_LABELS[example.task]}</p>
         <p className="flex flex-wrap items-baseline gap-x-3">
@@ -59,7 +61,9 @@ function ExampleResult({ example }: { example: HomeExample }) {
         </p>
       </div>
       <ProbabilityBars probabilities={shownProbabilities(example)} />
-      <ModelLine example={example} />
+      <div className="mt-auto">
+        <ModelLine example={example} />
+      </div>
     </div>
   )
 }
@@ -110,14 +114,18 @@ export default function RealExample() {
     <figure className="m-0 space-y-4 rounded-[22px] border border-rule-strong bg-card p-3 sm:p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <ExampleTabs selected={slug} onSelect={setSlug} />
-        <span className="label-mono rounded-btn border border-dashed border-rule-strong px-2.5 py-1 text-ink-faint">
-          Vrai résultat · figé le {frozenDate()}
+        <span className="inline-flex items-center gap-2 rounded-btn border border-brand bg-paper px-3.5 py-1.5 text-sm">
+          <span className="h-2 w-2 shrink-0 rounded-full bg-brand motion-safe:animate-pulse" />
+          <span className="font-semibold">Vrai résultat, pas une maquette</span>
+          <span className="hidden font-mono text-xs text-ink-soft sm:inline">
+            · figé le {frozenDate()}
+          </span>
         </span>
       </div>
       {/* Deux colonnes sur grand écran (spectrogramme plus large que le résultat), une seule
           sur téléphone : les barres de probabilités gardent ainsi une longueur lisible. */}
-      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
-        <div className="min-w-0 rounded-card border border-rule bg-paper p-4">
+      <div className="grid items-stretch gap-5 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
+        <div className="flex min-w-0 flex-col justify-center rounded-card border border-rule bg-paper p-4">
           <SpectrogramFigure
             url={`/exemple/${example.slug}.png`}
             info={example.spectrogram}
@@ -126,7 +134,7 @@ export default function RealExample() {
         </div>
         <ExampleResult example={example} />
       </div>
-      <figcaption className="text-xs text-ink-soft">
+      <figcaption className="min-h-8 text-xs text-ink-soft">
         {example.source} · licence {example.licence}. Analysé par les vrais modèles d’EchoLens, puis
         figé par un script depuis l’API.
       </figcaption>

@@ -7,6 +7,8 @@ détectée.
 
 import logging
 import socket
+import subprocess
+import sys
 
 import numpy as np
 import pytest
@@ -110,3 +112,24 @@ def test_with_torch_silero_is_chosen_and_logged(caplog: pytest.LogCaptureFixture
         detector = make_speech_detector(load_preprocess_config().vad)
     assert detector.name == "silero"
     assert "VAD : Silero (seuil 0.40, fin 0.25)" in caplog.text
+
+
+# Script lancé dans un nouveau processus : l'import de silero-vad n'y a pas encore eu lieu.
+THREADS_SCRIPT = """
+import torch
+torch.set_num_threads(2)
+from echolens.core.audio import load_preprocess_config
+from echolens.services.silero_detector import SileroDetector
+SileroDetector(load_preprocess_config().vad)
+print(torch.get_num_threads())
+"""
+
+
+def test_loading_silero_keeps_torch_threads() -> None:
+    # Le paquet silero-vad met torch sur un seul fil dès son import : le chargement doit
+    # rétablir le réglage d'avant, sinon les têtes Whisper vont presque deux fois moins vite.
+    completed = subprocess.run(
+        [sys.executable, "-c", THREADS_SCRIPT], capture_output=True, text=True, check=True
+    )
+    last_line = completed.stdout.strip().splitlines()[-1]
+    assert last_line == "2"

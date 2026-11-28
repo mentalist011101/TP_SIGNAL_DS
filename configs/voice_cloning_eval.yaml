@@ -1,0 +1,34 @@
+# Évaluation du clonage de voix (EF-18, C35b). Lu par
+# echolens.training.cloning_eval.CloningEvalConfig ; notebook c35_evaluation_clonage.ipynb.
+#
+# Voix évaluées : celles des membres de l'équipe qui ont donné leur accord écrit (ENF-10), dans
+# un dataset Kaggle privé (jamais sur GitHub), un dossier par personne :
+#   <prénom>/consentement.txt   accord écrit pour le clonage (texte clonage-v1, nom, date)
+#   <prénom>/reference/*.wav    au moins 10 s de parole : la voix que XTTS-v2 imite
+#   <prénom>/test/*.wav         3 à 5 phrases réelles de 3 s au moins, jamais données à XTTS : le
+#                               témoin (essai du 27 nov. : des phrases de 1 à 2 s donnent un
+#                               score ECAPA sous le seuil même pour la vraie voix)
+# Un dossier sans consentement.txt est refusé : le notebook s'arrête.
+consent_file: consentement.txt
+reference_folder: reference
+test_folder: test
+
+# Deux mesures, automatiques :
+# 1. ressemblance : cosinus ECAPA (le modèle de C15) entre chaque clone et la voix de référence
+#    de la personne, comparé au seuil « inconnu » de C15 et au score de ses vraies phrases ;
+# 2. intelligibilité : WER de Whisper small (configs/transcription.yaml) sur les clones, contre
+#    le texte demandé, avec la normalisation P12.
+speaker_encoder: ecapa-voxceleb       # identifiant dans configs/speaker.yaml
+transcription_model: small            # identifiant dans configs/transcription.yaml (Whisper small)
+
+# Phrases synthétisées pour chaque personne : courtes, en français, avec des nombres et des noms
+# propres pour éprouver la prononciation.
+sentences:
+  - "Bonjour, je présente aujourd'hui le projet EchoLens."
+  - "Le modèle reconnaît les émotions dans la voix."
+  - "Il pleut depuis ce matin sur la ville de Yaoundé."
+  - "La soutenance aura lieu le neuf décembre."
+  - "Nous avons comparé deux familles de réseaux de neurones."
+  - "Le chien aboie pendant que la sirène retentit au loin."
+  - "Merci de votre attention, nous attendons vos questions."
+  - "Cette voix est synthétique : elle a été produite par un modèle."
