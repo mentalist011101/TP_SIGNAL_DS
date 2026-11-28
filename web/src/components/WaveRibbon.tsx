@@ -35,15 +35,25 @@ function envelope(ratio: number): number {
   return Math.exp(-(distance * distance) / 0.045)
 }
 
-// Dessine une ligne à l'instant t, point par point, de gauche à droite.
-function drawLine(context: CanvasRenderingContext2D, line: WaveLine, timeS: number): void {
+// Ruban qui suit le micro : hauteur des ondes = plancher + gain × niveau. Le plancher garde
+// une ondulation visible dans le silence ; une voix forte les fait monter au maximum.
+const QUIET_GAIN = 0.06
+const VOICE_GAIN = 1.15
+
+// Dessine une ligne à l'instant t, point par point, de gauche à droite ; gain règle la hauteur.
+function drawLine(
+  context: CanvasRenderingContext2D,
+  line: WaveLine,
+  timeS: number,
+  gain: number,
+): void {
   const width = context.canvas.width
   const middle = context.canvas.height / 2
   context.beginPath()
   for (let x = 0; x <= width; x += STEP_PX) {
     const ratio = x / width
     const angle = (ratio * line.cycles + timeS * line.speed) * 2 * Math.PI + line.phase
-    const y = middle + Math.sin(angle) * line.amplitude * middle * envelope(ratio)
+    const y = middle + Math.sin(angle) * line.amplitude * gain * middle * envelope(ratio)
     if (x === 0) {
       context.moveTo(x, y)
     } else {
@@ -54,7 +64,7 @@ function drawLine(context: CanvasRenderingContext2D, line: WaveLine, timeS: numb
 }
 
 // Une image : on efface, puis on trace chaque ligne avec les couleurs du thème en cours.
-function drawFrame(context: CanvasRenderingContext2D, timeS: number): void {
+function drawFrame(context: CanvasRenderingContext2D, timeS: number, gain: number): void {
   context.clearRect(0, 0, context.canvas.width, context.canvas.height)
   context.lineWidth = LINE_WIDTH_PX * window.devicePixelRatio
   const brandColor = readCssColor('--color-brand')
@@ -66,7 +76,7 @@ function drawFrame(context: CanvasRenderingContext2D, timeS: number): void {
       context.strokeStyle = brandColor
       context.globalAlpha = 1
     }
-    drawLine(context, line, timeS)
+    drawLine(context, line, timeS, gain)
   }
   context.globalAlpha = 1
 }
@@ -81,8 +91,23 @@ function fitToDisplay(canvas: HTMLCanvasElement): void {
   }
 }
 
-// className règle la hauteur (h-40 par défaut).
-export default function WaveRibbon({ className = 'h-40' }: { className?: string }) {
+interface WaveRibbonProps {
+  // Hauteur du ruban (h-40 par défaut).
+  className?: string
+  // Niveau du micro entre 0 et 1, lu à chaque image : le ruban réagit alors à la voix. Absent :
+  // ondulation décorative constante.
+  readLevel?: () => number
+}
+
+// Gain d'une image : 1 sans micro, plancher + niveau avec le micro.
+function frameGain(readLevel: (() => number) | undefined): number {
+  if (readLevel === undefined) {
+    return 1
+  }
+  return QUIET_GAIN + VOICE_GAIN * readLevel()
+}
+
+export default function WaveRibbon({ className = 'h-40', readLevel }: WaveRibbonProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
@@ -98,12 +123,14 @@ export default function WaveRibbon({ className = 'h-40' }: { className?: string 
     const render = () => {
       fitToDisplay(canvas)
       const timeS = (performance.now() - startMs) / 1000
-      drawFrame(context, timeS)
+      drawFrame(context, timeS, frameGain(readLevel))
     }
 
-    // Moins d'animations demandé : une seule image, immobile.
+    // Moins d'animations demandé : une seule image, immobile (sauf si le ruban suit le micro :
+    // c'est alors une information, pas une décoration).
     render()
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    if (reduceMotion && readLevel === undefined) {
       return
     }
     const animation = { frameId: 0 }
@@ -115,7 +142,7 @@ export default function WaveRibbon({ className = 'h-40' }: { className?: string 
     return () => {
       window.cancelAnimationFrame(animation.frameId)
     }
-  }, [])
+  }, [readLevel])
 
   return <canvas ref={canvasRef} className={`block w-full ${className}`} aria-hidden="true" />
 }

@@ -74,11 +74,62 @@ encodeur Whisper pour les deux têtes). Pour la démo, `ECHOLENS_PRELOAD_MODELS=
 `preload_models: true`) les charge au démarrage, pour que la première analyse soit aussi
 rapide que les suivantes.
 
-Avec Docker (aucun prérequis hormis Docker) :
+### Docker (ENF-08)
+
+Aucun prérequis hormis Docker ; ni GPU ni Node à l'exécution :
 
 ```bash
-make docker       # construit l'image et lance http://localhost:5000
+make docker       # construit l'image complète et lance http://localhost:5000
 ```
+
+L'image complète (`docker/Dockerfile`) contient les vrais modèles (extra `[ml]`, torch en
+version CPU) ; les poids sont téléchargés depuis Hugging Face au premier usage, puis gardés
+dans le volume `echolens-var`. Variante légère, sans torch, avec le faux prédicteur :
+
+```bash
+docker build -f docker/Dockerfile --build-arg UV_EXTRAS="" \
+  --build-arg INFERENCE_BACKEND=demo -t echolens-demo .
+docker run -p 5000:5000 echolens-demo
+```
+
+Le clonage s'ajoute avec `--build-arg UV_EXTRAS="--extra ml --extra tts"` (environ 2,5 Go de
+mémoire de plus, licence à accepter : voir la page Cloner). La CI construit les deux images à
+chaque changement de `docker/`, `pyproject.toml` ou `uv.lock` (`.github/workflows/docker.yml`).
+
+### Démo publique dans un Codespace
+
+Un Codespace (4 cœurs, 16 Go) fait tourner tous les modèles, clonage compris, et donne une
+adresse HTTPS publique, protégée par un mot de passe (S6) :
+
+1. Dans les réglages GitHub du compte (Settings → Codespaces → Secrets), créer le secret
+   `ECHOLENS_ACCESS_PASSWORD`, autorisé pour ce dépôt. Ne jamais l'écrire dans le dépôt.
+2. Sur la page du dépôt : Code → Codespaces → Create codespace on main. La préparation
+   (`.devcontainer/post-create.sh` : ffmpeg, dépendances, front) prend une dizaine de minutes.
+3. Dans le terminal du Codespace : `bash .devcontainer/start-demo.sh`, ou
+   `ACCEPT_CPML=true bash .devcontainer/start-demo.sh` pour activer le clonage (la personne qui
+   lance accepte la Coqui Public Model License, usage non commercial).
+4. L'adresse est `https://<nom du codespace>-5000.app.github.dev` ; le navigateur demande le
+   mot de passe (n'importe quel nom d'utilisateur).
+
+Limites : la démo ne répond que tant que le Codespace tourne. Il s'arrête après le délai
+d'inactivité du compte (30 min par défaut, jusqu'à 4 h dans Settings → Codespaces), et le
+quota gratuit d'un compte personnel est de 120 heures-cœur par mois, soit 30 h sur 4 cœurs.
+Les données (voix, analyses) restent dans le Codespace : le supprimer les efface.
+
+### Analyse en direct (page Direct)
+
+La page Direct envoie le micro au serveur par le WebSocket `/ws/stream`. Toutes les 0,5 s, le
+serveur analyse les 2 dernières secondes (émotion et événement, profil Temps réel) et renvoie
+les résultats, le temps de calcul, le RTF et la latence. Le protocole est décrit dans
+[`docs/api-flux-micro.md`](docs/api-flux-micro.md).
+
+- Navigateur conseillé : **Chrome ou Edge**. Firefox a longtemps refusé de relier un micro à un
+  contexte audio à 16 kHz ; si le navigateur refuse, la page le dit au lieu d'échouer en
+  silence.
+- Rien n'est enregistré par défaut. La case « Enregistrer cette session » demande un
+  consentement écrit ; la session devient alors une analyse de l'Historique, supprimable comme
+  les autres.
+- Le micro n'est accessible qu'en `http://localhost` ou en `https://` (règle des navigateurs).
 
 ### Export des résultats
 

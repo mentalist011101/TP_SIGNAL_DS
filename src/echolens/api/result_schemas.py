@@ -38,13 +38,40 @@ class SegmentResultSchema(Schema):
 
     start_s = fields.Float(metadata={"description": "Début du segment, en secondes."})
     end_s = fields.Float(metadata={"description": "Fin du segment, en secondes."})
-    label = fields.String(metadata={"description": "Classe la plus probable sur ce segment."})
-    label_fr = fields.String(metadata={"description": "Libellé français de cette classe."})
+    label = fields.String(
+        allow_none=True,
+        metadata={
+            "description": "Classe la plus probable sur ce segment ; null pour la transcription."
+        },
+    )
+    label_fr = fields.String(
+        allow_none=True,
+        metadata={"description": "Libellé français de cette classe ; null pour la transcription."},
+    )
     probabilities = fields.List(
         fields.Nested(ClassProbabilitySchema),
         metadata={
             "description": "Probabilités de toutes les classes sur ce segment, de la plus "
-            "probable à la moins probable."
+            "probable à la moins probable ; liste vide pour la transcription."
+        },
+    )
+    # dump_default : un résultat enregistré avant l'ajout de text (C17b) renvoie null.
+    text = fields.String(
+        allow_none=True,
+        dump_default=None,
+        metadata={
+            "description": "Transcription : texte dit sur ce segment (chaîne vide si Whisper "
+            "n'y a rien entendu). null pour les autres tâches."
+        },
+    )
+    score = fields.Float(
+        allow_none=True,
+        dump_default=None,
+        metadata={
+            "description": "Locuteur : similarité cosinus (−1 à 1) avec la voix enregistrée la "
+            "plus proche, même si elle reste sous le seuil « inconnu » (EF-11). label est "
+            "l'identifiant du locuteur (ou « unknown »), label_fr son nom (ou « Inconnu »). "
+            "null pour les autres tâches."
         },
     )
 
@@ -55,9 +82,10 @@ class TaskResultSchema(Schema):
     status = fields.String(
         validate=validate.OneOf(TASK_RESULT_STATUSES),
         metadata={
-            "description": "done : résultat calculé ; no_speech : émotion demandée mais "
-            "aucune parole détectée, aucune émotion n'est inventée ; unavailable : tâche pas "
-            "encore branchée, l'analyse réussit quand même."
+            "description": "done : résultat calculé ; no_speech : émotion, transcription ou "
+            "locuteur demandé mais aucune parole détectée, rien n'est inventé ; unavailable : "
+            "pas de modèle pour cette tâche, ou locuteur demandé sans voix enregistrée ; "
+            "l'analyse réussit quand même."
         },
     )
     message = fields.String(
@@ -70,20 +98,25 @@ class TaskResultSchema(Schema):
     label = fields.String(
         allow_none=True,
         metadata={
-            "description": "Classe la plus probable sur tout l'audio ; null si status ≠ done."
+            "description": "Classe la plus probable sur tout l'audio ; null si status ≠ done "
+            "et pour la transcription."
         },
     )
     label_fr = fields.String(
         allow_none=True,
-        metadata={"description": "Libellé français de cette classe ; null si status ≠ done."},
+        metadata={
+            "description": "Libellé français de cette classe ; null si status ≠ done et "
+            "pour la transcription."
+        },
     )
     probabilities = fields.List(
         fields.Nested(ClassProbabilitySchema),
         metadata={
             "description": "Résultat global : toutes les classes, de la plus probable à la "
             "moins probable, somme 1. Il est calculé à partir des segments : moyenne des "
-            "fenêtres pour les événements, moyenne pondérée par la durée pour les émotions. "
-            "Liste vide si status ≠ done."
+            "fenêtres pour les événements, moyenne pondérée par la durée pour les émotions, "
+            "part du temps de parole de chacun pour le locuteur. Liste vide si status ≠ done, "
+            "et toujours pour la transcription."
         },
     )
     model_id = fields.String(
@@ -101,7 +134,8 @@ class TaskResultSchema(Schema):
         allow_none=True,
         metadata={
             "description": "Vrai si les probabilités sont calibrées (temperature scaling, "
-            "ENF-06) ; null si la tâche n'est pas branchée."
+            "ENF-06) ; faux pour la transcription (pas de probabilités) ; null si la tâche "
+            "n'est pas branchée."
         },
     )
     segments = fields.List(
@@ -109,7 +143,16 @@ class TaskResultSchema(Schema):
         metadata={
             "description": "Résultats par segment, dans l'ordre du temps (frise, EF-12) : "
             "fenêtres de 5 s à 50 % de recouvrement pour les événements, morceaux de parole "
-            "de 5 s au plus pour les émotions. Liste vide si status ≠ done."
+            "de 5 s au plus pour les émotions, de 30 s au plus pour la transcription. Liste "
+            "vide si status ≠ done."
+        },
+    )
+    text = fields.String(
+        allow_none=True,
+        dump_default=None,
+        metadata={
+            "description": "Transcription : texte complet, textes des segments joints par "
+            "une espace. null si status ≠ done et pour les autres tâches."
         },
     )
 
@@ -185,7 +228,10 @@ class ResultsSchema(Schema):
     )
     transcription = fields.Nested(
         TaskResultSchema,
-        metadata={"description": "Transcription (EF-10) : unavailable pour l'instant."},
+        metadata={
+            "description": "Transcription (EF-10) : un texte par segment de parole, sans "
+            "probabilités."
+        },
     )
     speaker = fields.Nested(
         TaskResultSchema,

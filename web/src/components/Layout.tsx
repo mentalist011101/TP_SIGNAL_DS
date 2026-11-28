@@ -1,8 +1,18 @@
 import type { ComponentType } from 'react'
 import { Link, NavLink, Outlet } from 'react-router-dom'
 import { useHealth } from '../api/client.ts'
+import AccountChip from './AccountChip.tsx'
 import Brand from './Brand.tsx'
-import { HistoryIcon, ModelsIcon, PlusIcon, WaveIcon } from './icons.tsx'
+import {
+  CompareIcon,
+  HistoryIcon,
+  LiveIcon,
+  MicIcon,
+  ModelsIcon,
+  PlusIcon,
+  SpeakersIcon,
+  WaveIcon,
+} from './icons.tsx'
 import ThemeToggle from './ThemeToggle.tsx'
 
 interface NavItem {
@@ -11,10 +21,14 @@ interface NavItem {
   icon: ComponentType<{ className?: string }>
 }
 
-// Pages livrées. Les pages encore vides (Direct, Comparer, Locuteurs) n'entrent au menu
-// qu'une fois livrées.
+// Pages du menu, dans l'ordre d'usage : analyser un fichier ou le micro, comparer, gérer et
+// cloner les voix, puis l'historique et les modèles.
 const MAIN_ITEMS: NavItem[] = [
   { to: '/analyser', label: 'Analyser', icon: WaveIcon },
+  { to: '/direct', label: 'Direct', icon: LiveIcon },
+  { to: '/comparer', label: 'Comparer', icon: CompareIcon },
+  { to: '/locuteurs', label: 'Locuteurs', icon: SpeakersIcon },
+  { to: '/cloner', label: 'Cloner', icon: MicIcon },
   { to: '/historique', label: 'Historique', icon: HistoryIcon },
   { to: '/modeles', label: 'Modèles', icon: ModelsIcon },
 ]
@@ -60,8 +74,9 @@ function NavSection({ title, items }: { title: string; items: NavItem[] }) {
   )
 }
 
-// Barre latérale (grand écran) : logo, action principale, menu, puis le choix du thème en bas.
-// Le fond occupe toute la hauteur de la page ; le contenu reste fixe pendant le défilement.
+// Barre latérale (grand écran) : logo, action principale, menu. Le thème et le compte sont en
+// haut à droite du contenu (TopBar). Le fond occupe toute la hauteur de la page ; le contenu
+// reste fixe pendant le défilement.
 function Sidebar() {
   return (
     <aside className="hidden w-64 shrink-0 border-r border-rule bg-card lg:block">
@@ -76,23 +91,21 @@ function Sidebar() {
         <nav className="space-y-6" aria-label="Menu de l’application">
           <NavSection title="Espace" items={MAIN_ITEMS} />
         </nav>
-        <div className="mt-auto flex items-center justify-between border-t border-rule px-1.5 pt-4">
-          <span className="text-xs text-ink-faint">Thème</span>
-          <ThemeToggle />
-        </div>
       </div>
     </aside>
   )
 }
 
-// Barre du haut (téléphone) : logo, thème et action principale, puis le menu qui défile.
+// Barre du haut (téléphone) : logo, thème, compte et action principale, puis le menu qui
+// défile.
 function MobileBar() {
   return (
     <header className="sticky top-0 z-10 space-y-3 border-b border-rule bg-paper/85 px-4 py-3 backdrop-blur lg:hidden">
       <div className="flex items-center justify-between gap-3">
         <Brand />
         <div className="flex items-center gap-2">
-          <ThemeToggle />
+          <ThemeToggle discreet />
+          <AccountChip compact />
           <Link to="/analyser" className={NEW_ANALYSIS_CLASSES}>
             <PlusIcon />
             Analyser
@@ -107,6 +120,16 @@ function MobileBar() {
         ))}
       </nav>
     </header>
+  )
+}
+
+// Barre du haut (grand écran), à droite du contenu : le thème, discret, et le compte.
+function TopBar() {
+  return (
+    <div className="hidden items-center justify-end gap-3 px-12 pt-5 lg:flex">
+      <ThemeToggle discreet />
+      <AccountChip />
+    </div>
   )
 }
 
@@ -131,7 +154,8 @@ export default function Layout() {
       <Sidebar />
       <MobileBar />
       <main className="dot-grid min-w-0 flex-1">
-        <div className="mx-auto max-w-6xl px-4 py-8 lg:px-12 lg:py-10">
+        <TopBar />
+        <div className="mx-auto max-w-6xl px-4 py-8 lg:px-12 lg:pt-4 lg:pb-10">
           <ServerDownBanner />
           <Outlet />
         </div>

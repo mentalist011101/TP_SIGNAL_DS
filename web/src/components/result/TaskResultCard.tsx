@@ -9,21 +9,26 @@ import { TASK_LABELS } from '../../labels.ts'
 import { findModel, formatCalibration, formatScore } from '../models/modelFormat.ts'
 import MainResultValue from './MainResultValue.tsx'
 import ProbabilityBars from './ProbabilityBars.tsx'
+import SpeakerResult from './SpeakerResult.tsx'
 import { isDemoResult } from './taskResult.ts'
+import TranscriptionResult from './TranscriptionResult.tsx'
 
 // Événements sonores : on montre les 5 classes les plus probables sur 50, le reste sur demande.
 const SOUND_EVENT_TOP_COUNT = 5
 
 const CARD_CLASSES = 'space-y-4 rounded-card border border-rule bg-card p-5'
 
+// La transcription prend toute la largeur : ses textes sont plus longs qu'un libellé de classe.
+const WIDE_CARD_CLASSES = `${CARD_CLASSES} md:col-span-2`
+
 const TOGGLE_CLASSES = 'text-sm font-semibold text-accent-ink hover:underline'
 
 // Résultat principal en grand : libellé français et probabilité.
-function MainResult({ result }: { result: TaskResult }) {
+function MainResult({ task, result }: { task: AnalysisTask; result: TaskResult }) {
   return (
     <div>
       <p className="label-mono text-ink-soft">Résultat principal</p>
-      <MainResultValue result={result} leading="leading-none" />
+      <MainResultValue task={task} result={result} leading="leading-none" />
     </div>
   )
 }
@@ -107,7 +112,7 @@ function BasicModelLine({ result }: { result: TaskResult }) {
 function DoneResult({ task, result }: { task: AnalysisTask; result: TaskResult }) {
   return (
     <>
-      <MainResult result={result} />
+      <MainResult task={task} result={result} />
       <TaskBars task={task} result={result} />
       <ModelLine result={result} />
     </>
@@ -123,6 +128,12 @@ function TaskResultBody({ task, result }: TaskResultCardProps) {
   if (result.status !== 'done') {
     return <p className="text-sm text-ink-soft">{result.message}</p>
   }
+  if (task === 'transcription') {
+    return <TranscriptionResult result={result} />
+  }
+  if (task === 'speaker') {
+    return <SpeakerResult result={result} />
+  }
   return <DoneResult task={task} result={result} />
 }
 
@@ -137,8 +148,12 @@ interface TaskResultCardProps {
 export default function TaskResultCard({ task, result }: TaskResultCardProps) {
   const title = TASK_LABELS[task]
   const isDemo = result !== null && isDemoResult(result)
+  let cardClasses = CARD_CLASSES
+  if (task === 'transcription') {
+    cardClasses = WIDE_CARD_CLASSES
+  }
   return (
-    <article className={CARD_CLASSES}>
+    <article className={cardClasses}>
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-base font-semibold">{title}</h2>
         {isDemo && (

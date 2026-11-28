@@ -32,12 +32,23 @@ from echolens.core.audio.io import TARGET_SAMPLE_RATE
 from echolens.core.data.class_labels import load_class_labels
 from echolens.core.features import FeatureConfig, log_mel_spectrogram
 from echolens.core.inference import load_inference_config
+from echolens.core.models.registry import Profile, Task
 from echolens.services.predictor import make_predictor
 from echolens.services.results import ResultContext, build_results, summarize_results
+from echolens.services.speaker_service import SpeakerService
 from echolens.services.spectrogram_image import save_spectrogram_png
 from echolens.services.speech_detection import make_speech_detector
-from echolens.services.storage import AnalysisRecord, AnalysisStatus, AnalysisSummaryRecord
+from echolens.services.storage import (
+    AnalysisRecord,
+    AnalysisStatus,
+    AnalysisSummaryRecord,
+    RecordingConsentRecord,
+)
 
+# Chauffe des modèles au préchargement : 2 s d'un son de 440 Hz.
+WARM_UP_SECONDS = 2.0
+WARM_UP_FREQUENCY_HZ = 440.0
+WARM_UP_AMPLITUDE = 0.1
 # Format de l'audio conservé : WAV PCM 16 bits, mono 16 kHz (D2).
 CONVERTED_AUDIO_NAME = "audio.wav"
 CONVERTED_AUDIO_SUBTYPE = "PCM_16"
@@ -62,22 +73,30 @@ class AnalysisService:
         # Paramètres des features lus une seule fois : les mêmes que l'entraînement (R5).
         self.feature_config = FeatureConfig.from_yaml(settings.features_path)
         self.result_context = _make_result_context(settings)
+        # Locuteurs enregistrés : même prédicteur et même VAD que les analyses (EF-11).
+        self.speakers = SpeakerService(settings, session_factory, self.result_context)
         self.executor = ThreadPoolExecutor(max_workers=settings.analysis_workers)
         self._fail_interrupted_analyses()
 
     def create_analysis(
-        self, upload: FileStorage, tasks: list[str], profile: str
+        self,
+        upload: FileStorage,
+        tasks: list[str],
+        profile: str,
+        consent_version: str | None = None,
     ) -> AnalysisRecord:
         """Contrôle le fichier, enregistre l'analyse au statut pending et lance son traitement.
 
+        consent_version : pour une session du flux micro, la version du consentement accepté ;
+        il est enregistré dans le même commit que l'analyse (ENF-10). None pour un fichier.
         Lève AnalysisRejectedError (message en français) si un contrôle échoue ; dans ce cas,
         rien n'est enregistré.
         """
         # Étape 1 : extension lue sur le nom envoyé, avant tout nettoyage, car secure_filename
         # efface les caractères non latins et peut emporter le nom entier ; puis nom nettoyé (S6).
         sent_name = upload.filename or ""
-        extension = self._check_extension(sent_name)
-        filename = _clean_filename(sent_name, extension)
+        extension = self.check_extension(sent_name)
+        filename = clean_filename(sent_name, extension)
 
         # Étape 2 : copie sur disque, puis contrôles qui demandent de décoder l'audio (D6).
         analysis_id = str(uuid.uuid4())
@@ -86,7 +105,7 @@ class AnalysisService:
         original = folder / f"original.{extension}"
         upload.save(original)
         try:
-            self._check_audio(original)
+            self.check_audio(original)
         except AnalysisRejectedError:
             shutil.rmtree(folder)
             raise
@@ -99,6 +118,11 @@ class AnalysisService:
             tasks=tasks,
             profile=profile,
         )
+        if consent_version is not None:
+            consent = RecordingConsentRecord(
+                analysis_id=analysis_id, consent_version=consent_version
+            )
+            record.consent_row = consent
         with self.session_factory() as session:
             session.add(record)
             session.commit()
@@ -167,7 +191,11 @@ class AnalysisService:
             session.execute(statement)
             session.commit()
 
-    def _check_extension(self, sent_name: str) -> str:
+    def check_extension(self, sent_name: str) -> str:
+        """Extension du nom envoyé, si elle est acceptée (S6) ; sinon AnalysisRejectedError.
+
+        Sert aussi à la comparaison de modèles (EF-15), qui importe un fichier de la même façon.
+        """
         suffix = Path(sent_name).suffix
         extension = suffix.lower().removeprefix(".")
         if extension in self.settings.allowed_extensions:
@@ -180,7 +208,8 @@ class AnalysisService:
             f"Format non pris en charge : « {shown_name} ». Formats acceptés : {allowed}."
         )
 
-    def _check_audio(self, path: Path) -> None:
+    def check_audio(self, path: Path) -> None:
+        """Refuse un audio trop long, illisible ou silencieux (D6), avec un message en français."""
         max_seconds = self.settings.max_audio_seconds
         try:
             signal = load_audio(path, max_seconds=max_seconds)
@@ -249,9 +278,13 @@ class AnalysisService:
     def _compute_results(self, analysis_id: str) -> dict[str, Any]:
         # Étape 1 : l'audio converti, relu par le point d'entrée unique du cœur (D1, D2).
         signal = load_audio(self.converted_audio_path(analysis_id))
-        # Étape 2 : un résultat par tâche demandée, global calculé à partir des segments.
+        # Étape 2 : un résultat par tâche demandée, global calculé à partir des segments. Les
+        # voix enregistrées sont relues à chaque analyse : un locuteur ajouté compte tout de suite.
         record = self.get_analysis(analysis_id)
-        return build_results(signal, record.tasks, record.profile, self.result_context)
+        voices = []
+        if Task.SPEAKER.value in record.tasks:
+            voices = self.speakers.enrolled_voices()
+        return build_results(signal, record.tasks, record.profile, self.result_context, voices)
 
     def _original_audio_path(self, analysis_id: str) -> Path:
         # L'extension est conservée dans le nom original.<ext> : on retrouve le fichier dans
@@ -293,15 +326,40 @@ def _make_result_context(settings: AppSettings) -> ResultContext:
     # Classes, prédicteur, découpage et VAD préparés une seule fois, au démarrage.
     labels = load_class_labels()
     predictor = make_predictor(settings, labels)
-    return ResultContext(
+    context = ResultContext(
         predictor=predictor,
         labels=labels,
         inference_config=load_inference_config(),
         speech_detector=make_speech_detector(load_preprocess_config().vad),
     )
+    # Démo : modèles chargés ET chauffés au démarrage, pour que la première fenêtre du
+    # direct ne paie pas l'initialisation de torch (environ 8 s mesurées sans chauffe).
+    if settings.preload_models:
+        warm_up_models(context)
+    return context
 
 
-def _clean_filename(sent_name: str, extension: str) -> str:
+def warm_up_models(context: ResultContext) -> None:
+    """Une inférence de chaque modèle de classification, dans chaque profil, puis la VAD.
+
+    La transcription n'est pas chauffée : sur un son sans parole, Whisper enchaîne ses replis
+    de température et la chauffe durerait plus d'une minute ; son modèle est déjà chargé.
+    """
+    # Étape 1 : une fenêtre de 2 s, un son de 440 Hz assez fort pour ne pas être du silence.
+    times = np.arange(int(WARM_UP_SECONDS * TARGET_SAMPLE_RATE)) / TARGET_SAMPLE_RATE
+    tone = WARM_UP_AMPLITUDE * np.sin(2 * np.pi * WARM_UP_FREQUENCY_HZ * times)
+    window = tone.astype(np.float32)
+    # Étape 2 : chaque modèle de classification, dans chaque profil où il existe.
+    for task in (Task.EMOTION, Task.SOUND_EVENT):
+        for profile in (Profile.QUALITY, Profile.REALTIME):
+            if context.predictor.supports(task, profile):
+                context.predictor.predict(task, profile, [window])
+    # Étape 3 : la VAD, utilisée par l'émotion, la transcription et le direct.
+    context.speech_detector.detect(window)
+
+
+def clean_filename(sent_name: str, extension: str) -> str:
+    """Nom nettoyé (S6) avec l'extension acceptée ; « audio.<ext> » s'il ne reste rien."""
     cleaned = secure_filename(sent_name)
     # « 音声メモ.wav » devient « wav » : il ne reste plus de nom avant l'extension,
     # on en donne un neutre.

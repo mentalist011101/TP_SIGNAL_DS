@@ -15,7 +15,7 @@ from echolens.core.models.registry import Profile, Task
 from echolens.services.predictor import DemoPredictor, class_counts
 from echolens.services.results import (
     NO_SPEECH_MESSAGE,
-    UNAVAILABLE_MESSAGE,
+    NO_VOICE_MESSAGE,
     ResultContext,
     build_results,
 )
@@ -84,7 +84,16 @@ def test_demo_predictor_says_demo_and_not_calibrated() -> None:
     info = predictor.model_info(Task.EMOTION, Profile.QUALITY)
     assert (info.model_id, info.model_version, info.calibrated) == ("demo", "0", False)
     assert predictor.supports(Task.EMOTION, Profile.REALTIME)
-    assert not predictor.supports(Task.TRANSCRIPTION, Profile.QUALITY)
+    assert predictor.supports(Task.TRANSCRIPTION, Profile.QUALITY)
+    assert predictor.supports(Task.SPEAKER, Profile.QUALITY)
+    assert not predictor.supports(Task.VOICE_CLONING, Profile.QUALITY)
+
+
+def test_demo_transcription_is_a_fixed_text_per_window() -> None:
+    predictor = DemoPredictor({Task.EMOTION: 6})
+    windows = [np.zeros(16_000, dtype=np.float32), np.ones(8_000, dtype=np.float32)]
+    texts = predictor.transcribe(Profile.REALTIME, windows)
+    assert texts == ["Transcription de démonstration", "Transcription de démonstration"]
 
 
 def test_unknown_backend_is_refused() -> None:
@@ -165,12 +174,21 @@ def test_emotion_global_is_the_duration_weighted_mean_of_segments(
         assert entry["probability"] == pytest.approx(expected, abs=1e-3)
 
 
-def test_tasks_not_plugged_in_are_unavailable(context: ResultContext) -> None:
-    results = build_results(tone(3.0), ["transcription", "speaker"], "realtime", context)
-    for task in ["transcription", "speaker"]:
-        assert results[task]["status"] == "unavailable"
-        assert results[task]["message"] == UNAVAILABLE_MESSAGE
-        assert results[task]["model_id"] is None
+def test_speaker_without_enrolled_voice_is_unavailable(context: ResultContext) -> None:
+    results = build_results(tone(3.0), ["speaker"], "realtime", context)
+    assert results["speaker"]["status"] == "unavailable"
+    assert results["speaker"]["message"] == NO_VOICE_MESSAGE
+    assert results["speaker"]["model_id"] is None
+    assert results["speaker"]["text"] is None
+
+
+def test_transcription_of_a_tone_is_no_speech(context: ResultContext) -> None:
+    results = build_results(tone(3.0), ["transcription"], "quality", context)
+    transcription = results["transcription"]
+    assert transcription["status"] == "no_speech"
+    assert transcription["message"] == NO_SPEECH_MESSAGE
+    assert transcription["text"] is None
+    assert transcription["segments"] == []
 
 
 def test_old_database_without_results_column_is_refused_clearly(tmp_path: Path) -> None:

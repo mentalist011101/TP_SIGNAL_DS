@@ -13,7 +13,6 @@ from typing import Any
 import numpy as np
 import numpy.typing as npt
 import torch
-from silero_vad import load_silero_vad
 
 from echolens.core.audio.io import TARGET_SAMPLE_RATE
 from echolens.core.audio.preprocess_config import VadConfig
@@ -25,7 +24,17 @@ SILERO_CHUNK_SAMPLES = 512
 
 
 def load_silero_model() -> Any:
-    """Charge Silero VAD, livré dans le paquet silero-vad (TorchScript, sans téléchargement)."""
+    """Charge Silero VAD, livré dans le paquet silero-vad (TorchScript, sans téléchargement).
+
+    Le paquet silero-vad appelle torch.set_num_threads(1) dès son import (silero_vad/model.py) :
+    sans précaution, tous les modèles torch du processus tourneraient sur un seul fil, et les
+    têtes Whisper du profil qualité iraient presque deux fois moins vite. On l'importe donc
+    ici, puis on rétablit le nombre de fils d'avant l'import.
+    """
+    threads_before = torch.get_num_threads()
+    from silero_vad import load_silero_vad
+
+    torch.set_num_threads(threads_before)
     model = load_silero_vad(onnx=False)
     model.eval()
     return model

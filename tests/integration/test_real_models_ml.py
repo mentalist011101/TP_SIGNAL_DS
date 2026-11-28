@@ -3,15 +3,18 @@
 Les modèles viennent du dossier ECHOLENS_MODELS_DIR, ou de Hugging Face si le registre donne
 leurs dépôts. L'extrait d'événement vient du dépôt public d'ESC-50 : des chants
 d'oiseaux (classe 14, chirping_birds), du fold 1. L'émotion en temps réel est testée sur des
-voyelles de synthèse.
+voyelles de synthèse, avec une VAD de test : Silero (installé avec l'extra ml) ne les prend pas
+pour de la parole, et le test vérifie le modèle d'émotion, pas la VAD (mesurée en C24).
 """
 
+import dataclasses
 import io
 import os
 import urllib.request
 from pathlib import Path
 from typing import Any
 
+import matplotlib.image
 import numpy as np
 import pytest
 import soundfile as sf
@@ -21,12 +24,26 @@ pytest.importorskip("transformers")
 
 from echolens.api import create_app
 from echolens.config import CONFIG_DIR, AppSettings
+from echolens.core.audio.segment import Segment
+from echolens.core.inference import FloatArray
 from echolens.core.models.registry import ModelRegistry
+from echolens.services.analysis_service import AnalysisService
 
 pytestmark = [pytest.mark.ml, pytest.mark.slow, pytest.mark.ffmpeg]
 
 CLIP_URL = "https://github.com/karolpiczak/ESC-50/raw/master/audio/1-100038-A-14.wav"
 EXPECTED_CLASS = "chirping_birds"
+# Zone de parole des voyelles de synthèse (voiced_speech_wav).
+SYNTHETIC_SPEECH = [Segment(start_s=1.0, end_s=5.0)]
+
+
+class FixedDetector:
+    """VAD de test : la zone où voiced_speech_wav contient des voyelles."""
+
+    name = "fixe"
+
+    def detect(self, signal: FloatArray) -> list[Segment]:
+        return SYNTHETIC_SPEECH
 
 
 def models_dir() -> Path | None:
@@ -71,8 +88,7 @@ def test_real_models_recognise_an_esc50_clip(tmp_path: Path, profile: str) -> No
 
 
 def voiced_speech_wav(seconds: float = 6.0) -> bytes:
-    """Voyelles de synthèse (140 Hz et harmoniques, 4 syllabes par seconde) de 1 à 5 s : webrtcvad
-    y trouve de la parole, donc l'émotion est bien calculée (et non « aucune parole »)."""
+    """Voyelles de synthèse (140 Hz et harmoniques, 4 syllabes par seconde) de 1 à 5 s."""
     sample_rate = 16_000
     times = np.arange(int(seconds * sample_rate)) / sample_rate
     fundamental = 140 * (1 + 0.05 * np.sin(2 * np.pi * 0.7 * times))
@@ -97,7 +113,12 @@ def test_realtime_profile_gives_a_calibrated_emotion(tmp_path: Path) -> None:
         inference_backend="models",
         models_dir=models_dir(),
     )
-    client = create_app(settings, TESTING=True).test_client()
+    app = create_app(settings, TESTING=True)
+    # La zone de parole est donnée : on teste le modèle d'émotion, pas Silero.
+    service: AnalysisService = app.extensions["analysis_service"]
+    context = dataclasses.replace(service.result_context, speech_detector=FixedDetector())
+    service.result_context = context
+    client = app.test_client()
     data = {
         "file": (io.BytesIO(voiced_speech_wav()), "voix.wav"),
         "tasks": ["emotion"],
@@ -114,3 +135,27 @@ def test_realtime_profile_gives_a_calibrated_emotion(tmp_path: Path) -> None:
     assert emotion["model_id"] in ("echolens-emotion-cnn", "echolens-emotion-crnn")
     assert emotion["label"] in ["neutral", "happy", "sad", "angry", "fear", "disgust"]
     assert sum(entry["probability"] for entry in emotion["probabilities"]) == pytest.approx(1.0)
+
+
+def test_realtime_analysis_has_a_grad_cam_map(tmp_path: Path) -> None:
+    # C14 (E7, EF-13) : la carte du CRNN a exactement la taille de l'image du spectrogramme.
+    settings = AppSettings(
+        data_dir=tmp_path,
+        web_dist_dir=tmp_path / "dist",
+        run_jobs_synchronously=True,
+        inference_backend="models",
+        models_dir=models_dir(),
+    )
+    client = create_app(settings, TESTING=True).test_client()
+    with urllib.request.urlopen(CLIP_URL, timeout=60) as response:
+        clip = response.read()
+    analysis = analyse(client, clip, "realtime")
+    assert analysis["status"] == "done", analysis["error_message"]
+
+    response = client.get(f"/api/v1/analyses/{analysis['id']}/gradcam?task=sound_event")
+
+    assert response.status_code == 200
+    assert response.mimetype == "image/png"
+    grad_map = matplotlib.image.imread(io.BytesIO(response.data))
+    spectrogram = matplotlib.image.imread(io.BytesIO(client.get(analysis["spectrogram_url"]).data))
+    assert grad_map.shape[:2] == spectrogram.shape[:2]
