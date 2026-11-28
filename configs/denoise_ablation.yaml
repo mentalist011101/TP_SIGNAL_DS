@@ -1,0 +1,32 @@
+# C19 — ablation du débruitage (D4). Lu par echolens.training.denoise_ablation.AblationConfig.
+# Le choix final est écrit ensuite dans configs/preprocess.yaml, selon la règle de D4.
+
+# Forces comparées. null = sans débruitage (enabled: false) ; sinon prop_decrease.
+strengths: [null, 0.5, 0.8, 1.0]
+
+# Conditions : null = extrait propre ; sinon rapport signal/bruit en dB (bruit mélangé au niveau exact).
+snr_db: [null, 20, 10, 0]
+
+# Bruits mélangés : classes d'ESC-50 au bruit de fond assez stable (le spectral gating
+# stationnaire est fait pour ce genre de bruit). Un extrait de bruit est tiré par extrait de
+# parole, avec la graine ci-dessous : toutes les forces voient exactement le même bruit.
+noise_classes: [rain, wind, vacuum_cleaner, engine, washing_machine, airplane]
+# Un extrait de bruit dont le niveau RMS est sous ce seuil (dBFS) est écarté : ESC-50 complète
+# certains extraits par du silence numérique, et un SNR n'aurait plus de sens.
+noise_min_dbfs: -50.0
+noise_max_tries: 20
+
+# Émotions : meilleur modèle du registre (famille B, tête Whisper base), partie « validation »
+# du découpage P1 (CREMA-D + RAVDESS).
+emotion_model_id: echolens-emotion-whisper-base
+
+# Transcription : faster-whisper (id de configs/transcription.yaml), partie « dev » d'OpenSLR 57
+# (986 phrases). wer_sentences = null : toutes les phrases ; un entier : tirage reproductible.
+whisper_model_id: base
+wer_sentences: null
+
+# Règle de D4 : meilleur score moyen ; à égalité, la plus faible force. Deux scores sont
+# « égaux » quand ils sont identiques une fois arrondis à tie_decimals décimales (0,001 = 0,1 point).
+tie_decimals: 3
+
+seed: 42
