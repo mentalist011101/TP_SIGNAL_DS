@@ -9,6 +9,7 @@ from echolens.training.ood_eval import (
     draw_actor_samples,
     f1_drop,
     h2_verdict,
+    intensity_scores,
     load_ood_config,
     paired_difference,
 )
@@ -68,6 +69,19 @@ def test_h2_verdict_rule():
     assert h2_verdict(0.0, 0.03) == "non tranchée"
 
 
+def test_intensity_scores_leave_neutral_out():
+    # Classe 0 = neutre (seulement en « faible »), classes 1 et 2 jouées aux deux intensités.
+    y_true = np.array([0, 0, 1, 2, 1, 2])
+    y_pred = np.array([1, 2, 1, 2, 0, 0])
+    intensities = ["faible", "faible", "faible", "faible", "forte", "forte"]
+    scores = intensity_scores(y_true, y_pred, intensities, neutral_target=0)
+    # Les neutres mal classés ne pèsent pas sur « faible » : ses 2 extraits émotionnels sont justes.
+    assert scores["faible"] == 1.0
+    # En « forte », les deux extraits sont prédits neutres : erreurs, sans classe neutre en plus.
+    assert scores["forte"] == 0.0
+    assert list(scores) == ["faible", "forte"]
+
+
 def test_drop_and_in_domain_check():
     assert f1_drop(0.75, 0.40) == pytest.approx(0.35)
     assert check_in_domain(0.7602, 0.7535, 0.01)
@@ -85,3 +99,4 @@ def test_ood_config_matches_task():
     ]
     assert config.h2.first == "mhubert-147"
     assert config.cafe_expected_clips == 792
+    assert config.neutral_class == "neutral"

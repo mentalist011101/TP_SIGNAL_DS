@@ -13,6 +13,7 @@ from pathlib import Path
 import numpy as np
 import numpy.typing as npt
 from pydantic import BaseModel, Field
+from sklearn.metrics import f1_score
 
 from echolens.config import CONFIG_DIR, load_yaml
 from echolens.training.evaluation import EvaluationConfig, IntArray, macro_f1
@@ -45,6 +46,7 @@ class OodConfig(BaseModel):
     cafe_expected_clips: int = Field(gt=0)
     cafe_expected_actors: int = Field(gt=0)
     intensity_names: dict[str, str]
+    neutral_class: str
 
 
 def load_ood_config(path: Path = OOD_CONFIG_PATH) -> OodConfig:
@@ -139,8 +141,39 @@ def h2_verdict(low: float, high: float) -> str:
     return "non tranchée"
 
 
+def intensity_scores(
+    y_true: IntArray, y_pred: IntArray, intensities: list[str], neutral_target: int
+) -> dict[str, float]:
+    """F1 macro par intensité (faible, forte), sur les émotions jouées aux deux intensités.
+
+    Dans CaFE, le neutre est joué sans intensité : ses extraits sont écartés et la moyenne porte
+    sur les 5 autres classes, les mêmes pour les deux groupes. Sinon « faible » compterait
+    6 classes et « forte » 5, et les deux F1 ne seraient pas comparables.
+    """
+    # Étape 1 : on écarte les extraits neutres.
+    emotional = y_true != neutral_target
+    kept_true = y_true[emotional]
+    kept_pred = y_pred[emotional]
+    kept_groups = np.asarray(intensities)[emotional]
+
+    # Étape 2 : les classes de la moyenne, imposées (labels) pour qu'une prédiction « neutre »
+    # compte comme une erreur sans ajouter de classe à la moyenne.
+    labels = sorted(set(kept_true.tolist()))
+    scores: dict[str, float] = {}
+    for name in sorted(set(kept_groups.tolist())):
+        mask = kept_groups == name
+        score = f1_score(
+            kept_true[mask], kept_pred[mask], labels=labels, average="macro", zero_division=0.0
+        )
+        scores[name] = float(score)
+    return scores
+
+
 def f1_drop(in_domain_f1: float, ood_f1: float) -> float:
-    """Chute de F1 macro entre le test en domaine et CaFE (positive = le modèle perd)."""
+    """Chute de F1 macro entre le test en domaine et CaFE (positive = le modèle perd).
+
+    Les deux F1 doivent venir du même réseau (mêmes poids), mesuré sur les deux jeux.
+    """
     return in_domain_f1 - ood_f1
 
 
