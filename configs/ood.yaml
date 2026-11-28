@@ -1,0 +1,29 @@
+# C25 — évaluation hors domaine des modèles d'émotion sur CaFE (H2, P7, E1).
+# Lu par echolens.training.ood_eval.OodConfig. Évaluation seulement : rien n'est réestimé sur CaFE.
+# Intervalles : n_bootstrap, confidence et seed viennent de configs/evaluation.yaml (1 000 tirages,
+# 95 %, graine 42).
+
+# Les 5 modèles d'émotion entraînés sur CREMA-D + RAVDESS (famille A : CNN, CRNN ; famille B :
+# têtes sur wav2vec 2.0, mHuBERT-147 et Whisper base). Même graine de référence que le registre.
+reference_seed: 42
+models:
+  - {id: cnn, family: A}
+  - {id: crnn, family: A}
+  - {id: wav2vec2-base, family: B}
+  - {id: mhubert-147, family: B}
+  - {id: whisper-base, family: B}
+
+# Avant d'évaluer sur CaFE, chaque modèle doit retrouver son F1 macro de test en domaine
+# (graine de référence) à cette tolérance près ; sinon on s'arrête.
+in_domain_tolerance: 0.01
+
+# H2 : « mHuBERT dépasse wav2vec 2.0 anglais sur le français ». Écart = F1(first) − F1(second).
+h2:
+  first: mhubert-147
+  second: wav2vec2-base
+
+# CaFE : 12 acteurs, 792 extraits gardés (surprise exclue par configs/labels.yaml).
+cafe_expected_clips: 792
+cafe_expected_actors: 12
+# Intensité du manifeste : « 1 » = faible, « 2 » = forte (dossiers Faible et Fort).
+intensity_names: {"1": faible, "2": forte}
