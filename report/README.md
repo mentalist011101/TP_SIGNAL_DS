@@ -8,6 +8,14 @@ chiffre d'une table cite en commentaire le fichier de `training/results/` d'où 
 Rédaction coordonnée par Lynn ; partie équations par Steve.
 
 ## Compiler
+
+```bash
+cd report
+latexmk -pdf main.tex
+```
+
+Le PDF n'est pas commité. Sur Overleaf, importer le dossier `report/` et compiler `main.tex`.
+
 ## Figures et tableaux
 
 Tout vient d'un seul script (décision E8), à relancer quand un résultat change :
@@ -17,13 +25,6 @@ Tout vient d'un seul script (décision E8), à relancer quand un résultat chang
 Il lit `training/results/*.json` et écrit les figures dans `report/figures/` (`fig_*.png`) et les
 tableaux dans `report/tables/` (`*.tex`). Ne jamais les modifier à la main. Un tableau s'inclut
 avec `\input{tables/<nom>}` dans un environnement `table` (légende et étiquette dans la section).
-
-```bash
-cd report
-latexmk -pdf main.tex
-```
-
-Le PDF n'est pas commité. Sur Overleaf, importer le dossier `report/` et compiler `main.tex`.
 
 ## Plan et répartition
 

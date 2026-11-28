@@ -1,11 +1,16 @@
 from echolens.training.report_assets import (
+    best_cafe_model,
+    best_of_family,
+    decimal_fr,
     emotion_models,
     emotion_table_rows,
+    f1_mean_of,
     fr,
     fr_interval,
     fr_percent,
     fr_pm,
     latency_rows,
+    mean_by_gender,
     render_table,
     transcription_rows,
 )
@@ -13,8 +18,14 @@ from echolens.training.report_assets import (
 
 def family_a_result(f1: float) -> dict:
     test = {"f1_per_class": [f1] * 6, "macro_f1_by_gender": {"F": f1 + 0.05, "M": f1 - 0.05}}
+    gender = {"F": {"mean": f1 + 0.05}, "M": {"mean": f1 - 0.05}}
+    summary = {
+        "macro_f1": {"mean": f1, "std": 0.01},
+        "accuracy": {"mean": f1},
+        "macro_f1_by_gender": gender,
+    }
     return {
-        "summary": {"macro_f1": {"mean": f1, "std": 0.01}, "accuracy": {"mean": f1}},
+        "summary": summary,
         "seeds": [{"seed": 42, "test": test}],
     }
 
@@ -91,3 +102,27 @@ def test_transcription_and_latency_rows():
         "0{,}173",
         "0{,}173",
     ]
+
+
+def test_best_of_family_and_french_decimals():
+    models = [
+        {"id": "cnn", "family": "A", "f1_mean": 0.62},
+        {"id": "wav2vec2-base", "family": "B", "f1_mean": 0.75},
+        {"id": "mhubert-147", "family": "B", "f1_mean": 0.77},
+    ]
+    assert best_of_family(models, "B")["id"] == "mhubert-147"
+    assert sorted(models, key=f1_mean_of)[0]["id"] == "cnn"
+    assert decimal_fr(0.7536) == "0,754"
+
+
+def test_best_cafe_model_picks_highest_cafe_f1():
+    models = {
+        "cnn": {"family": "A", "macro_f1": 0.30},
+        "crnn": {"family": "A", "macro_f1": 0.35},
+        "whisper-base": {"family": "B", "macro_f1": 0.40},
+    }
+    assert best_cafe_model(models, "A") == "crnn"
+
+
+def test_family_a_gender_uses_mean_of_seeds():
+    assert mean_by_gender({"F": {"mean": 0.69, "std": 0.01}}) == {"F": 0.69}
