@@ -1,12 +1,29 @@
 import Reveal from './Reveal.tsx'
 
+// Section « équipe et briques » : les quatre membres, chacun avec son profil GitHub (comptes des
+// contributeurs du dépôt), puis les 8 briques de la spécification (docs/specification.md).
+
+interface Member {
+  name: string
+  role: string
+  github: string
+}
+
+const TEAM: Member[] = [
+  { name: 'Luciano Fokouo', role: 'Responsable technique', github: 'mentalist011101' },
+  { name: 'Steve', role: 'Membre de l’équipe', github: 'DIFFO-web' },
+  { name: 'Lynn', role: 'Membre de l’équipe', github: 'Lynn2129' },
+  { name: 'Nicole', role: 'Membre de l’équipe', github: 'serenanicole' },
+]
+
+const GITHUB_URL = 'https://github.com/'
+// Taille demandée à GitHub pour l'avatar, en pixels (affiché en 56 px, net sur écran dense).
+const AVATAR_SIZE = 112
+
 interface Brick {
   title: string
   text: string
 }
-
-// L'équipe (README) et les 8 briques de la spécification (docs/specification.md).
-const TEAM = ['Luciano (responsable technique)', 'Steve', 'Lynn', 'Nicole']
 
 const BRICKS: Brick[] = [
   {
@@ -31,10 +48,38 @@ const BRICKS: Brick[] = [
     title: 'Interface',
     text: 'Application web : analyser, lire le résultat, retrouver l’historique.',
   },
-  { title: 'Ingénierie', text: 'Outillage, tests, intégration continue.' },
+  { title: 'Ingénierie', text: 'Outillage, tests, intégration continue, Docker.' },
 ]
 
-// Section « équipe et briques » : qui a construit EchoLens, et comment le projet est découpé.
+// Carte d'un membre : avatar GitHub, nom, rôle, lien vers le profil.
+function MemberCard({ member }: { member: Member }) {
+  const profile = `${GITHUB_URL}${member.github}`
+  return (
+    <a
+      href={profile}
+      target="_blank"
+      rel="noreferrer"
+      className="group flex items-center gap-4 rounded-card border border-rule bg-card p-4 transition-[transform,border-color] duration-300 ease-out-soft hover:-translate-y-1 hover:border-rule-strong"
+    >
+      <img
+        src={`${profile}.png?size=${AVATAR_SIZE}`}
+        alt=""
+        width={56}
+        height={56}
+        loading="lazy"
+        className="h-14 w-14 shrink-0 rounded-full border border-rule bg-paper-alt"
+      />
+      <span className="min-w-0 space-y-0.5">
+        <span className="block font-semibold">{member.name}</span>
+        <span className="block text-sm text-ink-soft">{member.role}</span>
+        <span className="block truncate font-mono text-xs text-ink-faint group-hover:text-ink">
+          @{member.github} ↗
+        </span>
+      </span>
+    </a>
+  )
+}
+
 export default function TeamBricks() {
   return (
     <section className="mx-auto max-w-6xl space-y-10 px-6 py-24">
@@ -43,10 +88,17 @@ export default function TeamBricks() {
         <h2 className="font-display text-5xl leading-tight">
           Quatre personnes, <em className="text-ink-soft">huit briques</em>.
         </h2>
-        <p className="text-lg text-ink-soft">
-          {TEAM.join(' · ')} · M2 Data Science, ENSPY, cours INF50101.
-        </p>
+        <p className="text-lg text-ink-soft">M2 Data Science, ENSPY, cours INF50101.</p>
       </Reveal>
+      <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {TEAM.map((member, index) => (
+          <li key={member.github}>
+            <Reveal delayMs={index * 90}>
+              <MemberCard member={member} />
+            </Reveal>
+          </li>
+        ))}
+      </ul>
       <Reveal>
         <ol className="grid gap-px overflow-hidden rounded-card border border-rule bg-rule sm:grid-cols-2 lg:grid-cols-4">
           {BRICKS.map((brick, index) => (
