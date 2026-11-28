@@ -21,6 +21,12 @@ def fr(value: float, digits: int = 3) -> str:
     return text.replace(".", "{,}")
 
 
+def decimal_fr(value: float, digits: int = 3) -> str:
+    """Nombre à la française pour une figure (texte simple, hors LaTeX) : 0,754."""
+    text = f"{value:.{digits}f}"
+    return text.replace(".", ",")
+
+
 def fr_pm(mean: float, std: float, digits: int = 3) -> str:
     """« moyenne ± écart-type » en mode mathématique."""
     return f"${fr(mean, digits)} \\pm {fr(std, digits)}$"
@@ -88,14 +94,14 @@ def emotion_models(
                 "ci": intervals[name],
                 "accuracy": summary["accuracy"]["mean"],
                 "per_class": content["seeds"][0]["test"]["f1_per_class"],
-                "by_gender": content["seeds"][0]["test"]["macro_f1_by_gender"],
+                "by_gender": mean_by_gender(summary["macro_f1_by_gender"]),
                 "confusion": None,
             }
         )
     for name, content in c11["models"].items():
         if name in EXCLUDED_B_VARIANTS:
             continue
-        gender = {key: value["mean"] for key, value in content["macro_f1_by_gender"].items()}
+        gender = mean_by_gender(content["macro_f1_by_gender"])
         models.append(
             {
                 "id": name,
@@ -110,6 +116,50 @@ def emotion_models(
             }
         )
     return models
+
+
+def mean_by_gender(by_gender: dict[str, Any]) -> dict[str, float]:
+    """F1 moyen des 3 graines pour chaque genre : {"F": 0,69, "M": 0,55}.
+
+    Les deux familles utilisent la moyenne des graines, pour être comparables sur la figure.
+    """
+    means: dict[str, float] = {}
+    for gender, values in by_gender.items():
+        means[gender] = values["mean"]
+    return means
+
+
+def f1_mean_of(model: dict[str, Any]) -> float:
+    """F1 macro moyen d'un modèle : sert de clé de tri."""
+    return float(model["f1_mean"])
+
+
+def best_of_family(models: list[dict[str, Any]], family: str) -> dict[str, Any]:
+    """Le modèle de la famille qui a le F1 macro moyen le plus haut."""
+    best: dict[str, Any] | None = None
+    for model in models:
+        if model["family"] != family:
+            continue
+        if best is None or model["f1_mean"] > best["f1_mean"]:
+            best = model
+    if best is None:
+        raise ValueError(f"Aucun modèle de la famille {family}")
+    return best
+
+
+def best_cafe_model(models: dict[str, Any], family: str) -> str:
+    """Identifiant du modèle de la famille qui a le F1 macro le plus haut sur CaFE (C25)."""
+    best_id = ""
+    best_f1 = -1.0
+    for model_id, result in models.items():
+        if result["family"] != family:
+            continue
+        if result["macro_f1"] > best_f1:
+            best_f1 = result["macro_f1"]
+            best_id = model_id
+    if best_id == "":
+        raise ValueError(f"Aucun modèle de la famille {family} sur CaFE")
+    return best_id
 
 
 def emotion_table_rows(models: list[dict[str, Any]]) -> list[Row]:

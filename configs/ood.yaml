@@ -27,3 +27,6 @@ cafe_expected_clips: 792
 cafe_expected_actors: 12
 # Intensité du manifeste : « 1 » = faible, « 2 » = forte (dossiers Faible et Fort).
 intensity_names: {"1": faible, "2": forte}
+# Le neutre de CaFE est joué sans intensité (le manifeste le range en « 1 ») : il est écarté de
+# la comparaison faible / forte, sinon « faible » compterait 6 classes et « forte » 5.
+neutral_class: neutral

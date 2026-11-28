@@ -24,13 +24,18 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.ticker import FuncFormatter, ScalarFormatter
 
 from echolens.config import REPO_ROOT
 from echolens.training.report_assets import (
+    best_cafe_model,
+    best_of_family,
+    decimal_fr,
     emotion_models,
     emotion_table_rows,
     esc50_models,
     esc50_table_rows,
+    f1_mean_of,
     latency_rows,
     read_results,
     render_table,
@@ -55,6 +60,7 @@ MODEL_COLORS = {
     "mhubert-147": "#4a7a3a",
     "whisper-base": "#2b4a21",
 }
+WHISPER_COLORS = {"base": INK_SOFT, "small": BRAND}
 STRENGTH_COLORS = {"none": REFERENCE, "0.5": INK_SOFT, "0.8": BRAND, "1.0": "#b4400f"}
 DPI = 200
 
@@ -67,9 +73,25 @@ def need(name: str) -> Any:
     return content
 
 
+def french_tick(value: float, _position: int) -> str:
+    """Graduation à la française : 0,25 et non 0.25."""
+    text = f"{value:g}"
+    return text.replace(".", ",")
+
+
+def use_french_decimals(figure: Any) -> None:
+    """Virgule décimale sur les axes numériques. Les axes à étiquettes (noms de modèles,
+    classes) gardent leurs étiquettes."""
+    for axis in figure.axes:
+        for scale in [axis.xaxis, axis.yaxis]:
+            if isinstance(scale.get_major_formatter(), ScalarFormatter):
+                scale.set_major_formatter(FuncFormatter(french_tick))
+
+
 def save_figure(figure: Any, name: str) -> Path:
     FIGURES_DIR.mkdir(parents=True, exist_ok=True)
     path = FIGURES_DIR / name
+    use_french_decimals(figure)
     figure.tight_layout()
     figure.savefig(path, dpi=DPI)
     plt.close(figure)
@@ -79,7 +101,8 @@ def save_figure(figure: Any, name: str) -> Path:
 def save_table(name: str, text: str) -> Path:
     TABLES_DIR.mkdir(parents=True, exist_ok=True)
     path = TABLES_DIR / name
-    path.write_text(text, encoding="utf-8")
+    # Fins de ligne LF sur toutes les machines : sinon Windows écrit CRLF et le fichier change.
+    path.write_text(text, encoding="utf-8", newline="\n")
     return path
 
 
@@ -107,7 +130,7 @@ def draw_confusion(
             value = values[row, column]
             color = "white" if value > 0.5 else INK
             axis.text(
-                column, row, f"{value:.2f}", ha="center", va="center", color=color, fontsize=7
+                column, row, decimal_fr(value, 2), ha="center", va="center", color=color, fontsize=7
             )
     figure.colorbar(image, ax=axis, fraction=0.046)
     return save_figure(figure, filename)
@@ -115,7 +138,7 @@ def draw_confusion(
 
 def draw_f1_bars(models: list[dict[str, Any]], xlabel: str, filename: str) -> Path:
     """Barres horizontales de F1 macro (moyenne) avec écart-type, couleur par famille."""
-    ordered = sorted(models, key=lambda model: model["f1_mean"])
+    ordered = sorted(models, key=f1_mean_of)
     figure, axis = plt.subplots(figsize=(6.0, 0.55 * len(ordered) + 1.2))
     for position, model in enumerate(ordered):
         color = FAMILY_COLORS[model["family"]]
@@ -123,7 +146,7 @@ def draw_f1_bars(models: list[dict[str, Any]], xlabel: str, filename: str) -> Pa
         axis.text(
             model["f1_mean"] + model["f1_std"] + 0.01,
             position,
-            f"{model['f1_mean']:.3f}",
+            decimal_fr(model["f1_mean"]),
             va="center",
             fontsize=8,
         )
@@ -132,9 +155,6 @@ def draw_f1_bars(models: list[dict[str, Any]], xlabel: str, filename: str) -> Pa
     axis.set_xlabel(xlabel)
     style_axis(axis)
     return save_figure(figure, filename)
-
-
-# ---------------------------------------------------------------------------- émotions
 
 
 def emotions_assets() -> list[Path]:
@@ -188,21 +208,20 @@ def emotions_assets() -> list[Path]:
     )
     axis.set_xticks(positions, [m["id"] for m in models], rotation=30, ha="right")
     axis.set_ylabel("F1 macro")
-    axis.legend()
+    # Axe jusqu'à 1 et légende sur une ligne en haut : elle ne cache plus aucune barre.
+    axis.set_ylim(0, 1)
+    axis.legend(ncol=2, loc="upper center", frameon=False)
     axis.spines["top"].set_visible(False)
     axis.spines["right"].set_visible(False)
     paths.append(save_figure(figure, "fig_emotions_gender.png"))
     # Figure 4 : matrice de confusion de la meilleure tête de la famille B (celle de la famille A
     # n'est pas dans les JSON : elle reste dans les sorties Kaggle de C12).
-    best_b = max([m for m in models if m["family"] == "B"], key=lambda m: m["f1_mean"])
+    best_b = best_of_family(models, "B")
     title = f"{best_b['id']}, émotions (test en domaine)"
     paths.append(
         draw_confusion(best_b["confusion"], classes, title, "fig_emotions_confusion_famille_B.png")
     )
     return paths
-
-
-# ---------------------------------------------------------------------------- ESC-50
 
 
 def esc50_assets() -> list[Path]:
@@ -223,14 +242,11 @@ def esc50_assets() -> list[Path]:
     paths.append(
         draw_f1_bars(models, "F1 macro ESC-50 (moyenne ± écart-type, 5 folds)", "fig_esc50_f1.png")
     )
-    best_b = max([m for m in models if m["family"] == "B"], key=lambda m: m["f1_mean"])
+    best_b = best_of_family(models, "B")
     title = f"{best_b['id']}, 5 catégories ESC-50"
     filename = f"esc50_{best_b['id']}_confusion_categories.png"
     paths.append(draw_confusion(best_b["categories"], c11["category_names"], title, filename))
     return paths
-
-
-# ---------------------------------------------------------------------------- transcription
 
 
 def transcription_assets() -> list[Path]:
@@ -254,7 +270,9 @@ def transcription_assets() -> list[Path]:
             errors[0].append(100 * (wer["value"] - wer["low"]))
             errors[1].append(100 * (wer["high"] - wer["value"]))
         positions = np.arange(len(corpora)) + index * width
-        axis.bar(positions, values, width, yerr=errors, capsize=3, label=f"Whisper {name}")
+        color = WHISPER_COLORS.get(name, INK)
+        label = f"Whisper {name}"
+        axis.bar(positions, values, width, yerr=errors, capsize=3, label=label, color=color)
     axis.set_xticks(np.arange(len(corpora)) + 0.4 - width / 2, [labels[c] for c in corpora])
     axis.set_ylabel("WER (%), IC 95 %")
     axis.legend()
@@ -262,9 +280,6 @@ def transcription_assets() -> list[Path]:
     axis.spines["right"].set_visible(False)
     paths.append(save_figure(figure, "fig_wer.png"))
     return paths
-
-
-# ---------------------------------------------------------------------------- latence
 
 
 def latency_assets() -> list[Path]:
@@ -298,16 +313,14 @@ def latency_assets() -> list[Path]:
         label="fenêtre de 5 s",
         color=INK_SOFT,
     )
-    axis.axvline(limit, color="#b4400f", linestyle="--", label=f"limite temps réel ({limit})")
+    limit_label = f"limite temps réel ({decimal_fr(limit, 2)})"
+    axis.axvline(limit, color="#b4400f", linestyle="--", label=limit_label)
     axis.set_yticks(positions, [n.removeprefix("echolens-") for n in names], fontsize=8)
     axis.set_xlabel("RTF au 95e centile (temps de calcul / durée du son)")
     axis.legend(fontsize=7)
     style_axis(axis)
     paths.append(save_figure(figure, "fig_latence.png"))
     return paths
-
-
-# ---------------------------------------------------------------------------- VAD
 
 
 def vad_assets() -> list[Path]:
@@ -351,9 +364,6 @@ def vad_assets() -> list[Path]:
     return [save_figure(figure, "fig_vad.png")]
 
 
-# ---------------------------------------------------------------------------- optionnels (C19, C25)
-
-
 def ablation_assets() -> list[Path]:
     """C19 : F1 des émotions et WER selon le SNR, pour chaque force de débruitage (E3)."""
     content = read_results(RESULTS_DIR, "c19_denoising_ablation.json")
@@ -368,14 +378,18 @@ def ablation_assets() -> list[Path]:
     for metric, title, axis in panels:
         for index, strength in enumerate(strengths):
             key = "none" if strength is None else str(strength)
-            values, lows, highs = [], [], []
+            values = []
+            lows = []
+            highs = []
             for snr in snrs:
                 cell = f"{key}|{'clean' if snr is None else snr}"
                 value, low, high = content["cells"][cell][metric]
                 values.append(value)
                 lows.append(value - low)
                 highs.append(high - value)
-            label = "sans" if strength is None else f"force {strength}"
+            label = "sans"
+            if strength is not None:
+                label = f"force {decimal_fr(strength, 1)}"
             axis.errorbar(
                 positions + (index - 1.5) * 0.06,
                 values,
@@ -404,9 +418,9 @@ def cafe_assets() -> list[Path]:
     positions = np.arange(len(names))
     axis.bar(
         positions - 0.2,
-        [models[n]["in_domain_f1_mean"] for n in names],
+        [models[n]["in_domain_f1"] for n in names],
         0.4,
-        label="en domaine",
+        label="en domaine (même réseau)",
         color=INK_SOFT,
     )
     cafe = [models[n]["macro_f1"] for n in names]
@@ -425,17 +439,17 @@ def cafe_assets() -> list[Path]:
     )
     axis.set_xticks(positions, names, rotation=30, ha="right")
     axis.set_ylabel("F1 macro")
-    axis.legend()
+    axis.set_ylim(0, 1)
+    axis.legend(ncol=2, loc="upper center", frameon=False)
     axis.spines["top"].set_visible(False)
     axis.spines["right"].set_visible(False)
     paths = [save_figure(figure, "fig_cafe_f1.png")]
     for family in ["A", "B"]:
-        in_family = {n: models[n] for n in names if models[n]["family"] == family}
-        best = max(in_family, key=lambda n: in_family[n]["macro_f1"])
-        title = f"{best} sur CaFE (F1 macro {in_family[best]['macro_f1']:.3f})"
+        best = best_cafe_model(models, family)
+        title = f"{best} sur CaFE (F1 macro {decimal_fr(models[best]['macro_f1'])})"
         paths.append(
             draw_confusion(
-                in_family[best]["confusion"],
+                models[best]["confusion"],
                 content["classes"],
                 title,
                 f"c25_cafe_confusion_famille_{family}.png",
