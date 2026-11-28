@@ -39,8 +39,14 @@ function HomeHeader() {
         className={`${CONTAINER_CLASSES} flex items-center justify-between gap-4 py-4`}
         aria-label="Menu du site"
       >
-        <Brand />
-        <div className="flex items-center gap-4 text-sm sm:gap-7">
+        <div className="flex items-center gap-4">
+          <Brand />
+          {/* Ce qu'est EchoLens, en une étiquette discrète à côté du logo (grand écran). */}
+          <span className="label-mono hidden border-l border-rule pl-4 text-ink-faint lg:inline">
+            Analyse audio par IA
+          </span>
+        </div>
+        <div className="flex items-center gap-3 text-sm sm:gap-7">
           <a href="#exemple" className={NAV_LINK_CLASSES}>
             Exemple
           </a>
@@ -56,7 +62,7 @@ function HomeHeader() {
           <a href="/docs" className={NAV_LINK_CLASSES}>
             API
           </a>
-          <ThemeToggle />
+          <ThemeToggle discreet />
           <Link
             to="/analyser"
             className="rounded-btn bg-accent px-4 py-2 font-semibold text-on-accent transition-colors hover:bg-accent-deep"
@@ -73,13 +79,9 @@ function HomeHeader() {
 // Ouverture : promesse en très grand, sous-titre, appels à l'action, puis le ruban d'ondes.
 function Hero() {
   return (
-    <section className="pt-20 sm:pt-28">
+    <section className="pt-10 sm:pt-16">
       <Reveal className={`${CONTAINER_CLASSES} flex flex-col items-center gap-8 text-center`}>
-        <span className="label-mono inline-flex items-center gap-2 rounded-btn border border-rule-strong bg-card px-3.5 py-1.5 text-ink-soft">
-          <span className="h-1.5 w-1.5 rounded-full bg-brand motion-safe:animate-pulse" />
-          Analyse audio par IA
-        </span>
-        <h1 className="max-w-5xl text-6xl leading-[0.95] sm:text-8xl lg:text-[8.5rem]">
+        <h1 className="max-w-6xl text-5xl leading-[0.95] break-words sm:text-7xl lg:text-[6.5rem]">
           Écoutez ce que vos audios <em className="text-brand">racontent</em>.
         </h1>
         <p className="max-w-2xl text-lg leading-relaxed text-ink-soft sm:text-xl">
@@ -99,7 +101,7 @@ function Hero() {
           wav, mp3, flac, ogg, webm, m4a · jusqu’à 5 minutes · fichier ou micro
         </p>
       </Reveal>
-      <div className="mt-10">
+      <div className="mt-6">
         <WaveRibbon />
       </div>
     </section>
@@ -148,7 +150,8 @@ function HomeFooter() {
         <div className="space-y-3">
           <Brand />
           <p className="max-w-xs text-sm text-ink-soft">
-            Analyse audio : événements sonores, émotions, transcription, et bientôt locuteurs.
+            Analyse audio par IA : événements sonores, émotions, transcription, locuteurs et clonage
+            de voix consentantes.
           </p>
         </div>
         <div className="space-y-3 text-sm">

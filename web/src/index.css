@@ -104,6 +104,103 @@
       opacity: 0;
     }
   }
+
+  /* Schéma de la chaîne de traitement : une impulsion parcourt la ligne en 9 s, chaque étape
+     s'allume à son passage (délai = position de l'étape × 9 s / nombre d'étapes). */
+  --animate-travel-x: travel-x 9s linear infinite;
+  --animate-travel-y: travel-y 9s linear infinite;
+  --animate-stage-glow: stage-glow 9s ease-out infinite;
+  @keyframes travel-x {
+    from {
+      left: 0%;
+    }
+    to {
+      left: 100%;
+    }
+  }
+  @keyframes travel-y {
+    from {
+      top: 0%;
+    }
+    to {
+      top: 100%;
+    }
+  }
+  @keyframes stage-glow {
+    0%,
+    100% {
+      border-color: var(--color-rule);
+      box-shadow: 0 0 0 0 transparent;
+      transform: scale(1);
+    }
+    4% {
+      border-color: var(--color-brand);
+      box-shadow: 0 0 0 6px color-mix(in oklab, var(--color-brand) 22%, transparent);
+      transform: scale(1.06);
+    }
+    18% {
+      border-color: var(--color-rule-strong);
+      box-shadow: 0 0 0 0 transparent;
+      transform: scale(1);
+    }
+  }
+
+  /* Émotions : chaque émoji apparaît, grandit, puis s'efface ; six émojis sur un cycle de 9 s
+     (délai = rang × 1,5 s). */
+  --animate-emotion-cycle: emotion-cycle 9s ease-in-out infinite;
+  @keyframes emotion-cycle {
+    0% {
+      opacity: 0;
+      transform: scale(0.4);
+    }
+    5% {
+      opacity: 1;
+      transform: scale(1.25);
+    }
+    12% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    16.66%,
+    100% {
+      opacity: 0;
+      transform: scale(0.9);
+    }
+  }
+
+  /* Frise sonore qui défile de droite à gauche, en boucle (contenu doublé, décalé de moitié). */
+  --animate-scroll-x: scroll-x 24s linear infinite;
+  @keyframes scroll-x {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-50%);
+    }
+  }
+
+  /* Cache qui se retire derrière la tête de lecture (même cycle de 8 s) : les tours de parole
+     apparaissent au moment où la lecture les atteint. */
+  --animate-uncover: uncover 8s linear infinite;
+  @keyframes uncover {
+    from {
+      left: 0%;
+    }
+    to {
+      left: 100%;
+    }
+  }
+
+  /* Barre de score qui pousse depuis l'axe quand le diagramme apparaît. */
+  --animate-bar-grow: bar-grow 1.2s cubic-bezier(0.22, 1, 0.36, 1) both;
+  @keyframes bar-grow {
+    from {
+      transform: scaleX(0);
+    }
+    to {
+      transform: scaleX(1);
+    }
+  }
 }
 
 :root {
